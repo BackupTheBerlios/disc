@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.17 2003/04/22 12:35:48 andrei Exp $
+ * $Id: aaa_core.c,v 1.18 2003/04/22 15:15:53 bogdan Exp $
  */
 /* History:
  * --------
@@ -43,7 +43,7 @@
 #define CFG_FILE "aaa.cfg"
 
 
-static char id[]="$Id: aaa_core.c,v 1.17 2003/04/22 12:35:48 andrei Exp $";
+static char id[]="$Id: aaa_core.c,v 1.18 2003/04/22 15:15:53 bogdan Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
@@ -151,13 +151,13 @@ str aaa_identity= {0, 0};
 str aaa_realm= {0, 0};
 
 /* fqdn */
-str aaa_fqdn= {0, 0 };
+str aaa_fqdn= {0, 0};
 
 /* product name */
-str product_name = {"AAA FokusFastServer",19};
+str product_name = {"DISC - DIameter Server/Client",29};
 
 /* vendor id */
-unsigned int vendor_id = VENDOR_ID;
+unsigned int vendor_id = 0x0000D15C;
 
 /* listening port */
 unsigned int listen_port = DEFAULT_LISTENING_PORT;
@@ -168,9 +168,14 @@ int disable_ipv6=0;
 /**/
 unsigned int do_relay = 0;
 
-
 /* my status - client, server, statefull server */
 unsigned int my_aaa_status = AAA_UNDEFINED;
+
+/* number of working threads */
+unsigned int worker_threads = DEAFULT_WORKER_THREADS;
+
+/* number of peer threads */
+unsigned int reader_threads = DEFAULT_TCP_RECEIVE_THREADS;
 
 
 
@@ -601,7 +606,19 @@ int init_aaa_core(char* name, char *cfg_file)
 			"not found in config file\n");
 		goto error;
 	}
-	
+	if (worker_threads==0 || worker_threads>MAX_THREADS) {
+		LOG(L_WARN,"WARNING:init_aaa_core: param \"worker_threads\" has an "
+			"invalid value %d (correct range is[1..%d]). Using default value "
+			"of %d.\n",worker_threads,MAX_THREADS,DEAFULT_WORKER_THREADS);
+		worker_threads = DEAFULT_WORKER_THREADS;
+	}
+	if (reader_threads==0 || reader_threads>MAX_THREADS) {
+		LOG(L_WARN,"WARNING:init_aaa_core: param \"reader_threads\" has an "
+			"invalid value %d (correct range is[1..%d]). Using default value "
+			"of %d.\n",reader_threads,MAX_THREADS,DEFAULT_TCP_RECEIVE_THREADS);
+		reader_threads = DEFAULT_TCP_RECEIVE_THREADS;
+	}
+
 	if (working_dir==0) working_dir="/";
 
 	/* get uid/gid */
@@ -656,7 +673,7 @@ int init_aaa_core(char* name, char *cfg_file)
 	}
 
 	/* starts the transport layer - tcp */
-	if (init_tcp_shell(DEFAULT_TCP_RECEIVE_THREADS)==-1) {
+	if (init_tcp_shell( reader_threads )==-1) {
 		goto error;
 	}
 
@@ -687,10 +704,10 @@ int init_aaa_core(char* name, char *cfg_file)
 
 	/* starts the worker threads */
 	if (my_aaa_status==AAA_CLIENT) {
-		if (start_workers( client_worker, DEAFULT_WORKER_THREADS)==-1 )
+		if (start_workers( client_worker, worker_threads )==-1 )
 			goto error;
 	} else {
-		if (start_workers( server_worker, DEAFULT_WORKER_THREADS)==-1 )
+		if (start_workers( server_worker, worker_threads )==-1 )
 			goto error;
 	}
 
@@ -727,6 +744,7 @@ static void sig_handler(int signo)
 				else
 					DBG("SIGTERM received, program terminates\n");
 				destroy_aaa_core();
+				LOG(L_CRIT,"Thank you for rolling the DISC...\n");
 				exit(0);
 				break;
 			case SIGHUP: /* ignoring it*/

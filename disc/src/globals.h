@@ -1,5 +1,5 @@
 /*
- * $Id: globals.h,v 1.8 2003/04/16 17:11:19 andrei Exp $
+ * $Id: globals.h,v 1.9 2003/04/22 15:15:54 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-04-16  added lots of startup config. vars (andrei)
@@ -38,10 +38,10 @@ extern char* pid_file;
 /* aaa_identity string */
 extern str aaa_identity;
 
-/**/
+/* the served realm */
 extern str aaa_realm;
 
-/**/
+/* the FQDN of the machin I'm running on */
 extern str aaa_fqdn;
 
 /* product name */
@@ -50,10 +50,17 @@ extern str product_name;
 /* vendor-id */
 extern unsigned int vendor_id;
 
+/* if the server does or not relaying */
 extern unsigned int do_relay;
 
 /* my status - client, server, statefull server */
 extern unsigned int my_aaa_status;
+
+/* number of working threads */
+extern unsigned int worker_threads;
+
+/* number of peer threads */
+extern unsigned int reader_threads;
 
 #endif
 

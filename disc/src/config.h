@@ -1,5 +1,5 @@
 /*
- * $Id: config.h,v 1.7 2003/04/14 15:52:08 andrei Exp $
+ * $Id: config.h,v 1.8 2003/04/22 15:15:53 bogdan Exp $
  */
 /* History:
  * --------
@@ -20,15 +20,16 @@
 #define DEFAULT_TRANS_HASH_SIZE   256
 
 /* default number of receiving thread for tcp */
-#define DEFAULT_TCP_RECEIVE_THREADS 4
+#define DEFAULT_TCP_RECEIVE_THREADS 2
 
 /* default number of working threads */
-#define DEAFULT_WORKER_THREADS  4
+#define DEAFULT_WORKER_THREADS  2
+
+/* maximum number of threads */
+#define MAX_THREADS 1024
+
 
 #define MAX_REALM_LEN 128
-
-
-#define VENDOR_ID   0x0000caca
 
 #endif
 

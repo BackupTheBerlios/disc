@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_init.c,v 1.10 2003/04/21 21:09:26 andrei Exp $
+ * $Id: cfg_init.c,v 1.11 2003/04/22 15:15:53 bogdan Exp $
  *
  * History:
  * --------
@@ -39,26 +39,28 @@ static int cfg_set_mod_param(struct cfg_line* cl, void* unused);
 
 /* config info (null terminated array)*/
 struct cfg_def cfg_ids[]={
-	{"debug",         INT_VAL,   &debug,        0                    },
-	{"log_stderr",    INT_VAL,   &log_stderr,   0                    },
-	{"aaa_realm",     STR_VAL,   &aaa_realm,    0                    },
-	{"aaa_fqdn",      STR_VAL,   &aaa_fqdn,     0                    },
-	{"listen_port",   INT_VAL,   &listen_port,  0                    },
-	{"aaa_status",    STR_VAL,   0,              cfg_set_aaa_status  },
-	{"dont_fork",     INT_VAL,   &dont_fork,    0                    },
-	{"chroot",        STR_VAL,   &chroot_dir,   0                    },
-	{"workdir",       STR_VAL,   &working_dir,  0                    },
-	{"user",          STR_VAL,   &user,         0                    },
-	{"group",         STR_VAL,   &group,        0                    },
-	{"pid_file",      STR_VAL,   &pid_file,     0                    },
-	{"module_path",   STR_VAL,   &module_path,   cfg_set_module_path },
-	{"set_mod_param", GEN_VAL,   0,              cfg_set_mod_param   },
-	{"module",        GEN_VAL,   0,              cfg_load_modules    },
-	{"peer",          GEN_VAL,   add_cfg_peer,   cfg_addpair         },
-	{"route",         GEN_VAL,   add_route,      cfg_addpair         },
-	{"echo",          GEN_VAL,   0,              cfg_echo            },
-	{"_error",        GEN_VAL,   0,              cfg_error           },
-	{"include",       STR_VAL,   0,              cfg_include         },
+	{"debug",         INT_VAL,   &debug,           0                   },
+	{"log_stderr",    INT_VAL,   &log_stderr,      0                   },
+	{"aaa_realm",     STR_VAL,   &aaa_realm,       0                   },
+	{"aaa_fqdn",      STR_VAL,   &aaa_fqdn,        0                   },
+	{"listen_port",   INT_VAL,   &listen_port,     0                   },
+	{"worker_threads",INT_VAL,   &worker_threads,  0                   },
+	{"reader_threads",INT_VAL,   &reader_threads,  0                   },
+	{"aaa_status",    STR_VAL,   0,                cfg_set_aaa_status  },
+	{"dont_fork",     INT_VAL,   &dont_fork,       0                   },
+	{"chroot",        STR_VAL,   &chroot_dir,      0                   },
+	{"workdir",       STR_VAL,   &working_dir,     0                   },
+	{"user",          STR_VAL,   &user,            0                   },
+	{"group",         STR_VAL,   &group,           0                   },
+	{"pid_file",      STR_VAL,   &pid_file,        0                   },
+	{"module_path",   STR_VAL,   &module_path,     cfg_set_module_path },
+	{"set_mod_param", GEN_VAL,   0,                cfg_set_mod_param   },
+	{"module",        GEN_VAL,   0,                cfg_load_modules    },
+	{"peer",          GEN_VAL,   add_cfg_peer,     cfg_addpair         },
+	{"route",         GEN_VAL,   add_route,        cfg_addpair         },
+	{"echo",          GEN_VAL,   0,                cfg_echo            },
+	{"_error",        GEN_VAL,   0,                cfg_error           },
+	{"include",       STR_VAL,   0,                cfg_include         },
 	{0,0,0,0}
 };
 
