@@ -1,5 +1,5 @@
 /*
- * $Id: sh_mutex.c,v 1.2 2003/03/12 18:12:22 andrei Exp $
+ * $Id: sh_mutex.c,v 1.3 2003/03/13 13:07:55 andrei Exp $
  *
  * 2003-02-26 created by bogdan
  *
@@ -8,12 +8,13 @@
 #include "dprint.h"
 #include "utils/aaa_lock.h"
 #include "utils/counter.h"
+#include "locking.h"
 
 
 #define NR_SHARED_MUTEXES 256
 
 
-static aaa_lock   *shared_mutexes=0;
+static gen_lock_t   *shared_mutexes=0;
 static atomic_cnt  mutex_counter;
 
 
@@ -46,7 +47,7 @@ void destroy_shared_mutexes()
 }
 
 
-aaa_lock *get_shared_mutex()
+gen_lock_t *get_shared_mutex()
 {
 	atomic_inc(&mutex_counter);
 	return &(shared_mutexes[(mutex_counter.value)|(NR_SHARED_MUTEXES-1)]);

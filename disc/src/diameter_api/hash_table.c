@@ -1,8 +1,9 @@
 /*
- * $Id: hash_table.c,v 1.2 2003/03/12 18:12:22 andrei Exp $
+ * $Id: hash_table.c,v 1.3 2003/03/13 13:07:55 andrei Exp $
  *
  * 2003-01-29  created by bogdan
  * 2003-03-12  converted to use shm_malloc (andrei)
+ * 2003-03-13  converted to locking.h /gen_lock_t (andrei)
  *
  */
 
@@ -27,7 +28,7 @@ static void default_cell_destroyer( void *link ) { shm_free(link); }
 struct h_table* build_htable( )
 {
 	struct h_table *table;
-	aaa_lock       *entry_locks;
+	gen_lock_t       *entry_locks;
 	int            i;
 
 	/* inits */
@@ -139,7 +140,7 @@ int add_cell_to_htable( struct h_table *table, struct h_link *link)
 
 	entry = &(table->entrys[link->hash_code]);
 	/* get the mutex for the entry */
-	lock( entry->mutex );
+	lock_get( entry->mutex );
 
 	/* get a label for this session */
 	link->label = entry->next_label++;
@@ -152,7 +153,7 @@ int add_cell_to_htable( struct h_table *table, struct h_link *link)
 	entry->tail = link;
 
 	/* release the mutex */
-	unlock( entry->mutex );
+	lock_release( entry->mutex );
 	return 1;
 }
 

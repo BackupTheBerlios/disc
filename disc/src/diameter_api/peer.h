@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.13 2003/03/12 18:58:55 bogdan Exp $
+ * $Id: peer.h,v 1.14 2003/03/13 13:07:55 andrei Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -9,7 +9,7 @@
 #define _AAA_DIAMETER_PEER_H
 
 #include "utils/str.h"
-#include "utils/aaa_lock.h"
+#include "locking.h"
 #include "utils/counter.h"
 #include "utils/ip_addr.h"
 #include "utils/list.h"
@@ -35,7 +35,7 @@ struct tcp_info {
 
 struct safe_list_head {
 	struct list_head lh;
-	aaa_lock         *mutex;
+	gen_lock_t         *mutex;
 };
 
 
@@ -53,7 +53,7 @@ struct peer {
 	struct list_head  all_peer_lh;
 	struct list_head  thd_peer_lh;
 	/* mutex for changing the status */
-	aaa_lock *mutex;
+	gen_lock_t *mutex;
 	/* ref counter*/
 	atomic_cnt ref_cnt;
 	/* timer */
@@ -85,7 +85,7 @@ struct p_table {
 	/* the peer list */
 	struct list_head peers ;
 	/* mutex for manipulating the list */
-	aaa_lock *mutex;
+	gen_lock_t *mutex;
 	/* buffers used for a fater CE, WD, DP creation */
 	str std_req;
 	str std_ans;
@@ -178,7 +178,7 @@ static inline struct peer* lookup_peer_by_host( str *host )
 	struct list_head *lh;
 	struct peer *p;
 
-	lock( peer_table->mutex );
+	lock_get( peer_table->mutex );
 
 	list_for_each( lh, &(peer_table->peers)) {
 		p = list_entry( lh, struct peer, all_peer_lh);
@@ -189,7 +189,7 @@ static inline struct peer* lookup_peer_by_host( str *host )
 		}
 	}
 
-	unlock( peer_table->mutex );
+	lock_release( peer_table->mutex );
 	return p;
 }
 
@@ -200,7 +200,7 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 	struct list_head *lh;
 	struct peer *p;
 
-	lock( peer_table->mutex );
+	lock_get( peer_table->mutex );
 
 	list_for_each( lh, &(peer_table->peers)) {
 		p = list_entry( lh, struct peer, all_peer_lh);
@@ -211,7 +211,7 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 		}
 	}
 
-	unlock( peer_table->mutex );
+	lock_release( peer_table->mutex );
 	return p;
 }
 
@@ -222,7 +222,7 @@ static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 	struct list_head *lh;
 	struct peer *p;
 
-	lock( peer_table->mutex );
+	lock_get( peer_table->mutex );
 
 	list_for_each( lh, &(peer_table->peers)) {
 		p = list_entry( lh, struct peer, all_peer_lh);
@@ -232,7 +232,7 @@ static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 		}
 	}
 
-	unlock( peer_table->mutex );
+	lock_release( peer_table->mutex );
 	return p;
 }
 

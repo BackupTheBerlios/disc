@@ -1,7 +1,8 @@
 /*
- * $Id: hash_table.h,v 1.3 2003/03/12 18:12:22 andrei Exp $
+ * $Id: hash_table.h,v 1.4 2003/03/13 13:07:55 andrei Exp $
  *
  * 2003-01-29 created by bogdan
+ * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
  *
  */
 
@@ -11,9 +12,10 @@
 #define _AAA_DIAMETER_HASH_TABLE_H
 
 
-#include "utils/aaa_lock.h"
+#include "locking.h"
 #include "dprint.h"
 #include "utils/str.h"
+#include "utils/aaa_lock.h"
 
 
 /*
@@ -63,7 +65,7 @@ struct h_entry {
 	struct h_link *head;
 	struct h_link *tail;
 	/* mutex for manipulating the linked list in critical region */
-	aaa_lock *mutex;
+	gen_lock_t *mutex;
 	/* each session from this entry will take a different label */
 	unsigned int next_label;
 };
@@ -111,11 +113,11 @@ static inline void remove_cell_from_htable(struct h_table *table ,
 
 	entry = &(table->entrys[link->hash_code]);
 	/* get the mutex for the entry */
-	lock( entry->mutex );
+	lock_get( entry->mutex );
 	/* remove the entry */
 	remove_cell_from_htable_unsafe( entry , link );
 	/* release the mutex */
-	unlock( entry->mutex );
+	lock_release( entry->mutex );
 }
 
 
@@ -125,7 +127,7 @@ static inline struct h_link *cell_lookup(struct h_table *table,
 {
 	struct h_link *link;
 	/* lock the hash entry */
-	lock( table->entrys[hash_code].mutex );
+	lock_get( table->entrys[hash_code].mutex );
 	/* looks into the the sessions hash table */
 	link = table->entrys[hash_code].head;
 	while ( link && (link->label!=label || link->type!=type) )
@@ -134,7 +136,7 @@ static inline struct h_link *cell_lookup(struct h_table *table,
 	if (rm && link)
 		remove_cell_from_htable_unsafe( &(table->entrys[hash_code]), link);
 	/* unlock the entry */
-	unlock( table->entrys[hash_code].mutex );
+	lock_release( table->entrys[hash_code].mutex );
 	return link;
 }
 

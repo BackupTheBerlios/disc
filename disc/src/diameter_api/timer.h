@@ -1,5 +1,5 @@
 /*
- * $Id: timer.h,v 1.2 2003/03/12 18:59:25 bogdan Exp $
+ * $Id: timer.h,v 1.3 2003/03/13 13:07:55 andrei Exp $
  *
  */
 
@@ -9,6 +9,7 @@
 #define _AAA_DIAMETER_TIMER_H
 
 #include "utils/aaa_lock.h"
+#include "locking.h"
 
 
 #define TIMER_TICK 1
@@ -45,7 +46,7 @@ typedef struct  timer
 {
 	struct timer_link  first_tl;
 	struct timer_link  last_tl;
-	aaa_lock*          mutex;
+	gen_lock_t*          mutex;
 } timer_type;
 
 

@@ -1,14 +1,15 @@
 /*
- * $Id: message.h,v 1.5 2003/03/11 18:06:29 bogdan Exp $
+ * $Id: message.h,v 1.6 2003/03/13 13:07:55 andrei Exp $
  *
  * 2003-02-07 created by bogdan
+ * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
  *
  */
 
 #ifndef _AAA_DIAMETER_MESSAGE_H
 #define _AAA_DIAMETER_MESSAGE_H
 
-#include "utils/aaa_lock.h"
+#include "locking.h"
 #include "diameter_types.h"
 #include "peer.h"
 #include "session.h"
@@ -17,9 +18,9 @@
 
 struct msg_manager {
 	unsigned int  hop_by_hop;
-	aaa_lock     *hop_by_hop_lock;
+	gen_lock_t     *hop_by_hop_lock;
 	unsigned int  end_to_end;
-	aaa_lock     *end_to_end_lock;
+	gen_lock_t     *end_to_end_lock;
 };
 
 

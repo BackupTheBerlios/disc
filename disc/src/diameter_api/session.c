@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.2 2003/03/12 18:12:22 andrei Exp $
+ * $Id: session.c,v 1.3 2003/03/13 13:07:55 andrei Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -15,6 +15,7 @@
 #include "globals.h"
 #include "utils/misc.h"
 #include "utils/aaa_lock.h"
+#include "locking.h"
 #include "hash_table.h"
 #include "session.h"
 
@@ -135,7 +136,7 @@ int generate_sessionID( AAASessionId* sID, unsigned int end_pad_len)
 	p += aaa_identity.len;
 	*(p++) = ';';
 	/* lock the mutex for accessing "sID_gen" var */
-	lock( sID_gen->mutex );
+	lock_get( sID_gen->mutex );
 	/* high 32 bits */
 	p += int2str( sID_gen->monoton_sID[1] , p, 10);
 	*(p++) = ';';
@@ -143,7 +144,7 @@ int generate_sessionID( AAASessionId* sID, unsigned int end_pad_len)
 	p += int2str( sID_gen->monoton_sID[0] , p, 10);
 	/* unlock the mutex after the 64 biti value is inc */
 	inc_64biti( sID_gen->monoton_sID );
-	unlock( sID_gen->mutex );
+	lock_release( sID_gen->mutex );
 	/* optional value*/
 	*(p++) = ';';
 	p += int2hexstr( rand() , p, 8);

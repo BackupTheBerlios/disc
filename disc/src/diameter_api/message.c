@@ -1,8 +1,9 @@
 /*
- * $Id: message.c,v 1.8 2003/03/12 18:58:55 bogdan Exp $
+ * $Id: message.c,v 1.9 2003/03/13 13:07:55 andrei Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
+ * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
  */
 
 #include <stdlib.h>
@@ -19,7 +20,7 @@
 #include "dprint.h"
 #include "utils/str.h"
 #include "utils/misc.h"
-#include "utils/aaa_lock.h"
+#include "locking.h"
 #include "globals.h"
 #include "peer.h"
 #include "message.h"
@@ -56,7 +57,7 @@ struct msg_manager  *msg_mgr=0;
  */
 int init_msg_manager()
 {
-	aaa_lock *locks;
+	gen_lock_t *locks;
 
 	/* build a new msg_manager structure */
 	msg_mgr = (struct msg_manager*)shm_malloc( sizeof(struct msg_manager) );
@@ -106,9 +107,9 @@ void destroy_msg_manager()
 inline static AAAMsgIdentifier generate_endtoendID()
 {
 	unsigned int id;
-	lock( msg_mgr->end_to_end_lock );
+	lock_get( msg_mgr->end_to_end_lock );
 	id = msg_mgr->end_to_end++;
-	unlock( msg_mgr->end_to_end_lock );
+	lock_release( msg_mgr->end_to_end_lock );
 	return id;
 }
 

@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: session.h,v 1.2 2003/03/13 13:07:55 andrei Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -13,6 +13,7 @@
 #include "diameter_types.h"
 #include "utils/aaa_lock.h"
 #include "hash_table.h"
+#include "locking.h"
 
 
 /* all possible states of the session state machine */
@@ -62,7 +63,7 @@ struct session_ID_gen {
 	 * in session ID generation */
 	unsigned int monoton_sID[2];
 	/* mutex */
-	aaa_lock *mutex;
+	gen_lock_t *mutex;
 };
 
 

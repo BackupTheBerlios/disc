@@ -1,8 +1,9 @@
 /*
- * $Id: peer.c,v 1.20 2003/03/12 19:05:22 andrei Exp $
+ * $Id: peer.c,v 1.21 2003/03/13 13:07:55 andrei Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
+ * 2003-03-13  converted to locking.h/gen_lock_t (andrei)
  *
  */
 
@@ -15,7 +16,7 @@
 #include "utils/str.h"
 #include "diameter_types.h"
 #include "diameter_api.h"
-#include "utils/aaa_lock.h"
+#include "locking.h"
 #include "utils/str.h"
 #include "utils/ip_addr.h"
 #include "utils/resolve.h"
@@ -43,16 +44,16 @@
 
 #define list_add_tail_safe( _lh_ , _list_ ) \
 	do{ \
-		lock( (_list_)->mutex );\
+		lock_get( (_list_)->mutex );\
 		list_add_tail( (_lh_), &((_list_)->lh) );\
-		unlock( (_list_)->mutex );\
+		lock_release( (_list_)->mutex );\
 	}while(0);
 
 #define list_del_safe( _lh_ , _list_ ) \
 	do{ \
-		lock( (_list_)->mutex );\
+		lock_get( (_list_)->mutex );\
 		list_del( (_lh_) );\
-		unlock( (_list_)->mutex );\
+		lock_release( (_list_)->mutex );\
 	}while(0);
 
 
@@ -434,9 +435,9 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 	p->fd = get_new_receive_thread();
 
 	/* insert the peer into the list */
-	lock( peer_table->mutex );
+	lock_get( peer_table->mutex );
 	list_add_tail( &(p->all_peer_lh), &(peer_table->peers) );
-	unlock( peer_table->mutex );
+	lock_release( peer_table->mutex );
 
 	/* give the peer to the designated thread */
 	write_command( p->fd, ADD_PEER_CMD, 0, p, 0);
@@ -894,7 +895,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 
 	switch (event) {
 		case TCP_ACCEPT:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: accepting connection\n");
@@ -913,16 +914,16 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 						get_ticks()+WAIT_CER_TIMEOUT);
 					/* the new state */
 					p->state = PEER_WAIT_CER;
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case TCP_CONNECTED:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: connect finished ->"
@@ -940,16 +941,16 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 						tcp_close( p );
 						reset_peer( p );
 					}
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case TCP_CONN_IN_PROG:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: connect in progress\n");
@@ -957,71 +958,71 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					info = (struct tcp_info*)ptr;
 					p->sock = info->sock;
 					p->flags |= PEER_CONN_IN_PROG;
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case TCP_CONN_FAILED:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: connect failed\n");
 					reset_peer( p );
 					p->state = PEER_UNCONN;
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case TCP_CLOSE:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			DBG("DEBUG:peer_state_machine: closing connection\n");
 			tcp_close( p );
 			reset_peer( p );
 			/* new state */
 			p->state = PEER_UNCONN;
-			unlock( p->mutex );
+			lock_release( p->mutex );
 			break;
 		case PEER_CER_TIMEOUT:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_CER:
 					DBG("DEBUG:peer_state_machine: CER not received!\n");
 					tcp_close( p );
 					reset_peer( p );
 					p->state = PEER_UNCONN;
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case PEER_RECONN_TIMEOUT:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: reconnecting peer\n");
 					if (p->flags&PEER_CONN_IN_PROG)
 						tcp_close( p );
 					write_command( p->fd, CONNECT_CMD, 0, p, 0);
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					DBG("DEBUG:peer_state_machine: no reason to reconnect\n");
 			}
 			break;
 		case PEER_TR_TIMEOUT:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_DWA:
 					list_del_safe( &p->lh , &activ_peers );
@@ -1031,16 +1032,16 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					tcp_close( p );
 					reset_peer( p );
 					p->state = PEER_UNCONN;
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case CEA_RECEIVED:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_CEA:
 					DBG("DEBUG:peer_state_machine: CEA received\n");
@@ -1052,16 +1053,16 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 						list_add_tail_safe( &p->lh, &activ_peers );
 						p->state = PEER_CONN;
 					}
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case CER_RECEIVED:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_CER:
 					/* if peer in wait_cer timer list-> take it out */
@@ -1087,16 +1088,16 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 						reset_peer( p );
 						p->state = PEER_UNCONN;
 					}
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case DWR_RECEIVED:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_CONN:
 				case PEER_WAIT_DWA:
@@ -1109,16 +1110,16 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					} else {
 						send_dwa( (struct trans*)ptr, AAA_SUCCESS);
 					}
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case PEER_IS_INACTIV:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_CONN:
 					if (p->last_activ_time+SEND_DWR_TIMEOUT<=get_ticks()) {
@@ -1133,34 +1134,34 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 							"alarm -> cancel sending\n");
 						list_add_tail_safe( &p->lh, &activ_peers );
 					}
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
 					LOG(L_CRIT,"BUUUUG:peer_state_machine: peer_is_inactiv "
 						"triggered outside PEER_CONN state!\n");
 					list_add_tail_safe( &p->lh, &activ_peers );
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case DWA_RECEIVED:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_DWA:
 					process_dw( p, (str*)ptr, 0 );
 					list_add_tail_safe( &p->lh, &activ_peers );
 					p->state = PEER_CONN;
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case DPR_RECEIVED:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_CONN:
 				case PEER_WAIT_DWA:
@@ -1177,31 +1178,31 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					tcp_close( p );
 					reset_peer( p );
 					p->state = PEER_UNCONN;
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case DPA_RECEIVED:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_DPA:
 					tcp_close( p );
 					reset_peer( p );
 					p->state = PEER_UNCONN;
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
 		case PEER_HANGUP:
-			lock( p->mutex );
+			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_CONN:
 					list_del_safe( &p->lh , &activ_peers );
@@ -1214,10 +1215,10 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					} else {
 						p->state = PEER_WAIT_DPA;
 					}
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					break;
 				default:
-					unlock( p->mutex );
+					lock_release( p->mutex );
 					error_code = 1;
 					goto error;
 			}
@@ -1289,7 +1290,7 @@ void peer_timer_handler(unsigned int ticks, void* param)
 
 	/* ACTIV_PEERS LIST */
 	if ( !list_empty(&(activ_peers.lh)) ) {
-		lock( activ_peers.mutex );
+		lock_get( activ_peers.mutex );
 		list_for_each_safe( lh, foo, &(activ_peers.lh)) {
 			p  = list_entry( lh , struct peer , lh);
 			if (p->last_activ_time+SEND_DWR_TIMEOUT<=ticks) {
@@ -1301,7 +1302,7 @@ void peer_timer_handler(unsigned int ticks, void* param)
 				break;
 			}
 		}
-		unlock( activ_peers.mutex );
+		lock_release( activ_peers.mutex );
 	}
 
 }

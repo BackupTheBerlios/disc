@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.4 2003/03/12 18:59:25 bogdan Exp $
+ * $Id: timer.c,v 1.5 2003/03/13 13:07:55 andrei Exp $
  *
  * 
  *  2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -16,6 +16,7 @@
 #include "timer.h"
 
 #include "mem/shm_mem.h"
+#include "locking.h"
 
 
 
@@ -189,7 +190,7 @@ int add_to_timer_list( struct timer_link* tl, struct timer* timer_list,
 														unsigned int timeout )
 {
 	/* lock the list */
-	lock(timer_list->mutex);
+	lock_get(timer_list->mutex);
 	/* add the element into the list */
 	tl->timeout = timeout;
 	tl->prev_tl = timer_list->last_tl.prev_tl;
@@ -198,7 +199,7 @@ int add_to_timer_list( struct timer_link* tl, struct timer* timer_list,
 	tl->prev_tl->next_tl = tl;
 	tl->timer_list = timer_list;
 	/* unlock the list */
-	unlock(timer_list->mutex);
+	lock_release(timer_list->mutex);
 
 	DBG("DEBUG: add_to_timer_list[%p]: %p\n",timer_list,tl);
 	return 1;
@@ -210,14 +211,14 @@ int rmv_from_timer_list( struct timer_link* tl )
 {
 	if (is_in_timer_list( tl )) {
 		/* lock the list */
-		lock(tl->timer_list->mutex);
+		lock_get(tl->timer_list->mutex);
 		tl->prev_tl->next_tl = tl->next_tl;
 		tl->next_tl->prev_tl = tl->prev_tl;
 		tl->next_tl = 0;
 		tl->prev_tl = 0;
 		/* unlock the list */
 		DBG("DEBUG: rmv_from_timer_list[%p]: %p\n",tl->timer_list,tl);
-		unlock(tl->timer_list->mutex);
+		lock_release(tl->timer_list->mutex);
 		tl->timer_list = 0;
 	}
 	return 1;
@@ -237,7 +238,7 @@ struct timer_link* get_expired_from_timer_list( struct timer* timer_list ,
 		return NULL;
 
 	/* the entire timer list is locked now */
-	lock(timer_list->mutex);
+	lock_get(timer_list->mutex);
 
 	end = &timer_list->last_tl;
 	tl = timer_list->first_tl.next_tl;
@@ -259,7 +260,7 @@ struct timer_link* get_expired_from_timer_list( struct timer* timer_list ,
 		tl->prev_tl = & timer_list->first_tl;
 	}
 	/* give the list lock away */
-	unlock(timer_list->mutex);
+	lock_release(timer_list->mutex);
 
 	return ret;
 }
