@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.7 2003/03/14 18:06:58 bogdan Exp $
+ * $Id: diameter_types.h,v 1.8 2003/03/18 12:31:51 ilk Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -45,7 +45,7 @@ typedef void*           AAACallback;
 typedef void*           AAAApplicationId;
 typedef uint8_t         AAAMsgFlag;
 
-
+typedef enum { _B_FALSE, _B_TRUE } boolean_t;
 
 /* Status codes returned by functions in the AAA API */
 typedef enum {
