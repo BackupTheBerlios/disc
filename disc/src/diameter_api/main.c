@@ -34,7 +34,7 @@ static void sig_handler(int signo)
 
 int main(int argc, char *argv[])
 {
-	if( AAAOpen("cucu.txt")!=AAA_ERR_SUCCESS ) {
+	if( AAAOpen("aaa_lib.cfg")!=AAA_ERR_SUCCESS ) {
 		return -1;
 	}
 

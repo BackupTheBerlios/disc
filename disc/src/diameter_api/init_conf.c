@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.10 2003/03/13 18:46:16 bogdan Exp $
+ * $Id: init_conf.c,v 1.11 2003/03/13 18:56:48 andrei Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -163,13 +163,13 @@ AAAReturnCode AAAOpen(char *configFileName)
 	};
 
 	/* read the config file */
-	if ((cfg_file=fopen(AAA_LIB_CFG, "r"))==0){
+	if ((cfg_file=fopen(configFileName, "r"))==0){
 		LOG(L_CRIT, "ERROR: reading config file: %s\n", strerror(errno));
 		goto error_config;
 	}
 	if (cfg_parse_stream(cfg_file)!=0){
 		fclose(cfg_file);
-		LOG(L_CRIT, "ERROR: reading config file(%s)\n", AAA_LIB_CFG);
+		LOG(L_CRIT, "ERROR: reading config file(%s)\n", configFileName);
 		goto error_config;
 	}
 	fclose(cfg_file);
