@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.4 2003/04/10 23:54:02 bogdan Exp $
+ * $Id: worker.c,v 1.5 2003/04/11 00:46:57 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -221,6 +221,14 @@ void *server_worker(void *attr)
 			msg->no_ses = 1;
 			msg->in_peer = in_peer;
 			DBG(" ******** request received!!! \n");
+			if (msg->commandCode==274 || msg->commandCode==258 ||
+			msg->commandCode==275 ) {
+				LOG(L_ERR,"ERROR:server_worker: request 274(ASR)/258(RAR)/"
+					"275(275) received - unsupported -> droping!\n");
+				send_error_reply( msg, AAA_COMMAND_UNSUPPORTED);
+				AAAFreeMessage( &msg );
+				continue;
+			}
 			if (!msg->sessionId || !msg->orig_host || !msg->orig_realm ||
 			!msg->dest_realm) {
 				LOG(L_ERR,"ERROR:server_worker: message without sessionId/"
