@@ -11626,7 +11626,7 @@ fi
 
 
 
-                                                                                          ac_config_files="$ac_config_files Makefile src/Makefile src/client/Makefile src/diameter_msg/Makefile src/diameter_api/Makefile src/mem/Makefile src/transport/Makefile src/client/modules/Makefile src/client/modules/print/Makefile"
+                                                                                                    ac_config_files="$ac_config_files Makefile src/Makefile src/client/Makefile src/server/Makefile src/diameter_msg/Makefile src/diameter_api/Makefile src/mem/Makefile src/transport/Makefile src/client/modules/Makefile src/client/modules/print/Makefile"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -12204,6 +12204,7 @@ do
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
   "src/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
   "src/client/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/client/Makefile" ;;
+  "src/server/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/server/Makefile" ;;
   "src/diameter_msg/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/diameter_msg/Makefile" ;;
   "src/diameter_api/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/diameter_api/Makefile" ;;
   "src/mem/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/mem/Makefile" ;;
