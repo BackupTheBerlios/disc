@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.33 2003/04/16 17:31:52 bogdan Exp $
+ * $Id: peer.c,v 1.34 2003/04/16 20:03:40 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -578,11 +578,13 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 int send_res_to_peer( str *buf, struct peer *p)
 {
 	lock_get( p->mutex );
-	if ( p->state==PEER_CONN ) {
+	if ( p->state==PEER_CONN || p->state==PEER_WAIT_DWA) {
 		if (safe_write( p, buf->s, buf->len)!=-1) {
 			lock_release( p->mutex);
 			return 1;
 		}
+	} else {
+		LOG(L_INFO,"ERROR:send_res_to_peer: peer is not connected\n");
 	}
 
 	lock_release( p->mutex);
@@ -1090,7 +1092,6 @@ void dispatch_message( struct peer *p, str *buf)
 
 	/* reset the inactivity time */
 	p->last_activ_time = get_ticks();
-	DBG(">>>>> new lat_activ_time %d\n",p->last_activ_time);
 
 	/* get message code */
 	code = ((unsigned int*)buf->s)[1]&MASK_MSG_CODE;
@@ -1609,7 +1610,6 @@ void peer_timer_handler(unsigned int ticks, void* param)
 		list_for_each_safe( lh, foo, &(activ_peers.lh)) {
 			p  = list_entry( lh , struct peer , lh);
 			if (p->last_activ_time+SEND_DWR_TIMEOUT<=ticks) {
-				DBG(">>>>> inactivity since %d\n",p->last_activ_time);
 				/* remove it from the list */
 				list_del_zero( lh );
 				/* send command to peer */
