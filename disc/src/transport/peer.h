@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.6 2003/03/17 17:54:14 bogdan Exp $
+ * $Id: peer.h,v 1.7 2003/03/18 17:29:53 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -19,10 +19,6 @@
 
 struct peer;
 #include "tcp_shell.h"
-
-
-#define PEER_TO_DESTROY    1<<0
-#define PEER_CONN_IN_PROG  1<<1
 
 
 
@@ -148,6 +144,19 @@ typedef enum {
 extern struct p_table *peer_table;
 /* List with all known application identifiers */
 extern unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ];
+
+
+
+#define PEER_TO_DESTROY    1<<0
+#define PEER_CONN_IN_PROG  1<<1
+
+
+#define for_all_AVPS_do_switch( _buf_ , _foo_ , _ptr_ ) \
+	for( (_ptr_) =  (_buf_)->s + AAA_MSG_HDR_SIZE, (_foo_)=(_ptr_) ;\
+	(_ptr_) < (_buf_)->s+(_buf_)->len ;\
+	(_ptr_) = (_foo_)+to_32x_len((ntohl( ((unsigned int *)(_foo_))[1] )&\
+	0x00ffffff)), (_foo_) = (_ptr_) ) \
+		switch( ntohl( ((unsigned int *)(_ptr_))[0] ) )
 
 
 

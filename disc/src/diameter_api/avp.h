@@ -1,5 +1,5 @@
 /*
- * $Id: avp.h,v 1.4 2003/03/11 21:18:15 bogdan Exp $
+ * $Id: avp.h,v 1.5 2003/03/18 17:29:11 bogdan Exp $
  *
  * 2003-02-04 created by bogdan
  *
@@ -11,21 +11,6 @@
 
 #include "diameter_types.h"
 
-
-#define AVP_HDR_SIZE  (AVP_CODE_SIZE+AVP_FLAGS_SIZE+AVP_LENGTH_SIZE)
-
-#define to_32x_len( _len_ ) \
-	( (_len_)+(((_len_)&3)?4-((_len_)&3):0) )
-
-#define for_all_AVPS_do_switch( _buf_ , _foo_ , _ptr_ ) \
-	for( (_ptr_) =  (_buf_)->s + AAA_MSG_HDR_SIZE, (_foo_)=(_ptr_) ;\
-	(_ptr_) < (_buf_)->s+(_buf_)->len ;\
-	(_ptr_) = (_foo_)+to_32x_len((ntohl( ((unsigned int *)(_foo_))[1] )&\
-	0x00ffffff)), (_foo_) = (_ptr_) ) \
-		switch( ntohl( ((unsigned int *)(_ptr_))[0] ) )
-
-#define set_AVP_mask( _mask_, _pos_) \
-	do{ (_mask_)|=1<<(_pos_); }while(0)
 
 
 #if 0

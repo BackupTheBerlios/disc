@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.4 2003/03/17 15:52:05 bogdan Exp $
+ * $Id: session.h,v 1.5 2003/03/18 17:29:40 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -56,14 +56,16 @@ enum AAA_EVENTS {
 
 
 /*
- * structure that contains all information needed for generating session-IDs
+ * all session manager's info packed
  */
-struct session_ID_gen {
+struct session_manager {
 	/* vector used to store the monotonically increasing 64-bit value used
 	 * in session ID generation */
 	unsigned int monoton_sID[2];
 	/* mutex */
-	gen_lock_t *mutex;
+	gen_lock_t *sID_mutex;
+	/* hash_table for the sessions */
+	struct h_table *ses_table;
 };
 
 
@@ -75,19 +77,23 @@ struct session {
 	struct h_link  linker;
 	/* AAA info */
 	unsigned short peer_identity;        /* is it a client, server ....? */
-	AAASessionId sID;                    /* session-ID as string */
+	str sID;                             /* session-ID as string */
+	/* callbacks */
+	AAACallback abort_callback;
 	unsigned int session_timeout;
 	unsigned int request_timeout;
 	unsigned int state;
 };
 
 
+/* session-IDs manager */
+extern struct session_manager  ses_mgr;
 
 
 
 /* builds and init all variables/structures needed for session management
  */
-int init_session_manager();
+int init_session_manager( unsigned int ses_hash_size );
 
 
 /*
@@ -97,7 +103,7 @@ void shutdown_session_manager();
 
 /* parse a session-Id and retrive the hash-code and label from it
  */
-int parse_sessionID(AAASessionId* ,unsigned int* ,unsigned int* );
+int parse_sessionID( str* ,unsigned int* ,unsigned int* );
 
 
 /*
@@ -107,16 +113,15 @@ int session_state_machine( struct session* , enum AAA_EVENTS event);
 
 /* search into hash table a session, based on session-Id
  */
-inline static struct session* session_lookup(struct h_table *table, 
+inline static struct session* session_lookup(struct h_table *table,
 															AAASessionId *sID)
 {
 	unsigned int   hash_code;
 	unsigned int   label;
 
-	if (parse_sessionID(  sID, &hash_code, &label)!=1)
+	if (parse_sessionID(  sID->val, &hash_code, &label)!=1)
 		return 0;
-	return (struct session*)cell_lookup
-		( table, hash_code, label);
+	return (struct session*)cell_lookup( table, hash_code, label);
 }
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.9 2003/03/18 16:00:19 andrei Exp $
+ * $Id: diameter_types.h,v 1.10 2003/03/18 17:29:11 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -29,7 +29,29 @@
 #define AAA_MSG_HDR_SIZE  \
 	(VER_SIZE + MESSAGE_LENGTH_SIZE + FLAGS_SIZE + COMMAND_CODE_SIZE +\
 	APPLICATION_ID_SIZE+HOP_BY_HOP_IDENTIFIER_SIZE+END_TO_END_IDENTIFIER_SIZE)
+#define AVP_HDR_SIZE  \
+	(AVP_CODE_SIZE+AVP_FLAGS_SIZE+AVP_LENGTH_SIZE)
 
+
+#if (__BYTE_ORDER==LITTLE_ENDIAN)
+	#define AS_MSG_CODE      0x12010000
+	#define AC_MSG_CODE      0x0f010000
+	#define CE_MSG_CODE      0x01010000
+	#define DW_MSG_CODE      0x18010000
+	#define DP_MSG_CODE      0x1a010000
+	#define RA_MSG_CODE      0x02010000
+	#define ST_MSG_CODE      0x13010000
+	#define MASK_MSG_CODE    0xffffff00
+#else
+	#define AS_MSG_CODE      0x00000112
+	#define AC_MSG_CODE      0x0000010f
+	#define CE_MSG_CODE      0x00000101
+	#define DW_MSG_CODE      0x00000118
+	#define DP_MSG_CODE      0x0000011a
+	#define RA_MSG_CODE      0x00000102
+	#define ST_MSG_CODE      0x00000113
+	#define MASK_MSG_CODE    0x00ffffff
+#endif
 
 
 
@@ -40,13 +62,17 @@ typedef unsigned int    AAAExtensionId;
 typedef unsigned int    AAA_AVPCode;
 typedef unsigned int    AAAValue;
 typedef void            AAAServer;
-typedef str             AAASessionId;
 typedef unsigned int    AAAMsgIdentifier;
-typedef void*           AAACallback;
 typedef void*           AAAApplicationId;
 typedef uint8_t         AAAMsgFlag;
 
-typedef enum { _B_FALSE, _B_TRUE } boolean_t;
+
+/*  */
+typedef enum {
+	_B_FALSE,
+	_B_TRUE
+}boolean_t;
+
 
 /* Status codes returned by functions in the AAA API */
 typedef enum {
@@ -235,7 +261,13 @@ typedef struct _message_t {
 } AAAMessage;
 
 
-//typedef AAAReturnCode (*func)(AAAMessage *message) AAACallback;
+typedef struct _session_t {
+	str   *val;
+	void  *ptr;
+}AAASessionId;
+
+
+typedef AAAReturnCode (*AAACallback)(AAAMessage *message);
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.5 2003/03/17 16:39:46 bogdan Exp $
+ * $Id: session.c,v 1.6 2003/03/18 17:29:40 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -23,13 +23,13 @@
 
 
 /* local vars */
-struct session_ID_gen  *sID_gen =0 ;        /* session-IDs generator */
+struct session_manager  ses_mgr;   /* session-IDs manager */
 
 
 
 /* extra functions */
 struct session* create_session( unsigned short peer_id);
-void destroy_session( void *ses);
+void destroy_session( struct session *ses);
 
 
 
@@ -37,26 +37,25 @@ void destroy_session( void *ses);
 /*
  * builds and inits all variables/structures needed for session management
  */
-int init_session_manager()
+int init_session_manager( unsigned int ses_hash_size )
 {
-	/* allocate a new sessionID_gen variable */
-	sID_gen = (struct session_ID_gen*)
-					shm_malloc( sizeof(struct session_ID_gen) );
-	if (!sID_gen) {
-		LOG(L_ERR,"ERROR:generate_sessionID: no more free memory!\n");
-		goto error;
-	}
+	/* init the session manager */
+	memset( &ses_mgr, 0, sizeof(ses_mgr));
+
 	/* init the monoton_sID vector as follows:  the high 32 bits of the 64-bit
 	 * value are initialized to the time, and the low 32 bits are initialized
 	 * to zero */
-	sID_gen->monoton_sID[0] = 0;
-	sID_gen->monoton_sID[1] = (unsigned int)time(0) ;
+	ses_mgr.monoton_sID[0] = 0;
+	ses_mgr.monoton_sID[1] = (unsigned int)time(0) ;
 	/* create the mutex */
-	sID_gen->mutex = create_locks( 1 );
-	if (!sID_gen->mutex) {
+	ses_mgr.sID_mutex = create_locks( 1 );
+	if (!ses_mgr.sID_mutex) {
 		LOG(L_ERR,"ERROR:init_session_manager: cannot create lock!\n");
 		goto error;
 	}
+
+	/* build the hash_table */
+	ses_mgr.ses_table = build_htable( ses_hash_size );
 
 	LOG(L_INFO,"INFO:init_session_manager: session manager started\n");
 	return 1;
@@ -71,16 +70,15 @@ error:
  */
 void shutdown_session_manager()
 {
-	/* the session-ID generator */
-	if (sID_gen) {
-		/* destroy the mutex */
-		if (sID_gen->mutex)
-			destroy_locks( sID_gen->mutex, 1);
-		/* free the memory */
-		shm_free( sID_gen );
-	}
-	LOG(L_INFO,"INFO:shutdown_session_manager: session manager stoped\n");
+	/* destroy the mutex */
+	if (ses_mgr.sID_mutex)
+		destroy_locks( ses_mgr.sID_mutex, 1);
 
+	/* free the hash table */
+	if (ses_mgr.ses_table)
+		destroy_htable( ses_mgr.ses_table );
+
+	LOG(L_INFO,"INFO:shutdown_session_manager: session manager stoped\n");
 	return;
 }
 
@@ -104,7 +102,7 @@ inline void inc_64biti(int *vec_64b)
  * Returns an 1 if success or -1 if error.
  * The function is thread safe
  */
-int generate_sessionID( AAASessionId* sID, unsigned int end_pad_len)
+int generate_sessionID( str *sID, unsigned int end_pad_len)
 {
 	char *p;
 
@@ -116,7 +114,7 @@ int generate_sessionID( AAASessionId* sID, unsigned int end_pad_len)
 	sID->len = aaa_identity.len +
 		1/*;*/ + 10/*high 32 bits*/ +
 		1/*;*/ + 10/*low 32 bits*/ +
-		1/*;*/ + 8/*optinal value*/ +
+		1/*;*/ + 8/*optional value*/ +
 		end_pad_len;
 
 	/* get some memory for it */
@@ -133,15 +131,15 @@ int generate_sessionID( AAASessionId* sID, unsigned int end_pad_len)
 	p += aaa_identity.len;
 	*(p++) = ';';
 	/* lock the mutex for accessing "sID_gen" var */
-	lock_get( sID_gen->mutex );
+	lock_get( ses_mgr.sID_mutex );
 	/* high 32 bits */
-	p += int2str( sID_gen->monoton_sID[1] , p, 10);
+	p += int2str( ses_mgr.monoton_sID[1] , p, 10);
 	*(p++) = ';';
 	/* low 32 bits */
-	p += int2str( sID_gen->monoton_sID[0] , p, 10);
+	p += int2str( ses_mgr.monoton_sID[0] , p, 10);
 	/* unlock the mutex after the 64 biti value is inc */
-	inc_64biti( sID_gen->monoton_sID );
-	lock_release( sID_gen->mutex );
+	inc_64biti( ses_mgr.monoton_sID );
+	lock_release( ses_mgr.sID_mutex );
 	/* optional value*/
 	*(p++) = ';';
 	p += int2hexstr( rand() , p, 8);
@@ -157,8 +155,7 @@ error:
 
 /* extract hash_code and label from sID
  */
-int parse_sessionID( AAASessionId *sID, unsigned int *hash_code,
-														unsigned int *label)
+int parse_sessionID( str *sID, unsigned int *hash_code, unsigned int *label)
 {
 	unsigned int  rang;
 	unsigned int  u;
@@ -249,8 +246,6 @@ struct session* create_session( unsigned short peer_id)
 	}
 	memset( ses, 0, sizeof(struct session));
 
-	/* set the type */
-	//ses->linker.type = SESSION_CELL_TYPE;
 	/* init the session */
 	ses->peer_identity = peer_id;
 	ses->state = AAA_IDLE_STATE;
@@ -262,12 +257,12 @@ error:
 
 
 
-void destroy_session( void *ses)
+void destroy_session( struct session *ses)
 {
 	if (!ses)
 		return;
-	if (((struct session*)ses)->sID.s)
-		shm_free( ((struct session*)ses)->sID.s );
+	if ( ses->sID.s)
+		shm_free( ses->sID.s );
 	shm_free(ses);
 }
 
@@ -440,11 +435,16 @@ error:
 /****************************** API FUNCTIONS ********************************/
 
 
-AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
+AAAReturnCode  AAAStartSession( AAASessionId *sessionId,
 		AAAApplicationId appHandle, char *userName, AAACallback abortCallback)
 {
 	struct session  *session;
 	char            *p;
+
+	if (!sessionId || !userName || !appHandle) {
+		LOG(L_ERR,"ERROR:AAAStartSession: invalid params received!\n");
+		goto error;
+	}
 
 	/* build a new session structure */
 	session = create_session( AAA_SERVER );
@@ -459,10 +459,11 @@ AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 	/* compute the hash code; !!!IMPORTANT!!! -> this must happen before 
 	 * inserting the session into the hash table, otherwise, the entry to
 	 * insert on , will not be known */
-	//session->linker.hash_code = hash( &(session->sID) );
+	session->linker.hash_code = hash( &(session->sID),
+		ses_mgr.ses_table->hash_size );
 
 	/* insert the session into the hash table */
-	//add_cell_to_htable( hash_table, (struct h_link*)session);
+	add_cell_to_htable( ses_mgr.ses_table, (struct h_link*)session);
 
 	/* now we have both the hash_code and the label of the session -> append
 	 * them to the and of session ID */
@@ -474,7 +475,8 @@ AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 	session->sID.len = p - session->sID.s;
 
 	/* return the session-ID */
-	if (sessionId) *sessionId = &(session->sID);
+	sessionId->val = &(session->sID);
+	sessionId->ptr = session;
 
 	return AAA_ERR_SUCCESS;
 error:

@@ -1,5 +1,5 @@
 /*
- * $Id: utils.h,v 1.1 2003/03/14 15:57:16 bogdan Exp $
+ * $Id: utils.h,v 1.2 2003/03/18 17:29:11 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -23,6 +23,14 @@
 		while( ((_sf).s[(_sf).len-1])==' ' )\
 			(_sf).len--;\
 	}while(0)
+
+
+#define to_32x_len( _len_ ) \
+	( (_len_)+(((_len_)&3)?4-((_len_)&3):0) )
+
+
+#define set_bit_in_mask( _mask_, _pos_) \
+	do{ (_mask_)|=1<<(_pos_); }while(0)
 
 
 

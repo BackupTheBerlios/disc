@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.7 2003/03/17 19:10:55 bogdan Exp $
+ * $Id: peer.c,v 1.8 2003/03/18 17:29:40 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -16,12 +16,12 @@
 #include "../mem/shm_mem.h"
 #include "../dprint.h"
 #include "../str.h"
+#include "../utils.h"
 #include "../locking.h"
 #include "../globals.h"
 #include "../timer.h"
 #include "../sh_mutex.h"
-#include "../diameter_api/message.h"
-#include "../diameter_api/avp.h"
+#include "../diameter_api/diameter_api.h"
 #include "ip_addr.h"
 #include "resolve.h"
 #include "tcp_shell.h"
@@ -32,7 +32,7 @@
 #define DELETE_TIMEOUT   2
 #define RECONN_TIMEOUT   600
 #define WAIT_CER_TIMEOUT 5
-#define SEND_DWR_TIMEOUT 25
+#define SEND_DWR_TIMEOUT 35
 
 
 #define cheack_app_ids( _peer_ ) \
@@ -618,7 +618,7 @@ int process_ce( struct peer *p, str *buf , int is_req)
 
 	for_all_AVPS_do_switch( buf , foo , ptr ) {
 		case 268: /* result_code */
-			set_AVP_mask( mask, 0);
+			set_bit_in_mask( mask, 0);
 			n = ntohl( ((unsigned int *)ptr)[2] );
 			if (n!=AAA_SUCCESS) {
 				LOG(L_ERR,"ERROR:process_ce: CEA has a non-success "
@@ -627,19 +627,19 @@ int process_ce( struct peer *p, str *buf , int is_req)
 			}
 			break;
 		case 264: /* orig host */
-			set_AVP_mask( mask, 1);
+			set_bit_in_mask( mask, 1);
 			break;
 		case 296: /* orig realm */
-			set_AVP_mask( mask, 2);
+			set_bit_in_mask( mask, 2);
 			break;
 		case 257: /* host ip address */
-			set_AVP_mask( mask, 3);
+			set_bit_in_mask( mask, 3);
 			break;
 		case 266: /* vendor ID */
-			set_AVP_mask( mask, 4);
+			set_bit_in_mask( mask, 4);
 			break;
 		case 269: /*product name */
-			set_AVP_mask( mask, 5);
+			set_bit_in_mask( mask, 5);
 			break;
 		case 259: /*acc app id*/
 			n = ntohl( ((unsigned int *)ptr)[2] );
@@ -744,7 +744,7 @@ int process_dw( struct peer *p, str *buf , int is_req)
 
 	for_all_AVPS_do_switch( buf , foo , ptr ) {
 		case 268: /* result_code */
-			set_AVP_mask( mask, 0);
+			set_bit_in_mask( mask, 0);
 			n = ntohl( ((unsigned int *)ptr)[2] );
 			if (n!=AAA_SUCCESS) {
 				LOG(L_ERR,"ERROR:process_ce: DWA has a non-success "
@@ -753,10 +753,10 @@ int process_dw( struct peer *p, str *buf , int is_req)
 			}
 			break;
 		case 264: /* orig host */
-			set_AVP_mask( mask, 1);
+			set_bit_in_mask( mask, 1);
 			break;
 		case 296: /* orig realm */
-			set_AVP_mask( mask, 2);
+			set_bit_in_mask( mask, 2);
 			break;
 	}
 
@@ -848,7 +848,7 @@ int process_dp( struct peer *p, str *buf , int is_req)
 
 	for_all_AVPS_do_switch( buf , foo , ptr ) {
 		case 268: /* result_code */
-			set_AVP_mask( mask, 0);
+			set_bit_in_mask( mask, 0);
 			n = ntohl( ((unsigned int *)ptr)[2] );
 			if (n!=AAA_SUCCESS) {
 				LOG(L_ERR,"ERROR:process_ce: DPA has a non-success "
@@ -857,13 +857,13 @@ int process_dp( struct peer *p, str *buf , int is_req)
 			}
 			break;
 		case 264: /* orig host */
-			set_AVP_mask( mask, 1);
+			set_bit_in_mask( mask, 1);
 			break;
 		case 296: /* orig realm */
-			set_AVP_mask( mask, 2);
+			set_bit_in_mask( mask, 2);
 			break;
 		case 273: /* disconnect cause */
-			set_AVP_mask( mask, 3);
+			set_bit_in_mask( mask, 3);
 			break;
 	}
 

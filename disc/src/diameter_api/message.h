@@ -1,5 +1,5 @@
 /*
- * $Id: message.h,v 1.8 2003/03/14 18:06:58 bogdan Exp $
+ * $Id: message.h,v 1.9 2003/03/18 17:29:40 bogdan Exp $
  *
  * 2003-02-07 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -28,25 +28,6 @@ struct msg_manager {
 	(((_msg_)->flags)&0x80)
 
 
-#if (__BYTE_ORDER==LITTLE_ENDIAN)
-	#define AS_MSG_CODE      0x12010000
-	#define AC_MSG_CODE      0x0f010000
-	#define CE_MSG_CODE      0x01010000
-	#define DW_MSG_CODE      0x18010000
-	#define DP_MSG_CODE      0x1a010000
-	#define RA_MSG_CODE      0x02010000
-	#define ST_MSG_CODE      0x13010000
-	#define MASK_MSG_CODE    0xffffff00
-#else
-	#define AS_MSG_CODE      0x00000112
-	#define AC_MSG_CODE      0x0000010f
-	#define CE_MSG_CODE      0x00000101
-	#define DW_MSG_CODE      0x00000118
-	#define DP_MSG_CODE      0x0000011a
-	#define RA_MSG_CODE      0x00000102
-	#define ST_MSG_CODE      0x00000113
-	#define MASK_MSG_CODE    0x00ffffff
-#endif
 
 
 int init_msg_manager();

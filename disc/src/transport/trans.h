@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.6 2003/03/17 19:10:55 bogdan Exp $
+ * $Id: trans.h,v 1.7 2003/03/18 17:29:53 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -61,7 +61,7 @@ struct trans* create_transaction( str*, struct session*, struct peer*);
 void destroy_transaction( void* );
 
 
-/* search into hash table a transaction, based on 
+/* search a transaction into the hash table based on endtoendID and hopbyhopID
  */
 inline static struct trans* transaction_lookup(struct h_table *trans_table,
 							unsigned int endtoendID, unsigned int hopbyhopID)

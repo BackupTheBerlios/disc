@@ -56,7 +56,7 @@ unsigned int supported_auth_app_id =
 
 /* supported acc. applications */
 unsigned int supported_acc_app_id = 
-	(1<<AAA_APP_RELAY);
+	(1<<AAA_APP_RELAY) ;
 
 
 

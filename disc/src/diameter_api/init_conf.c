@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.19 2003/03/17 19:10:55 bogdan Exp $
+ * $Id: init_conf.c,v 1.20 2003/03/18 17:29:11 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -13,15 +13,13 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include "../mem/shm_mem.h"
+#include "../dprint.h"
 #include "../str.h"
-#include "../globals.h"
 #include "init_conf.h"
 #include "diameter_types.h"
-#include "../dprint.h"
 #include "session.h"
 #include "message.h"
-
-#include "../mem/shm_mem.h"
 #include "cfg_parser.h"
 
 
@@ -31,7 +29,6 @@ static int  is_lib_init = 0;
 static char *config_filename = 0;
 
 /* config info */
-int i;
 struct cfg_def cfg_ids[]={
 	//{"debug",        INT_VAL,   &debug        },
 	//{"log_stderr",   INT_VAL,   &log_stderr   },
@@ -62,12 +59,6 @@ int read_config_file( char *configFileName)
 		goto error;
 	}
 	fclose(cfg_file);
-
-	/* check the params */
-	if ((aaa_identity.s==0)||(aaa_fqdn.s==0)||(aaa_realm.s==0)){
-		LOG(L_CRIT, "critical config parameters missing --exiting\n");
-		goto error;
-	}
 
 	return 1;
 error:
@@ -120,7 +111,7 @@ AAAReturnCode AAAOpen(char *configFileName)
 	strcpy( config_filename, configFileName);
 
 	/* init the session manager */
-	if (init_session_manager()==-1)
+	if (init_session_manager( 1024 )==-1)
 		goto mem_error;
 
 	/* init the message manager */
