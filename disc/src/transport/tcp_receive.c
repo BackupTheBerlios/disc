@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.10 2003/04/14 19:23:17 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.11 2003/04/15 10:46:26 bogdan Exp $
  *
  *  History:
  *  --------
@@ -29,7 +29,7 @@
 
 
 
-inline int do_read( struct peer *p)
+inline static int do_read( struct peer *p)
 {
 	unsigned char  *ptr;
 	unsigned int   wanted_len, n, len;
@@ -43,7 +43,7 @@ inline int do_read( struct peer *p)
 		ptr = p->buf + p->buf_len;
 	}
 
-	while( (n=read( p->sock, ptr, wanted_len))>0 ) {
+	while( (n=recv( p->sock, ptr, wanted_len, MSG_DONTWAIT ))>0 ) {
 		//DBG(">>>>>> read -> n=%d (expected=%d)\n",n,wanted_len);
 		p->buf_len += n;
 		if (n<wanted_len) {
@@ -108,9 +108,9 @@ inline void tcp_accept(struct peer *p, unsigned int s)
 	unsigned int length;
 	unsigned int option;
 
-	/* get the socket non-blocking */
+	/* get the socket blocking */
 	option = fcntl( s, F_GETFL, 0);
-	fcntl( s, F_SETFL, option | O_NONBLOCK);
+	fcntl( s, F_SETFL, option & ~O_NONBLOCK);
 
 	/* get the address that the socket is connected to you */
 	length = sockaddru_len(local);
@@ -143,6 +143,11 @@ inline void do_connect( struct peer *p, int sock )
 	struct ip_addr       local_ip;
 	struct tcp_info      info;
 	unsigned int         length;
+	unsigned int         option;
+
+	/* get the socket blocking */
+	option = fcntl( sock, F_GETFL, 0);
+	fcntl( sock, F_SETFL, option & ~O_NONBLOCK);
 
 	length = sockaddru_len(local);
 	if (getsockname( sock, (struct sockaddr*)&local, &length)==-1) {
@@ -326,7 +331,10 @@ void *do_receive(void *arg)
 						LOG(L_INFO,"INFO:do_receive: inactivity detected\n");
 						peer_state_machine( cmd.peer, PEER_IS_INACTIV, 0);
 						break;
-					default:
+					case CLOSE_CMD:
+						LOG(L_INFO,"INFO:do_receive: close cmd. received\n");
+						peer_state_machine( cmd.peer, TCP_CLOSE, 0);
+						default:
 						LOG(L_ERR,"ERROR:do_receive: unknown command "
 							"code %d -> ignoring command\n",cmd.code);
 				}

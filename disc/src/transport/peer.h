@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.17 2003/04/12 20:53:50 bogdan Exp $
+ * $Id: peer.h,v 1.18 2003/04/15 10:46:26 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -148,6 +148,12 @@ extern struct p_table *peer_table;
 	(_ptr_) < (_buf_)->s+(_buf_)->len ;\
 	(_ptr_) = (_foo_)+get_avp_len( _foo_ ), (_foo_) = (_ptr_) ) \
 		switch( ntohl( ((unsigned int *)(_ptr_))[0] ) )
+
+#define close_peer( _peer_ ) \
+	do {\
+		write_command( (_peer_)->fd, CLOSE_CMD, 0, _peer_, 0);\
+	}while(0)
+
 
 
 

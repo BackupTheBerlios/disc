@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.26 2003/04/14 20:16:13 bogdan Exp $
+ * $Id: peer.c,v 1.27 2003/04/15 10:46:26 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -513,19 +513,25 @@ void destroy_peer( struct peer *p)
 }
 
 
-static inline int blocking_write(unsigned int fd, char *buf, unsigned int len)
+static inline int safe_write(struct peer *p, char *buf, unsigned int len)
 {
 	int n;
 
-	while( (n=write(fd,buf,len))!=-1 ) {
-		buf+=n;
-		len-=n;
-		if (len==0)
-			return 1;
-		usleep(20);
+	while( (n=write(p->sock,buf,len))==-1 ) {
+		if (errno==EINTR)
+			continue;
+		LOG(L_ERR,"ERROR:safe_write: write returned error: %s\n",
+			strerror(errno));
+		close_peer( p );
+		return -1;
 	}
 
-	return -1;
+	if (n!=len) {
+		LOG(L_CRIT,"ERROR:safe_write: BUG!!! write gave no error but wrote"
+			" less than asked\n");
+		close_peer( p );
+	}
+	return 1;
 }
 
 
@@ -562,7 +568,7 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 	/* the hash label is used as hop-by-hop ID */
 	((unsigned int*)tr->req->s)[3] = tr->linker.label;
 	/* send it */
-	if (blocking_write( p->sock, tr->req->s, tr->req->len)!=-1) {
+	if (safe_write( p, tr->req->s, tr->req->len)!=-1) {
 		lock_release( p->mutex);
 		tr->out_peer = p;
 		tr->req = 0;
@@ -584,7 +590,7 @@ int send_res_to_peer( str *buf, struct peer *p)
 {
 	lock_get( p->mutex );
 	if ( p->state==PEER_CONN ) {
-		if (blocking_write( p->sock, buf->s, buf->len)!=-1) {
+		if (safe_write( p, buf->s, buf->len)!=-1) {
 			lock_release( p->mutex);
 			return 1;
 		}
@@ -625,7 +631,7 @@ inline int internal_send_request( str *buf, struct peer *p)
 	((unsigned int*)buf->s)[3] = tr->linker.label;
 
 	/* send the request */
-	if ( blocking_write( p->sock, buf->s, buf->len)==-1 ) {
+	if ( safe_write( p, buf->s, buf->len)==-1 ) {
 		LOG(L_ERR,"ERROR:internal_send_request: tcp_send_unsafe returned"
 			" error!\n");
 		goto error;
@@ -661,7 +667,7 @@ inline int internal_send_response( str *res, str *req, unsigned int res_code,
 	((unsigned int*)res->s)[4] = ((unsigned int*)req->s)[4];
 
 	/* send the message */
-	if ( blocking_write( p->sock, res->s, res->len)==-1 ) {
+	if ( safe_write( p, res->s, res->len)==-1 ) {
 		LOG(L_ERR,"ERROR:internal_send_response: tcp_send_unsafe "
 			"returned error!\n");
 		return -1;
@@ -1299,7 +1305,8 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			break;
 		case TCP_CLOSE:
 			lock_get( p->mutex );
-			DBG("DEBUG:peer_state_machine: closing connection\n");
+			DBG("DEBUG:peer_state_machine: TCP connection was closed ->"
+					"closing peer\n");
 			tcp_close( p );
 			reset_peer( p );
 			/* new state */

@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_shell.h,v 1.5 2003/04/12 20:53:50 bogdan Exp $
+ * $Id: tcp_shell.h,v 1.6 2003/04/15 10:46:26 bogdan Exp $
  *
  *  History:
  *  --------
@@ -50,6 +50,7 @@ enum COMMAND_CODES {
 	ADD_PEER_CMD,             /* (cmd,-,peer,-) */
 	INACTIVITY_CMD,           /* (cmd,-,peer,-) */
 	TIMEOUT_PEER_CMD,         /* (cmd,event,peer,-) */
+	CLOSE_CMD,                /* (cmd,-,peer,-) */
 };
 
 
