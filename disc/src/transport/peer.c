@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.14 2003/04/01 14:04:45 bogdan Exp $
+ * $Id: peer.c,v 1.15 2003/04/02 15:05:13 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -445,7 +445,7 @@ int add_peer( str *aaa_identity, str *host, unsigned int port )
 	/* fill the IP_ADDR structure */
 	hostent2ip_addr( &p->ip, ht, 0);
 	/* set the port */
-	p->port = port;
+	p->port = htons(port);
 
 	/* get a thread to listen for this peer */
 	p->fd = get_new_receive_thread();
@@ -602,9 +602,16 @@ int send_cer( struct peer *dst_peer)
 {
 	struct trans *tr;
 	char *ptr;
+	str *ce_avp;
 	str cer;
 
-	cer.len = peer_table->std_req.len + peer_table->ce_avp_ipv4.len;
+#ifdef USE_IPV6
+	if (dst_peer->local_ip.af==AF_INET6)
+		ce_avp = &(peer_table->ce_avp_ipv6);
+	else
+#endif
+		ce_avp = &(peer_table->ce_avp_ipv4);
+	cer.len = peer_table->std_req.len + ce_avp->len;
 	cer.s = shm_malloc( cer.len );
 	if (!cer.s) {
 		LOG(L_ERR,"ERROR:send_cer: no more free memory\n");
@@ -617,8 +624,8 @@ int send_cer( struct peer *dst_peer)
 	((unsigned int*)ptr)[1] |= CE_MSG_CODE;
 	ptr += peer_table->std_req.len;
 	/**/
-	memcpy( ptr, peer_table->ce_avp_ipv4.s, peer_table->ce_avp_ipv4.len );
-	memcpy( ptr + AVP_HDR_SIZE, &dst_peer->local_ip, sizeof(struct ip_addr) );
+	memcpy( ptr, ce_avp->s, ce_avp->len );
+	memcpy( ptr+AVP_HDR_SIZE,dst_peer->local_ip.u.addr,dst_peer->local_ip.len);
 
 	/* send the buffer */
 	if ( (tr=internal_send_request( &cer, dst_peer))==0 )
@@ -636,9 +643,16 @@ error:
 int send_cea( struct trans *tr, unsigned int result_code)
 {
 	char *ptr;
+	str *ce_avp;
 	str cea;
 
-	cea.len = peer_table->std_ans.len + peer_table->ce_avp_ipv4.len;
+#ifdef USE_IPV6
+	if (dst_peer->local_ip.af==AF_INET6)
+		ce_avp = &(peer_table->ce_avp_ipv6);
+	else
+#endif
+		ce_avp = &(peer_table->ce_avp_ipv4);
+	cea.len = peer_table->std_ans.len + ce_avp->len;
 	cea.s = shm_malloc( cea.len );
 	if (!cea.s) {
 		LOG(L_ERR,"ERROR:send_cer: no more free memory\n");
@@ -653,8 +667,8 @@ int send_cea( struct trans *tr, unsigned int result_code)
 		htonl( result_code );
 	ptr += peer_table->std_ans.len;
 	/**/
-	memcpy( ptr, peer_table->ce_avp_ipv4.s, peer_table->ce_avp_ipv4.len );
-	memcpy( ptr + AVP_HDR_SIZE, &tr->peer->local_ip, sizeof(struct ip_addr) );
+	memcpy( ptr, ce_avp->s, ce_avp->len );
+	memcpy( ptr+AVP_HDR_SIZE,tr->peer->local_ip.u.addr,tr->peer->local_ip.len);
 
 
 	/* send the buffer */

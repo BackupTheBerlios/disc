@@ -158,7 +158,7 @@ int init_aaa_client()
 	aaa_id.len = strlen( aaa_id.s );
 	add_peer( &aaa_id, &host, 1812);
 
-	/* init the script */
+	/* init the dest peers */
 	if ( init_dest_peers()==-1 ) {
 		goto error;
 	}
@@ -246,18 +246,6 @@ int main(int argc, char *argv[])
 
 	/* for the last of the execution, I will act as timer */
 	timer_ticker();
-
-
-	/*
-	sleep( 5 );
-	AAAStartSession( &sID, modules->exports, 0);
-	req = AAANewMessage( 456, 4, sID, 0);
-	AAACreateAVP( &avp, AVP_Destination_Realm, 0, 0, "gmd.de", 6);
-	AAAAddAVPToMessage( req, avp, req->orig_realm);
-	AAASendMessage( req );
-
-	for(;;)
-		sleep( 40 );*/
 
 	return 0;
 }

@@ -103,21 +103,31 @@ void terminate_tcp_shell()
 	cmd.code = SHUTDOWN_CMD;
 
 	/* send it to the accept thread */
-	write( tinfo[ACCEPT_THREAD_ID].cmd_pipe[1], &cmd, COMMAND_SIZE);
+	if (tinfo[ACCEPT_THREAD_ID].tid)
+		write( tinfo[ACCEPT_THREAD_ID].cmd_pipe[1], &cmd, COMMAND_SIZE);
+	else
+		LOG(L_INFO,"INFO:terminate_tcp_shell: accept thread not created\n");
 
 	/* ... and to the receiver threads */
 	for(i=0; i<nr_recv_threads; i++)
-		write( tinfo[RECEIVE_THREAD_ID(i)].cmd_pipe[1] , &cmd, COMMAND_SIZE);
+		if (tinfo[RECEIVE_THREAD_ID(i)].tid)
+			write(tinfo[RECEIVE_THREAD_ID(i)].cmd_pipe[1],&cmd,COMMAND_SIZE);
+		else
+			LOG(L_INFO,"INFO:terminate_tcp_shell: receive thread %d not "
+				"created\n",i);
 
 	/* now wait for them to end */
 	/* accept thread */
-	pthread_join( tinfo[ACCEPT_THREAD_ID].tid, 0);
+	if (tinfo[ACCEPT_THREAD_ID].tid)
+		pthread_join( tinfo[ACCEPT_THREAD_ID].tid, 0);
 	LOG(L_INFO,"INFO:terminate_tcp_shell: accept thread terminated\n");
 	/* receive threads */
 	for(i=0; i<nr_recv_threads; i++) {
-		pthread_join( tinfo[RECEIVE_THREAD_ID(i)].tid, 0);
-		LOG(L_INFO,"INFO:terminate_tcp_shell: receive thread %d "
-			"terminated\n",i);
+		if (tinfo[RECEIVE_THREAD_ID(i)].tid) {
+			pthread_join( tinfo[RECEIVE_THREAD_ID(i)].tid, 0);
+			LOG(L_INFO,"INFO:terminate_tcp_shell: receive thread %d "
+				"terminated\n",i);
+		}
 	}
 
 	/* destroy the lock list */

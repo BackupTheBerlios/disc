@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_api.h,v 1.5 2003/03/28 20:27:24 bogdan Exp $
+ * $Id: diameter_api.h,v 1.6 2003/04/02 15:05:13 bogdan Exp $
  *
  * 2002-10-04 created by illya (komarov@fokus.gmd.de)
  *
@@ -51,7 +51,7 @@ AAAReturnCode AAARegisterExtension(
 
 AAAReturnCode AAAStartSession(
 		AAASessionId **sessionId,
-		AAAApplicationId appHandle,
+		AAAApplicationRef appReference,
 		void *contect);
 
 /*  AAAReturnCode AAARegisterPeerSession(AAASessionId **sessionId,

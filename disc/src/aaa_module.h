@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.h,v 1.2 2003/03/28 20:00:37 andrei Exp $
+ * $Id: aaa_module.h,v 1.3 2003/04/02 15:05:13 bogdan Exp $
  */
 /* History:
  * --------
@@ -9,6 +9,7 @@
 #ifndef aaa_module_h
 #define aaa_module_h
 
+#include "diameter_api/diameter_types.h"
 
 
 struct module_exports{
@@ -18,7 +19,7 @@ struct module_exports{
 	int (*mod_init)();   /* module initialization function */
 	void (*mod_destroy)(); /* called on exit */
 	
-	int (*mod_run)(int); /* called for each message */
+	int (*mod_run)(AAAMessage*, void*); /* called for each message */
 };
 
 

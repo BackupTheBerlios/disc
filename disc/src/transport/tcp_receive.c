@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.5 2003/03/28 14:20:43 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.6 2003/04/02 15:05:13 bogdan Exp $
  *
  *  History:
  *  --------
@@ -24,6 +24,7 @@
 #include "ip_addr.h"
 #include "tcp_receive.h"
 #include "tcp_shell.h"
+
 
 
 
@@ -95,8 +96,9 @@ error:
 
 inline void tcp_accept(struct peer *p, unsigned int s)
 {
-	struct tcp_info  info;
-	struct sockaddr_in local;
+	struct tcp_info      info;
+	struct ip_addr       local_ip;
+	union sockaddr_union local;
 	unsigned int length;
 	unsigned int option;
 
@@ -105,15 +107,16 @@ inline void tcp_accept(struct peer *p, unsigned int s)
 	fcntl( s, F_SETFL, option | O_NONBLOCK);
 
 	/* get the address that the socket is connected to you */
-	length = sizeof(struct sockaddr_in);
+	length = sockaddru_len(local);
 	if (getsockname( s, (struct sockaddr *)&local, &length) == -1) {
 		LOG(L_ERR,"ERROR:tcp_accept: getsocname failed: \"%s\"\n",
 			strerror(errno));
 		goto error;
 	}
 
+	su2ip_addr( &local_ip, &local );
 	info.sock  = s;
-	info.local = &local.sin_addr;
+	info.local = &local_ip;
 	/* call the peer state machine */
 	if (peer_state_machine( p, TCP_ACCEPT, &info)==-1)
 		goto error;
@@ -129,12 +132,13 @@ error:
 
 inline void do_connect( struct peer *p, int sock )
 {
-	struct sockaddr_in local;
-	struct tcp_info    info;
-	unsigned int       length;
+	union sockaddr_union local;
+	struct ip_addr       local_ip;
+	struct tcp_info      info;
+	unsigned int         length;
 
-	length = sizeof(struct sockaddr_in);
-	if (getsockname(sock,(struct sockaddr*)&local,&length)==-1) {
+	length = sockaddru_len(local);
+	if (getsockname( sock, (struct sockaddr*)&local, &length)==-1) {
 		LOG(L_ERR,"ERROR:do_conect: getsockname failed : %s\n",
 			strerror(errno));
 		peer_state_machine( p, TCP_CONN_FAILED,0);
@@ -142,8 +146,9 @@ inline void do_connect( struct peer *p, int sock )
 		return;
 	}
 
+	su2ip_addr( &local_ip, &local );
 	info.sock = sock;
-	info.local = &(local.sin_addr);
+	info.local = &local_ip;
 	if (peer_state_machine( p, TCP_CONNECTED, &info)==-1 ) {
 		/* peer state machine didn't accepted this connect */
 		close(sock);
@@ -158,15 +163,20 @@ inline void do_connect( struct peer *p, int sock )
 
 inline void tcp_connect(struct peer *p)
 {
-	struct sockaddr_in remote;
-	struct tcp_info    info;
+	union sockaddr_union remote;
+	struct tcp_info      info;
 	int option;
 	int sock;
 
 	sock = -1;
 
 	/* create a new socket */
-	sock = socket(AF_INET, SOCK_STREAM, 0);
+#ifdef USE_IPV6
+	if (p->ip.af==AF_INET6)
+		sock = socket(AF_INET6, SOCK_STREAM, 0);
+	else
+#endif
+		sock = socket(AF_INET, SOCK_STREAM, 0);
 	if ( sock==-1) {
 		LOG(L_ERR,"ERROR:tcp_connect: cannot connect, failed to create "
 				"new socket\n");
@@ -177,19 +187,17 @@ inline void tcp_connect(struct peer *p)
 	fcntl(sock, F_SETFL, option | O_NONBLOCK);
 
 	/* remote peer */
-	memset( &remote, 0, sizeof(remote));
-	remote.sin_family = AF_INET;
-	remote.sin_addr   = p->ip;
-	remote.sin_port   = htons( p->port );
+	if ( init_su( &remote, &(p->ip), p->port )==-1 )
+		goto error;
 
 	/* call connect non-blocking */
-	if (connect(sock,(struct sockaddr*)&remote,sizeof(remote))==0) {
+	if (connect(sock,(struct sockaddr*)&remote, sockaddru_len(remote))==0) {
 		/* connection creation succeedes on the spot */
 		do_connect(p, sock);
 	} else {
 		if (errno == EINPROGRESS) {
 			/* connection creation performs asynch. */
-			DBG("DEBUG:do_dispatch: connecting socket %d in progress\n",sock);
+			DBG("DEBUG:tcp_connect: connecting socket %d in progress\n",sock);
 			info.sock = sock;
 			if (peer_state_machine( p, TCP_CONN_IN_PROG, &info)==-1)
 				close(sock);

@@ -1,4 +1,4 @@
-/* $Id: ip_addr.h,v 1.2 2003/03/14 17:15:38 bogdan Exp $
+/* $Id: ip_addr.h,v 1.3 2003/04/02 15:05:13 bogdan Exp $
  *
  * ip address family realted structures
  *
@@ -40,7 +40,6 @@
 
 
 
-#if 0
 struct ip_addr{
 	unsigned int af; /* address family: AF_INET6 or AF_INET */
 	unsigned int len;    /* address len, 16 or 4 */
@@ -53,9 +52,6 @@ struct ip_addr{
 		unsigned char  addr[16];
 	}u;
 };
-#else
-#define ip_addr in_addr
-#endif
 
 
 
@@ -86,34 +82,26 @@ union sockaddr_union{
 #define sockaddru_len(su)	sizeof(struct sockaddr_in)
 #endif /*USE_IPV6*/
 #endif /* HAVE_SOCKADDR_SA_LEN*/
-	
+
+
+
 /* inits an ip_addr with the addr. info from a hostent structure
  * ip = struct ip_addr*
  * he= struct hostent*
  */
-#ifdef USE_IPV6
-	#define hostent2ip_addr(ip, he, addr_no) \
-		do{ \
-			(ip)->af=(he)->h_addrtype; \
-			(ip)->len=(he)->h_length;  \
-			memcpy((ip)->u.addr, (he)->h_addr_list[(addr_no)], (ip)->len); \
-		}while(0)
+#define hostent2ip_addr(ip, he, addr_no) \
+	do{ \
+		(ip)->af=(he)->h_addrtype; \
+		(ip)->len=(he)->h_length;  \
+		memcpy((ip)->u.addr, (he)->h_addr_list[(addr_no)], (ip)->len); \
+	}while(0)
 
-	/* compare 2 ip_addrs (both args are pointers)*/
-	#define ip_addr_cmp(ip1, ip2) \
-		(((ip1)->af==(ip2)->af)&& \
-			(memcmp((ip1)->u.addr, (ip2)->u.addr, (ip1)->len)==0))
-#else
-	#define hostent2ip_addr(ip, he, addr_no) \
-		do{ \
-			memcpy((char*)&((ip)->s_addr), (he)->h_addr_list[(addr_no)], 4); \
-		}while(0)
 
-	/* compare 2 ip_addrs (both args are pointers)*/
-	#define ip_addr_cmp(ip1, ip2) \
-		((memcmp((char*)&((ip1)->s_addr), (char*)&((ip2)->s_addr), 4)==0))
-#endif
 
+/* compare 2 ip_addrs (both args are pointers)*/
+#define ip_addr_cmp(ip1, ip2) \
+	(((ip1)->af==(ip2)->af)&& \
+		(memcmp((ip1)->u.addr, (ip2)->u.addr, (ip1)->len)==0))
 
 
 
@@ -138,7 +126,6 @@ union sockaddr_union{
 
 
 
-#ifdef USE_IPV6
 /* returns 1 if ip & net.mask == net.ip ; 0 otherwise & -1 on error 
 	[ diff. adress fams ]) */
 inline static int matchnet(struct ip_addr* ip, struct net* net)
@@ -356,7 +343,7 @@ static inline char* ip_addr2a(struct ip_addr* ip)
 				c=(hex4>>4)&0xf;
 				d=hex4&0xf;
 				if (a){
-			init_all_peers(struct p_table *table)		buff[offset]=HEXDIG(a);
+					buff[offset]=HEXDIG(a);
 					buff[offset+1]=HEXDIG(b);
 					buff[offset+2]=HEXDIG(c);
 					buff[offset+3]=HEXDIG(d);
@@ -483,7 +470,7 @@ static inline struct hostent* ip_addr2he(str* name, struct ip_addr* ip)
 	he.h_name=hostname;
 	return &he;
 }
-#endif /* USE_IPV6 */
-
 
 #endif
+
+

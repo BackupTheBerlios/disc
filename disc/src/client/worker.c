@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.1 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: worker.c,v 1.2 2003/04/02 15:05:13 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -118,7 +118,8 @@ void *client_worker(void *attr)
 					shm_free( buf.s );
 				}
 				/* call the handler */
-				if (((struct module_exports*)tr->ses->app_ref)->mod_run(4)!=1){
+				if (((struct module_exports*)tr->ses->app_ref)->
+				mod_run( msg, tr->ses->context)!=1) {
 				}
 			}
 		}
