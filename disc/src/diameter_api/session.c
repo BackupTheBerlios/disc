@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.22 2003/04/21 15:03:45 bogdan Exp $
+ * $Id: session.c,v 1.23 2003/04/21 15:18:39 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -674,7 +674,8 @@ AAAReturnCode AAAEndSession( AAASessionId *sessionId )
 			ses->state = AAA_TO_DESTROY_STATE;
 			lock_release( ses->mutex );
 		} else {
-			lock_get( ses->mutex );
+			lock_release( ses->mutex );
+			LOG(L_INFO,"INFO:AAAEndSession: destroing session\n");
 			destroy_session( ses );
 		}
 	}
