@@ -1,27 +1,37 @@
-dnl $Id: configure.ac,v 1.5 2003/04/02 19:00:35 andrei Exp $
+dnl $Id: configure.ac,v 1.6 2003/04/06 14:12:20 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
-dnl
+dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
+dnl  on *BSD (it will eat -lc_r)
 dnl
 dnl History:
 dnl --------
 dnl 2003-03-24  created by andrei
 dnl 2003-03-26  fixed "./" path for cc*.sh (andrei)
 dnl 2003-03-27  added libltdl support (andrei)
+dnl 2003-04-06  fixed sched_yield (added AC_CHECK_FUNCS) (andrei)
+dnl             added automake 1.4 backward compatibility stuff (andrei)
+dnl
+dnl
+dnl TODO:
+dnl -----
+dnl  -add locking tests (define HAVE_blabla)
 
 
-AC_PREREQ(2.54)
-AC_REVISION($Id: configure.ac,v 1.5 2003/04/02 19:00:35 andrei Exp $)
+
+AC_PREREQ(2.53)
+AC_REVISION($Id: configure.ac,v 1.6 2003/04/06 14:12:20 andrei Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 AC_CONFIG_SUBDIRS(libltdl)
-AM_INIT_AUTOMAKE([nostdinc dist-bzip2 dist-shar dist-zip dist-tarZ])
-AM_MAINTAINER_MODE
+AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION, 
+					[nostdinc dist-bzip2 dist-shar dist-zip dist-tarZ])
+# AM_MAINTAINER_MODE
 
 
 dnl FIXME:
 AC_DEFINE(NAME, ["]AC_PACKAGE_NAME["])
-# AC_DEFINE(VERSION, AC_PACKAGE_VERSION)
+AC_DEFINE(VERSION, AC_PACKAGE_VERSION)
 AC_DEFINE(CFG_DIR, ["/etc/aaa_client"])
 
 
@@ -160,9 +170,9 @@ fi
 AC_DEFINE_UNQUOTED([COMPILER], ["$CC $CCVER"])
 
 
-dnl Checks for libraries
+dnl Checks for libraries (warning for HAVE_* run AC_CHECK_FUNCTION)
 #AC_SEARCH_LIBS([dlopen], [dl c_r])
-AC_SEARCH_LIBS([pthread_create], [pthread])
+AC_SEARCH_LIBS([pthread_create], [pthread c_r])
 AC_SEARCH_LIBS([res_search], [resolv])
 dnl solaris libs
 AC_SEARCH_LIBS([sendto], [socket xnet])
@@ -192,18 +202,19 @@ AC_CHECK_TYPE([union semun], AC_DEFINE(HAVE_UNION_SEMUN),,
 				[#include <sys/sem.h> ])
 
 dnl  Checks for library functions.
-AC_FUNC_FORK
+## AC_FUNC_FORK
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_FUNC_MMAP
-AC_FUNC_REALLOC
+## AC_FUNC_REALLOC
 AC_TYPE_SIGNAL
-AC_FUNC_STRFTIME
-AC_FUNC_VPRINTF
+## AC_FUNC_STRFTIME
+## AC_FUNC_VPRINTF
 
- AC_CHECK_FUNCS([gethostbyaddr gettimeofday inet_ntoa localtime_r memchr memmove memset mkfifo munmap regcomp select socket strcasecmp strchr strdup strerror strncasecmp strtol uname], ,
+ AC_CHECK_FUNCS([gethostbyaddr gettimeofday inet_ntoa localtime_r memchr memmove memset mkfifo munmap regcomp select socket strcasecmp strchr strdup strerror strncasecmp strtol uname pthread_create res_search sendto], ,
  AC_MSG_ERROR(["*** not all required functions found - please fix ***"]))
+ AC_CHECK_FUNCS([sched_yield],,)
 
 dnl Checks for "special" functions
 AC_CHECK_FUNCS([gethostbyname], ,

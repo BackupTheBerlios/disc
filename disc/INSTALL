@@ -1,4 +1,4 @@
-#$Id: INSTALL,v 1.2 2003/04/04 17:47:29 andrei Exp $
+#$Id: INSTALL,v 1.3 2003/04/06 14:12:20 andrei Exp $
 
 Compilation
 -----------
@@ -13,6 +13,18 @@ or just make if you are compiling on the same machine.
 (if you want to regenerate everything, including libtltdl and scripts,
 you should run first ./bootstrap but you need decently recent versions of
 autoconf, automake & libtool)
+
+Troubleshooting
+---------------
+
+Check if your auto* and libtool version are >= than the ones listed at the 
+begining of configure.ac.
+On FreeBSD the libtool 1.4.2 generated script will not properly link the 
+binary. It will eat -lc_r for some reason and it will not pass it to gcc.
+
+If you get automake errors try ./bootstrap. If you don't have libtool try
+ aclocal; ./rebuild.
+
 
 
 Installation
