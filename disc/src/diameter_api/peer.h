@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.2 2003/03/07 17:20:08 bogdan Exp $
+ * $Id: peer.h,v 1.3 2003/03/07 18:31:12 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -12,11 +12,13 @@
 #include "utils/aaa_lock.h"
 #include "utils/counter.h"
 #include "utils/ip_addr.h"
-#include "tcp_shell/common.h"
 #include "global.h"
 #include "diameter_types.h"
 #include "trans.h"
 #include "timer.h"
+
+struct peer;
+#include "tcp_shell/common.h"
 
 
 #define PEER_TO_DESTROY  1<<0
@@ -164,7 +166,7 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 
 
 /* search into the peer table for the peer having the given IP address */
-static inline struct peer* lookup_peer_fd_by_ip( struct ip_addr *ip )
+static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 {
 	struct peer *p;
 

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.2 2003/03/07 17:20:08 bogdan Exp $
+ * $Id: peer.c,v 1.3 2003/03/07 18:31:12 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -184,7 +184,7 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 	p->port = port;
 
 	/* get a thread to listen for this peer */
-	p->fd = get_new_peer_thread();
+	p->fd = get_new_receive_thread();
 
 	/* insert the peer into the list */
 	lock( peer_table->mutex );
