@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.4 2003/03/07 19:29:20 bogdan Exp $
+ * $Id: peer.h,v 1.5 2003/03/09 15:01:15 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -29,6 +29,12 @@ struct peer;
 extern struct p_table *peer_table;
 
 
+struct tcp_info {
+	struct ip_addr *local;
+	unsigned int   sock;
+};
+
+
 struct peer {
 	/* aaa specific information */
 	str aaa_realm;
@@ -36,6 +42,8 @@ struct peer {
 	/* location of the peer as ip:port */
 	unsigned int port;
 	IP_ADDR ip;
+	/* local ip*/
+	IP_ADDR local_ip;
 	unsigned int state;
 	/* linking information */
 	struct list_head  all_peer_lh;
@@ -50,6 +58,8 @@ struct peer {
 	unsigned char flags;
 	/* command pipe */
 	unsigned int fd;
+	/* thread the peer belong to */
+	struct thread_info *tinfo;
 	/* socket */
 	int sock;
 };
@@ -103,7 +113,7 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 void init_all_peers();
 
 int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event,
-															void *info);
+													struct tcp_info *info);
 
 /* increments the ref_counter of the peer */
 void static inline ref_peer(struct peer *p)
@@ -130,12 +140,11 @@ static inline struct peer* lookup_peer_by_host( str *host )
 	list_for_each( lh, &(peer_table->peers)) {
 		p = list_entry( lh, struct peer, all_peer_lh);
 		if ( host->len==p->aaa_host.len &&
-		!strncasecmp( host->s, p->aaa_host.s, host->len))
+		!strncasecmp( host->s, p->aaa_host.s, host->len)) {
+			ref_peer( p );
 			break;
+		}
 	}
-
-	if (p)
-		ref_peer( p );
 
 	unlock( peer_table->mutex );
 	return p;
@@ -153,12 +162,11 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 	list_for_each( lh, &(peer_table->peers)) {
 		p = list_entry( lh, struct peer, all_peer_lh);
 		if ( realm->len==p->aaa_realm.len &&
-		!strncasecmp( realm->s, p->aaa_realm.s, realm->len))
+		!strncasecmp( realm->s, p->aaa_realm.s, realm->len)) {
+			ref_peer( p );
 			break;
+		}
 	}
-
-	if (p)
-		ref_peer( p );
 
 	unlock( peer_table->mutex );
 	return p;
@@ -175,12 +183,11 @@ static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 
 	list_for_each( lh, &(peer_table->peers)) {
 		p = list_entry( lh, struct peer, all_peer_lh);
-		if ( ip_addr_cmp(ip, &p->ip) )
+		if ( ip_addr_cmp(ip, &p->ip) ) {
+			ref_peer( p );
 			break;
+		}
 	}
-
-	if (p)
-		ref_peer( p );
 
 	unlock( peer_table->mutex );
 	return p;

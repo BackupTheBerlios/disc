@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.2 2003/03/07 19:36:52 bogdan Exp $
+ * $Id: init_conf.c,v 1.3 2003/03/09 15:01:15 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -176,12 +176,12 @@ AAAReturnCode AAAOpen(char *configFileName)
 
 	/* add the peers from config file */
 	//..................
-	peer.s = "ugluk.mobis.fokus.gmd.de";
+	peer.s = "localhost";
 	peer.len = strlen(peer.s);
-	add_peer( peer_table, &peer, 5, 1912);
+	add_peer( peer_table, &peer, 5, 2000);
 
-	/* init all peers */
-	init_all_peers();
+	/* start the tcp shell */
+	start_tcp_accept();
 
 	/* finally DONE */
 	is_lib_init = 1;

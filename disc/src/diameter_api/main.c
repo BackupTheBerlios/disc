@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
 	//req = AAANewMessage( 34, 0, SID, 0, 0);
 	//AAASendMessage( req );
 
-	//for(;;)
-		sleep(100);
+	for(;;)
+		sleep( 5 );
 
 	//while(feof(fp)==0){
 	//	source[i] = fgetc(fp);
