@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.8 2003/04/18 17:38:19 bogdan Exp $
+ * $Id: timer.c,v 1.9 2003/04/22 18:32:14 bogdan Exp $
  *
  * 
  *  2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -197,7 +197,7 @@ int insert_into_timer_list( struct timer_link* t_link, struct timer* t_list,
 	/* add the element into the list */
 	t_link->timeout = timeout;
 	/* look for the corect possition */
-	tlink = &(t_list->first_tl);
+	tlink = t_list->first_tl.next_tl;
 	for(;tlink!=&(t_list->last_tl)&&tlink->timeout<timeout;
 		tlink=tlink->next_tl);
 	/* do insert before "tlink" */
