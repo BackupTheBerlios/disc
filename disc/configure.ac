@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.16 2003/04/21 21:09:26 andrei Exp $
+dnl $Id: configure.ac,v 1.17 2003/04/22 13:01:33 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -23,7 +23,7 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.16 2003/04/21 21:09:26 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.17 2003/04/22 13:01:33 andrei Exp $)
 AC_INIT(disc, 0.1.0)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 ##AC_CONFIG_HEADERS([ac_config.h])
@@ -113,6 +113,11 @@ if test "$enable_dns_ip_hack" = yes; then
 fi
 	
 dnl modules 
+
+dnl init to nothing
+
+server_modules=""
+client_modules=""
 	
 AC_ARG_WITH(mipv6_modules, 
 				AC_HELP_STRING([--with-mipv6_modules],
