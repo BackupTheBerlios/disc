@@ -16,7 +16,6 @@
 #include "../transport/tcp_shell.h"
 #include "../aaa_module.h"
 
-#include "../diameter_api/diameter_types.h"
 #include "../diameter_api/diameter_api.h"
 
 #include "worker.h"
@@ -88,7 +87,7 @@ void init_random_generator()
 {
 	unsigned int seed;
 	int fd;
-
+#include <netinet/in.h>
 	/* init the random number generater by choosing a proper seed; first
 	 * we try to read it from /dev/random; if it doesn't exist use a
 	 * combination of current time and pid */

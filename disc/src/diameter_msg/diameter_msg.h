@@ -1,19 +1,19 @@
 /*
- * $Id: diameter_types.h,v 1.17 2003/04/06 22:19:49 bogdan Exp $
+ * $Id: diameter_msg.h,v 1.1 2003/04/07 19:51:57 bogdan Exp $
  *
- * 2002-09-25 created by illya (komarov@fokus.gmd.de)
+ * 2003-04-07 created by bogdan
  */
 
 
-#ifndef _AAA_DIAMETER_TYPES_H
-#define _AAA_DIAMETER_TYPES_H
+#ifndef _AAA_DIAMETER_MSG_H
+#define _AAA_DIAMETER_MSG_H
 
-/* */
-
-#include "../transport/ip_addr.h"
 #include "../str.h"
 
-#define AAA_NO_VENDOR_ID   0
+
+/*********************************** AAA TYPES *******************************/
+
+#define AAA_NO_VENDOR_ID           0
 
 #define VER_SIZE                   1
 #define MESSAGE_LENGTH_SIZE        3
@@ -26,6 +26,7 @@
 #define AVP_FLAGS_SIZE     1
 #define AVP_LENGTH_SIZE    3
 #define AVP_VENDOR_ID_SIZE 4
+
 #define AAA_MSG_HDR_SIZE  \
 	(VER_SIZE + MESSAGE_LENGTH_SIZE + FLAGS_SIZE + COMMAND_CODE_SIZE +\
 	APPLICATION_ID_SIZE+HOP_BY_HOP_IDENTIFIER_SIZE+END_TO_END_IDENTIFIER_SIZE)
@@ -57,13 +58,6 @@
 #endif
 
 
-/* types of timeout - passed when a Tout handler is called
- */
-#define ANSWER_TIMEOUT_EVENT  1
-#define SESSION_TIMEOUT_EVENT 2
-
-
-typedef struct ip_addr  IP_ADDR;
 typedef unsigned int    AAACommandCode;
 typedef unsigned int    AAAVendorId;
 typedef unsigned int    AAAExtensionId;
@@ -71,17 +65,10 @@ typedef unsigned int    AAA_AVPCode;
 typedef unsigned int    AAAValue;
 typedef unsigned int    AAAApplicationId;
 typedef void*           AAAApplicationRef;
-typedef void            AAAServer;
 typedef str             AAASessionId;
-typedef uint32_t        AAAMsgIdentifier;
-typedef uint8_t         AAAMsgFlag;
+typedef unsigned int    AAAMsgIdentifier;
+typedef unsigned char   AAAMsgFlag;
 
-
-/*  */
-typedef enum {
-	_B_FALSE,
-	_B_TRUE
-}boolean_t;
 
 
 /* Status codes returned by functions in the AAA API */
@@ -106,15 +93,6 @@ typedef enum {
 } AAAReturnCode;
 
 
-//    The following are codes used to indicate where a callback should be
-//   installed in callback chain for processing:
-
-      typedef enum {
-           AAA_APP_INSTALL_FIRST,
-           AAA_APP_INSTALL_ANYWHERE,
-           AAA_APP_INSTALL_LAST
-      } AAACallbackLocation;
-
 /* The following are AVP data type codes. They correspond directly to
  * the AVP data types outline in the Diameter specification [1]: */
 typedef enum {
@@ -135,20 +113,9 @@ typedef enum {
 	AAA_AVP_FLAG_RESERVED           = 0x1F,
 	AAA_AVP_FLAG_VENDOR_SPECIFIC    = 0x80,
 	AAA_AVP_FLAG_END_TO_END_ENCRYPT = 0x20,
-	//AAA_AVP_FLAG_UNKNOWN            = 0x10000,
-	//AAA_AVP_FLAG_ENCRYPT            = 0x40000,
 } AAA_AVPFlag;
 
 
-//   The following domain interconnection types are returned by
-//   AAAGetDomainInternconnectType(). They indicate the type of domain
-//   interconnection:
-     typedef enum {
-          AAA_DOMAIN_LOCAL,
-          AAA_DOMAIN_PROXY,
-          AAA_DOMAIN_BROKER,
-          AAA_DOMAIN_FORWARD
-      } AAADomainInterconnect;
 
 /* The following are the result codes returned from remote servers as
  * part of messages */
@@ -232,33 +199,19 @@ typedef enum {
 
 
 
-      typedef enum {
-           AAA_ACCT_EVENT = 1,
-           AAA_ACCT_START = 2,
-           AAA_ACCT_INTERIM = 3,
-           AAA_ACCT_STOP = 4
-      } AAAAcctMessageType;
+typedef enum {
+	AAA_ACCT_EVENT = 1,
+	AAA_ACCT_START = 2,
+	AAA_ACCT_INTERIM = 3,
+	AAA_ACCT_STOP = 4
+} AAAAcctMessageType;
 
-//   The following defines the possible security characteristics for a
-//   host.
 
-      typedef enum {
-           AAA_SEC_NOT_DEFINED = -2,
-           AAA_SEC_NOT_CONNECTED = -1,
-           AAA_SEC_NO_SECURITY = 0,
-           AAA_SEC_CMS_SECURITY = 1,
-           AAA_SEC_CMS_PROXIED = 2
-      } AAASecurityStatus;
-// The following structure is returned by the dictionary entry lookup
-// functions
-      typedef struct dictionaryEntry {
-           AAA_AVPCode    avpCode;
-           char*          avpName;
-           AAA_AVPDataType     avpType;
-           AAAVendorId    vendorId;
-           AAA_AVPFlag    flags;
-      } AAADictionaryEntry;
-
+typedef enum {
+	AVP_DUPLICATE_DATA,
+	AVP_DONT_FREE_DATA,
+	AVP_FREE_DATA,
+} AVPDataStatus;
 
 /* The following structure contains a message AVP in parsed format */
 typedef struct avp {
@@ -273,7 +226,7 @@ typedef struct avp {
 	AAA_AVPDataType type;
 	AAAVendorId vendorId;
 	str data;
-	uint32_t free_it;
+	unsigned char free_it;
 } AAA_AVP;
 
 
@@ -306,6 +259,91 @@ typedef struct _message_t {
 	void                *trans;
 } AAAMessage;
 
+
+
+
+/**************************** AAA MESSAGE FUNCTIONS **************************/
+
+/* MESSAGES
+ */
+
+#define is_req(_msg_) \
+	(((_msg_)->flags)&0x80)
+
+AAAMessage *AAANewMessage(
+		AAACommandCode commandCode,
+		AAAApplicationId appId,
+		AAASessionId *sessionId,
+		AAAMessage *request);
+
+AAAReturnCode AAAFreeMessage(
+		AAAMessage **message);
+
+AAAResultCode AAASetMessageResultCode(
+		AAAMessage *message,
+		AAAResultCode resultCode);
+
+void AAAPrintMessage(
+		AAAMessage *msg);
+
+AAAReturnCode AAABuildMsgBuffer(
+		AAAMessage *msg );
+
+AAAMessage* AAATranslateMessage(
+		unsigned char* source,
+		unsigned int sourceLen );
+
+
+/* AVPS
+ */
+
+AAA_AVP* AAACreateAVP(
+		AAA_AVPCode code,
+		AAA_AVPFlag flags,
+		AAAVendorId vendorId,
+		char *data,
+		size_t length,
+		AVPDataStatus data_status);
+
+AAA_AVP* AAACloneAVP(
+		AAA_AVP *avp,
+		unsigned char duplicate_data );
+
+AAAReturnCode AAAAddAVPToMessage(
+		AAAMessage *msg,
+		AAA_AVP *avp,
+		AAA_AVP *position);
+
+AAA_AVP *AAAFindMatchingAVP(
+		AAAMessage *msg,
+		AAA_AVP *startAvp,
+		AAA_AVPCode avpCode,
+		AAAVendorId vendorId,
+		AAASearchType searchType);
+
+AAAReturnCode AAARemoveAVPFromMessage(
+		AAAMessage *msg,
+		AAA_AVP *avp);
+
+AAAReturnCode AAAFreeAVP(
+		AAA_AVP **avp);
+
+AAA_AVP* AAAGetFirstAVP(
+		AAA_AVP_LIST *avpList);
+
+AAA_AVP* AAAGetLastAVP(
+		AAA_AVP_LIST *avpList);
+
+AAA_AVP* AAAGetNextAVP(
+		AAA_AVP *avp);
+
+AAA_AVP* AAAGetPrevAVP(
+		AAA_AVP *avp);
+
+char *AAAConvertAVPToString(
+		AAA_AVP *avp,
+		char *dest,
+		unsigned int destLen);
 
 
 #endif

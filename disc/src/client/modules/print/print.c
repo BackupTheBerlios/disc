@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.4 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: print.c,v 1.5 2003/04/07 19:51:57 bogdan Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -16,7 +16,6 @@
 #include "../../../dprint.h"
 #include "../../../aaa_module.h"
 #include "../../../diameter_api/diameter_api.h"
-#include "../../../diameter_api/diameter_types.h"
 
 
 static int mod_init();
@@ -51,7 +50,8 @@ void *print_worker(void *attr)
 
 	AAAStartSession( &sID, get_my_appref(), 0);
 	req = AAANewMessage( 456, 4, sID, 0);
-	AAACreateAVP( &avp, AVP_Destination_Realm, 0, 0, "gmd.de", 6);
+	avp = AAACreateAVP( AVP_Destination_Realm, 0, 0, "gmd.de", 6,
+		AVP_DONT_FREE_DATA);
 	AAAAddAVPToMessage( req, avp, req->orig_realm);
 	AAASendMessage( req );
 

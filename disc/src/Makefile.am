@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.10 2003/04/06 22:09:16 andrei Exp $
+## $Id: Makefile.am,v 1.11 2003/04/07 19:51:57 bogdan Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -10,7 +10,7 @@
 
 @SET_MAKE@
 
-SUBDIRS = diameter_api transport mem client
+SUBDIRS = diameter_msg diameter_api transport mem client
 
 INCLUDES = @INCLTDL@
 

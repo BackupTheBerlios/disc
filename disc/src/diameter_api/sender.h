@@ -1,38 +1,30 @@
 /*
- * $Id: message.h,v 1.12 2003/04/01 12:03:16 bogdan Exp $
+ * $Id: sender.h,v 1.1 2003/04/07 19:51:57 bogdan Exp $
  *
  * 2003-02-07 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
  *
  */
 
-#ifndef _AAA_DIAMETER_MESSAGE_H
-#define _AAA_DIAMETER_MESSAGE_H
+#ifndef _AAA_DIAMETER_SENDER_H
+#define _AAA_DIAMETER_SENDER_H
 
 #include "../locking.h"
-#include "diameter_types.h"
 #include "../transport/peer.h"
 #include "session.h"
-#include "../transport/trans.h"
+#include "diameter_api.h"
 
 
-struct msg_manager {
-	unsigned int  hop_by_hop;
-	gen_lock_t     *hop_by_hop_lock;
+struct send_manager {
 	unsigned int  end_to_end;
-	gen_lock_t     *end_to_end_lock;
+	gen_lock_t    *end_to_end_lock;
 };
 
 
-#define is_req(_msg_) \
-	(((_msg_)->flags)&0x80)
 
+int init_send_manager();
 
-
-
-int init_msg_manager();
-
-void destroy_msg_manager();
+void destroy_send_manager();
 
 void print_aaa_message( AAAMessage *msg);
 

@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.13 2003/04/07 15:17:51 bogdan Exp $
+ * $Id: session.h,v 1.14 2003/04/07 19:51:57 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -10,7 +10,7 @@
 #define _AAA_DIAMETER_SESSION_H
 
 
-#include "diameter_types.h"
+#include "diameter_api.h"
 #include "../aaa_lock.h"
 #include "../hash_table.h"
 #include "../locking.h"

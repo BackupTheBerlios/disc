@@ -1,5 +1,5 @@
 /*$
- * $Id: dest.c,v 1.2 2003/04/04 16:59:25 bogdan Exp $$
+ * $Id: dest.c,v 1.3 2003/04/07 19:51:57 bogdan Exp $$
  *$
  * 2003-04-01 created by bogdan$
  */
@@ -9,7 +9,7 @@
 #include "../mem/shm_mem.h"
 #include "../dprint.h"
 #include "../transport/peer.h"
-#include "../diameter_api/message.h"
+#include "../diameter_msg/diameter_msg.h"
 
 
 static struct peer_chaine *all_peers;

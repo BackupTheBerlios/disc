@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_api.h,v 1.7 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: diameter_api.h,v 1.8 2003/04/07 19:51:57 bogdan Exp $
  *
  * 2002-10-04 created by illya (komarov@fokus.gmd.de)
  *
@@ -9,46 +9,61 @@
 #ifndef _AAA_DIAMETER_API_H
 #define _AAA_DIAMETER_API_H
 
-#include "diameter_types.h"
+#include "../diameter_msg/diameter_msg.h"
 
 
-#define get_my_appref() ((AAAApplicationRef)&exports)
 
 
-AAAReturnCode AAAOpen(
-	char *configFileName);
+/****************************** TYPES ***************************************/
+
+
+/* types of timeout - passed when a Tout handler is called
+ */
+#define ANSWER_TIMEOUT_EVENT  1
+#define SESSION_TIMEOUT_EVENT 2
+
+
+/*  */
+typedef enum {
+	_B_FALSE,
+	_B_TRUE
+}boolean_t;
+
+
+/* The following defines the possible security characteristics for a host
+ */
+typedef enum {
+	AAA_SEC_NOT_DEFINED = -2,
+	AAA_SEC_NOT_CONNECTED = -1,
+	AAA_SEC_NO_SECURITY = 0,
+	AAA_SEC_CMS_SECURITY = 1,
+	AAA_SEC_CMS_PROXIED = 2
+} AAASecurityStatus;
+
+
+/* The following structure is returned by the dictionary entry lookup
+ * functions */
+typedef struct dictionaryEntry {
+	AAA_AVPCode    avpCode;
+	char*          avpName;
+	AAA_AVPDataType     avpType;
+	AAAVendorId    vendorId;
+	AAA_AVPFlag    flags;
+} AAADictionaryEntry;
+
+
+
+/*********************************** FUNCTIONS *******************************/
+
+
+#define get_my_appref() \
+	((AAAApplicationRef)&exports)
+
+
+AAAReturnCode AAAOpen();
 
 
 AAAReturnCode AAAClose();
-
-
-const char *AAAGetDefaultConfigFileName();
-
-
-/*AAACallbackHandle *AAARegisterCommandCallback(
-	AAACommandCode       commandCode,
-	AAAVendorId          vendorId,
-	char                 *commandName,
-	AAAExtensionId       extensionId,
-	AAACallback          callback,
-	AAACallbackLocation  position);
-
-
-AAACallbackHandle AAARegisterNoncommandCallback(
-	AAACallback callback,
-	AAACallbackLocation position);
-
-
-AAAReturnCode AAADeregisterCommandCallback(
-	AAACallbackHandle *handle);
-
-
-AAAReturnCode AAADeregisterNoncommandCallback(
-	AAACallbackHandle *handle);
-
-
-AAAReturnCode AAARegisterExtension(
-	AAAExtensionId extensionId);*/
 
 
 AAAReturnCode AAAStartSession(
@@ -69,133 +84,57 @@ AAAReturnCode AAASessionTimerStart(
 AAAReturnCode AAASessionTimerStop(
 		AAASessionId *sessionId );
 
-
-/*  AAAReturnCode AAAAbortSession(AAASessionId *sessionId);
-  AAAServer *AAALookupServer(IP_ADDR ipAddr);
-  AAAReturnCode AAASetSessionMessageTimeout(AAASessionId *id,
-                                            time_t timeout);
-  AAAResultCode  AAAGetDomainInterconnectType(AAAMessage *message,
-																							char *domainName,
-				                                      char *type);
+/*
+AAAReturnCode AAAAbortSession(
+		AAASessionId *sessionId);
 */
-AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
-				                                AAAVendorId vendorId,
-   				                              AAADictionaryEntry *entry);
-AAAValue AAAValueFromName(char *avpName,
-		                        char *vendorName,
-		                        char *valueName);
-AAAReturnCode AAADictionaryEntryFromName(char *avpName,
-													     AAAVendorId vendorId,
-														 AAADictionaryEntry *entry);
-AAAValue AAAValueFromAVPCode(AAA_AVPCode avpCode,
-			                         AAAVendorId vendorId,
-		                           char *valueName);
-const char *AAALookupValueNameUsingValue(AAA_AVPCode avpCode,
-				                                   AAAVendorId vendorId,
-				                                   AAAValue value);
-//Insert the AVP avp into this avpList after position
-boolean_t AAAGetCommandCode(char *commandName,
-		                          AAACommandCode *commandCode,
-		                          AAAVendorId *vendorId);
 
-AAAMessage *AAANewMessage(
-		AAACommandCode commandCode,
-		AAAApplicationId appId,
-		AAASessionId *sessionId,
-		AAAMessage *request);
-
-AAAReturnCode AAAFreeMessage(
-		AAAMessage **message);
-
-AAAReturnCode AAARespondToMessage(
-		AAAMessage* message,
-		AAACommandCode commandCode,
-		AAAVendorId vendorId,
-		AAAResultCode resultCode);
-
-AAAReturnCode AAAAddProxyState(
-		AAAMessage *message);
-
-AAAReturnCode AAACreateAVP(
-		AAA_AVP **avp,
-		AAA_AVPCode code,
-		AAA_AVPFlag flags,
-		AAAVendorId vendorId,
-		char *data,
-		size_t length);
-
-AAAReturnCode AAACreateAndAddAVPToMessage(
-		AAAMessage *msg,
-		AAA_AVPCode code,
-		AAA_AVPFlag flags,
-		AAAVendorId vendorId,
-		char *data,
-		size_t length);
-
-AAAReturnCode AAAAddAVPToMessage(
-		AAAMessage *msg,
-		AAA_AVP *avp,
-		AAA_AVP *position);
-
-AAA_AVP *AAAFindMatchingAVP(
-		AAAMessage *msg,
-		AAA_AVP *startAvp,
+AAAReturnCode AAADictionaryEntryFromAVPCode(
 		AAA_AVPCode avpCode,
 		AAAVendorId vendorId,
-		AAASearchType searchType);
+		AAADictionaryEntry *entry);
 
-/*AAAReturnCode AAAJoinAVPLists(
-		AAA_AVP_LIST *dest,
-		AAA_AVP_LIST *source,
-		AAA_AVP      *position);*/
 
-AAAReturnCode AAARemoveAVPFromMessage(
-		AAAMessage *msg,
-		AAA_AVP *avp);
+AAAValue AAAValueFromName(
+		char *avpName,
+		char *vendorName,
+		char *valueName);
 
-AAAReturnCode AAAFreeAVP(
-		AAA_AVP **avp);
 
-AAA_AVP* AAAGetFirstAVP(
-		AAA_AVP_LIST *avpList);
+AAAReturnCode AAADictionaryEntryFromName(
+		char *avpName,
+		AAAVendorId vendorId,
+		AAADictionaryEntry *entry);
 
-AAA_AVP* AAAGetLastAVP(
-		AAA_AVP_LIST *avpList);
 
-AAA_AVP* AAAGetNextAVP(
-		AAA_AVP *avp);
+AAAValue AAAValueFromAVPCode(
+		AAA_AVPCode avpCode,
+		AAAVendorId vendorId,
+		char *valueName);
 
-AAA_AVP* AAAGetPrevAVP(
-		AAA_AVP *avp);
 
-char *AAAConvertAVPToString(
-		AAA_AVP *avp,
-		char *dest,
-		size_t destLen);
+const char *AAALookupValueNameUsingValue(
+		AAA_AVPCode avpCode,
+		AAAVendorId vendorId,
+		AAAValue value);
 
-AAAResultCode AAASetMessageResultCode(
-		AAAMessage *message,
-		AAAResultCode resultCode);
 
-AAAReturnCode  AAASetServer(
-		AAAMessage *message,
-		IP_ADDR host);
+boolean_t AAAGetCommandCode(
+		char *commandName,
+		AAACommandCode *commandCode,
+		AAAVendorId *vendorId);
+
 
 AAAReturnCode AAASendMessage(
 		AAAMessage *message);
 
+/*
 AAAReturnCode AAASendAcctRequest(
 		AAASessionId *aaaSessionId,
 		AAAExtensionId extensionId,
 		AAA_AVP_LIST *acctAvpList,
 		AAAAcctMessageType msgType);
-
-AAASecurityStatus AAAGetPeerSecurityStatus(
-		IP_ADDR remoteHost);
-
-AAAMessage* AAATranslateMessage(
-		unsigned char* source,
-		size_t sourceLen);
+*/
 
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.h,v 1.5 2003/04/04 16:59:24 bogdan Exp $
+ * $Id: aaa_module.h,v 1.6 2003/04/07 19:51:57 bogdan Exp $
  */
 /* History:
  * --------
@@ -9,7 +9,7 @@
 #ifndef aaa_module_h
 #define aaa_module_h
 
-#include "diameter_api/diameter_types.h"
+#include "diameter_msg/diameter_msg.h"
 
 struct module_exports{
 	char* name; /* module name, must be unique */

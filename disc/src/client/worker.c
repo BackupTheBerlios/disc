@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.4 2003/04/07 15:17:51 bogdan Exp $
+ * $Id: worker.c,v 1.5 2003/04/07 19:51:57 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -15,7 +15,6 @@
 #include "../timer.h"
 #include "../msg_queue.h"
 #include "../aaa_module.h"
-#include "../diameter_api/diameter_types.h"
 #include "../diameter_api/diameter_api.h"
 #include "../transport/trans.h"
 #include "worker.h"

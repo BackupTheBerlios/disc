@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.1 2003/03/24 18:45:11 andrei Exp $
+## $Id: Makefile.am,v 1.2 2003/04/07 19:51:57 bogdan Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -7,13 +7,13 @@
 @SET_MAKE@
 
 noinst_LTLIBRARIES = libdiameter_api.la
-libdiameter_api_la_SOURCES =	avp.c cfg_parser.c init_conf.c message.c \
-								session.c \
-								avp.h diameter_api.h message.h session.h \
-								cfg_parser.h diameter_types.h init_conf.h \
-								parser_f.h \
-								# dictionary.c dictionary.h
-libdiameter_api_la_LIBADD = 
+libdiameter_api_la_SOURCES =	init_conf.c sender.c session.c \
+								session.h diameter_api.h \
+								init_conf.h sender.h 
+								
+#								dictionary.c  dictionary.h
+								
+libdiameter_api_la_LIBADD = ../diameter_msg/libdiameter_msg.la
 
 EXTRA_DIST=	aaa_lib.cfg \
 			#dictionary

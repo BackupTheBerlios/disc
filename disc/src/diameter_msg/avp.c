@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.10 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: avp.c,v 1.1 2003/04/07 19:51:57 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  * 2003-03-12 converted to shm_malloc/free (andrei)
@@ -9,10 +9,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../dprint.h"
-#include "diameter_types.h"
+#include <netinet/in.h>
 
 #include "../mem/shm_mem.h"
+#include "../dprint.h"
+#include "diameter_msg.h"
+
 
 
 
@@ -70,78 +72,58 @@ inline void set_avp_fields( AAA_AVPCode code, AAA_AVP *avp)
 
 
 
-/* internal function - builds an avp ; if free_it is 1, the data will be freed
- * along with the avp; if 0, it will not be freed
- */
-AAAReturnCode  create_avp(
-	AAA_AVP **avp,
-	AAA_AVPCode code,
-	AAA_AVPFlag flags,
-	AAAVendorId vendorId,
-	char   *data,
-	size_t length,
-	unsigned int free_it)
-{
-	/* allocated a new AVP struct */
-	(*avp) = 0;
-	(*avp) = (AAA_AVP*)shm_malloc(sizeof(AAA_AVP));
-	if (!(*avp))
-		goto error;
-	memset( *avp, 0, sizeof(AAA_AVP) );
-
-	/* set some fields */
-	(*avp)->free_it = free_it;
-	(*avp)->packetType = AAA_DIAMETER;
-	(*avp)->code=code;
-	(*avp)->flags=flags;
-	(*avp)->vendorId=vendorId;
-	set_avp_fields( code, *avp);
-
-	/* data */
-	(*avp)->data.s = data;
-	(*avp)->data.len = length;
-
-	return AAA_ERR_SUCCESS;
-error:
-	LOG(L_ERR,"ERROR:create_avp: no more free memory!\n");
-	if (*avp) shm_free(*avp);
-	if (data && free_it) shm_free(data);
-	return AAA_ERR_NOMEM;
-}
-
-
-
 /* This function creates an AVP and returns a pointer to it;
- * For data, a own copy will be made.
  */
-AAAReturnCode  AAACreateAVP(
-	AAA_AVP **avp,
+AAA_AVP*  AAACreateAVP(
 	AAA_AVPCode code,
 	AAA_AVPFlag flags,
 	AAAVendorId vendorId,
 	char   *data,
-	size_t length )
+	unsigned int length,
+	AVPDataStatus data_status)
 {
-	char *p=0;
+	AAA_AVP *avp;
 
 	/* first check the params */
-	if(avp==0 || data==0 || length==0) {
+	if( data==0 || length==0) {
 		LOG(L_ERR,"ERROR:AAACreateAndAddAVPToList: NULL value received for"
-			" param avp/data/length !!\n");
-		return AAA_ERR_PARAMETER;
+			" param data/length !!\n");
+		return 0;
 	}
 
-	/* make a duplicate for data */
-	p = (void*)shm_malloc(length);
-	if(!p) {
-		LOG(L_ERR,"ERROR:AAACreateAVP: no more free memory!\n");
+	/* allocated a new AVP struct */
+	avp = 0;
+	avp = (AAA_AVP*)shm_malloc(sizeof(AAA_AVP));
+	if (!avp)
 		goto error;
-	}
-	memcpy( p, data, length);
+	memset( avp, 0, sizeof(AAA_AVP) );
 
-	return create_avp( avp, code, flags, vendorId, p, length, 1);
+	/* set some fields */
+	//avp->free_it = free_it;
+	avp->packetType = AAA_DIAMETER;
+	avp->code=code;
+	avp->flags=flags;
+	avp->vendorId=vendorId;
+	set_avp_fields( code, avp);
+
+	if ( data_status==AVP_DUPLICATE_DATA ) {
+		/* make a duplicate for data */
+		avp->data.len = length;
+		avp->data.s = (void*)shm_malloc(length);
+		if(!avp->data.s)
+			goto error;
+		memcpy( avp->data.s, data, length);
+		avp->free_it = 1;
+	} else {
+		avp->data.s = data;
+		avp->data.len = length;
+		avp->free_it = (data_status==AVP_FREE_DATA)?1:0;
+	}
+
+	return avp;
 error:
-	return AAA_ERR_NOMEM;
+	LOG(L_ERR,"ERROR:AAACreateAVP: no more free memory!\n");
+	return 0;
 }
 
 
@@ -203,34 +185,6 @@ AAAReturnCode  AAAAddAVPToMessage(
 
 
 
-/** This function creates an AVP and adds it to an AVP list of a message */
-AAAReturnCode AAACreateAndAddAVPToMessage(
-	AAAMessage *msg,
-	AAA_AVPCode code,
-	AAA_AVPFlag flags,
-	AAAVendorId vendorId,
-	char *data,
-	size_t length )
-{
-	AAA_AVP *avp;
-
-	/* some checks */
-	if (!msg ) {
-		LOG(L_ERR,"ERROR:AAACreateAndAddAVPToList: param mesage cannot"
-			" be null!!\n");
-		return AAA_ERR_PARAMETER;
-	}
-
-	/* build the AVP */
-	if (AAACreateAVP(&avp,code,flags,vendorId,data,length)!=AAA_ERR_SUCCESS)
-		return AAA_ERR_NOMEM;
-
-	/* add avp at the end */
-	return AAAAddAVPToMessage( msg, avp, msg->avpList.tail);
-}
-
-
-
 /* This function finds an AVP with matching code and vendor id */
 AAA_AVP  *AAAFindMatchingAVP(
 	AAAMessage *msg,
@@ -272,47 +226,6 @@ error:
 	return 0;
 }
 
-
-#if 0
-/*  The following function joins together two AVP lists */
-AAAReturnCode  AAAJoinAVPLists(
-	AAA_AVP_LIST *dest,
-	AAA_AVP_LIST *source,
-	AAA_AVP      *position)
-{
-	AAA_AVP *avp_t;
-
-	/* param check */
-	if ( !dest || !source ) {
-		LOG(L_ERR,"ERROR:AAAAddAVPToList: param AVP_LIST \"dest\" or \"source\" "
-			"passed null !!\n");
-		return AAA_ERR_PARAMETER;
-	}
-
-	/* search the "position" avp */
-	for(avp_t=dest->head;avp_t&&avp_t!=position;avp_t=avp_t->next);
-	if (!avp_t) {
-		LOG(L_ERR,"ERROR: AAACreateAVP: the \"position\" avp is not in "
-			"\"dest\" avp_list!!\n");
-		return AAA_ERR_PARAMETER;
-	}
-
-	/* join */
-	if (source->head) {
-		if (position) {
-			source->tail->next = position->next;
-			position->next = source->head;
-		} else {
-			source->tail->next = dest->head;
-			dest->head = source->head;
-		}
-		source->head->prev = position;
-		if (source->tail->next)
-			source->tail->next->prev = source->tail;
-	}
-	return AAA_ERR_SUCCESS;
-}
-#endif
 
 
 /* This function removes an AVP from a list of a message */
@@ -418,7 +331,7 @@ AAA_AVP*  AAAGetPrevAVP(AAA_AVP *avp)
 
 /* This function converts the data in the AVP to a format suitable for
  * log or display functions. */
-char*  AAAConvertAVPToString(AAA_AVP *avp, char *dest, size_t destLen)
+char*  AAAConvertAVPToString(AAA_AVP *avp, char *dest, unsigned int destLen)
 {
 	int l;
 	int i;
@@ -484,7 +397,7 @@ char*  AAAConvertAVPToString(AAA_AVP *avp, char *dest, size_t destLen)
 
 
 
-AAA_AVP* clone_avp( AAA_AVP *avp , unsigned int clone_data)
+AAA_AVP* AAACloneAVP( AAA_AVP *avp , unsigned char clone_data)
 {
 	AAA_AVP *n_avp;
 

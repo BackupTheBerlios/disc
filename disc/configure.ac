@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.7 2003/04/06 22:09:16 andrei Exp $
+dnl $Id: configure.ac,v 1.8 2003/04/07 19:51:57 bogdan Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -20,7 +20,7 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.7 2003/04/06 22:09:16 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.8 2003/04/07 19:51:57 bogdan Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 AC_CONFIG_SUBDIRS(libltdl)
@@ -67,6 +67,16 @@ if test -z "$enable_extra_debug"; then
 fi
 if test "$enable_extra_debug" = yes; then
 	AC_DEFINE(EXTRA_DEBUG)
+fi
+
+AC_ARG_ENABLE(malloc_debug,
+				AC_HELP_STRING([--enable-malloc_debug],
+							[enable malloc debugging code (default is NO)]))
+if test -z "$enable_malloc_debug"; then
+	enable_malloc_debug=no
+fi
+if test "$enable_malloc_debug" = yes; then
+	AC_DEFINE(DBG_QM_MALLOC)
 fi
 
 AC_ARG_ENABLE(log,
@@ -254,7 +264,9 @@ dnl substitutions
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
 
-AC_OUTPUT(Makefile src/Makefile src/client/Makefile src/diameter_api/Makefile
+AC_OUTPUT(Makefile src/Makefile src/client/Makefile 
+			src/diameter_msg/Makefile
+			src/diameter_api/Makefile
 			src/mem/Makefile src/transport/Makefile
 			src/client/modules/Makefile
 			src/client/modules/print/Makefile

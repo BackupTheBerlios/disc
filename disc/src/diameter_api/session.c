@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.16 2003/04/07 15:17:51 bogdan Exp $
+ * $Id: session.c,v 1.17 2003/04/07 19:51:57 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <netinet/in.h>
 #include "../mem/shm_mem.h"
 #include "../dprint.h"
 #include "../str.h"
@@ -19,7 +20,7 @@
 #include "../locking.h"
 #include "../hash_table.h"
 #include "../aaa_module.h"
-#include "message.h"
+#include "sender.h"
 #include "session.h"
 
 
