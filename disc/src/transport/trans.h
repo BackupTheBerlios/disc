@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.10 2003/04/07 15:17:51 bogdan Exp $
+ * $Id: trans.h,v 1.11 2003/04/10 21:40:03 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -23,11 +23,15 @@ struct trans {
 	struct h_link  linker;
 	/* session the request belong to - if any */
 	struct session *ses;
+	/* the incoming hop-by-hop-Id - used only when forwarding*/
+	unsigned int orig_hopbyhopId;
 	/* info - can be used for different purposes */
 	unsigned int info;
 
-	/* request peer */
-	struct peer *peer;
+	/* incoming request peer */
+	struct peer *in_peer;
+	/* outgoing request peer */
+	struct peer *out_peer;
 	/* request buffer */
 	str *req;
 	/* timeout timer */
@@ -51,7 +55,7 @@ int init_trans_manager();
 void destroy_trans_manager();
 
 
-struct trans* create_transaction( str*, struct session*, struct peer*);
+struct trans* create_transaction( str *in_buf, struct peer *in_peer );
 
 
 void destroy_transaction( struct trans* );

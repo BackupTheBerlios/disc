@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_msg.h,v 1.5 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: diameter_msg.h,v 1.6 2003/04/10 21:40:03 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -265,7 +265,7 @@ typedef struct _message_t {
 	AAA_AVP             *auth_ses_state;
 	AAA_AVP_LIST        avpList;
 	str                 buf;
-	void                *trans;
+	void                *in_peer;
 } AAAMessage;
 
 

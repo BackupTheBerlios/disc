@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.3 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: sender.c,v 1.4 2003/04/10 21:40:03 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -59,18 +59,13 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	}
 
 	if ( !is_req(msg) ) {
-		/* it's a response -> I already have a transaction and a session */
-		tr = (struct trans*)msg->trans;
-		ses = tr->ses;
+		/* it's a response */
 
 		/* generate the buf from the message */
 		if ( AAABuildMsgBuffer( msg )==-1 )
 			goto error;
 
-		/* copy the end-to-end id and hop-by-hop id */
-		((unsigned int*)msg->buf.s)[3] = ((unsigned int*)tr->req->s)[3];
-		((unsigned int*)msg->buf.s)[4] = ((unsigned int*)tr->req->s)[4];
-
+		ses = sId2session( msg->sId );
 		if (ses!=FAKE_SESSION) {
 			/* update the session state machine */
 			switch (msg->commandCode) {
@@ -83,8 +78,8 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 				goto error;
 		}
 
-		/* send the message */
-		if (send_res_to_peer( &(msg->buf), tr->peer)==-1) {
+		/* send the reply to the request incoming peer  */
+		if (send_res_to_peer( &(msg->buf), (struct peer*)msg->in_peer)==-1) {
 			LOG(L_ERR,"ERROR:send_aaa_response: send returned error!\n");
 			if (ses!=FAKE_SESSION)
 				session_state_machine( ses, AAA_SEND_FAILED, 0);
@@ -120,12 +115,13 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		if ( AAABuildMsgBuffer( msg )==-1 )
 			goto error;
 
-		/* build a new transaction for this request */
-		if (( tr=create_transaction( &msg->buf, ses, 0/*no peer yet*/))==0 ) {
+		/* build a new outgoing transaction for this request */
+		if (( tr=create_transaction(&(msg->buf), 0) )==0 ) {
 			LOG(L_ERR,"ERROR:AAASendMesage: cannot create a new"
 				" transaction!\n");
 			goto error;
 		}
+		tr->ses = ses;
 
 		/* send the request */
 		for( ; pc ; pc=pc->next ) {
@@ -136,13 +132,12 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 				break;
 			}
 		}
+		tr->req = 0;
 		if (ret==-1) {
 			LOG(L_ERR,"ERROR:AAASendMessage: I wasn't able to send request\n");
 			session_state_machine( ses, AAA_SEND_FAILED, 0);
 			goto error;
 		}
-		/* just to be sure */
-		tr->req = 0;
 	}
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.1 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: avp.c,v 1.2 2003/04/10 21:40:03 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  * 2003-03-12 converted to shm_malloc/free (andrei)
@@ -289,6 +289,7 @@ AAAReturnCode  AAAFreeAVP(AAA_AVP **avp)
 	/* free all the mem */
 	if ( (*avp)->free_it && (*avp)->data.s )
 		shm_free((*avp)->data.s);
+
 	shm_free( *avp );
 	avp = 0;
 

@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.2 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: message.c,v 1.3 2003/04/10 21:40:03 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -55,7 +55,7 @@ AAAReturnCode AAABuildMsgBuffer( AAAMessage *msg )
 	/* allocate some memory */
 	msg->buf.s = (unsigned char*)shm_malloc( msg->buf.len );
 	if (!msg->buf.s) {
-		LOG(L_ERR,"ERROR:build_buf_from_msg: no more free memory!\n");
+		LOG(L_ERR,"ERROR:AAABuildMsgBuffer: no more free memory!\n");
 		goto error;
 	}
 	memset(msg->buf.s, 0, msg->buf.len);
@@ -77,8 +77,10 @@ AAAReturnCode AAABuildMsgBuffer( AAAMessage *msg )
 	((unsigned int*)p)[0] = htonl(msg->applicationId);
 	p += APPLICATION_ID_SIZE;
 	/* hop by hop id */
+	((unsigned int*)p)[0] = msg->hopbyhopId;
 	p += HOP_BY_HOP_IDENTIFIER_SIZE;
 	/* end to end id */
+	((unsigned int*)p)[0] = msg->endtoendId;
 	p += END_TO_END_IDENTIFIER_SIZE;
 
 	/* AVPS */
@@ -129,7 +131,6 @@ AAAMessage *AAANewMessage(
 	AAAMessage   *msg;
 	AAA_AVP      *avp;
 	AAA_AVP      *avp_t;
-	struct trans *tr;
 	unsigned int code;
 
 	msg = 0;
@@ -186,13 +187,15 @@ AAAMessage *AAANewMessage(
 		/* keep track of the session -> SendMessage will need it! */
 		msg->sId = sessionId;
 	} else {
-		/* it'a ans answer -> it will have the same session Id */
+		/* it'a an answer -> it will have the same session Id */
 		msg->sId = request->sId;
-		/* link the transaction the req. belong to */
-		msg->trans = request->trans;
-		tr = (struct trans*)request->trans;
+		/* link the incoming peer to the answer */
+		msg->in_peer = request->in_peer;
 		/* set the P flag as in request */
 		msg->flags |= request->flags&0x40;
+		/**/
+		msg->endtoendId = request->endtoendId;
+		msg->hopbyhopId = request->hopbyhopId;
 
 		/* add a success result-code avp ;-))) */
 		avp = 0;
@@ -399,7 +402,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen)
 	msg->buf.s = source;
 	msg->buf.len = msg_len;
 
-	AAAPrintMessage( msg );
+	//AAAPrintMessage( msg );
 	return  msg;
 error:
 	LOG(L_ERR,"ERROR:AAATranslateMessage: message conversion droped!!\n");

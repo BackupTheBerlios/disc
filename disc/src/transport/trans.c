@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.7 2003/04/08 12:08:20 bogdan Exp $
+ * $Id: trans.c,v 1.8 2003/04/10 21:40:03 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -54,30 +54,29 @@ void destroy_trans_manager()
 
 
 
-struct trans* create_transaction(str *buf, struct session *ses, struct peer *p)
+struct trans* create_transaction( str *buf, struct peer *in_peer)
 {
 	struct trans *t;
 
 	t = (struct trans*)shm_malloc(sizeof(struct trans));
 	if (!t) {
-		LOG(L_ERR,"ERROR:create_transaction: no more free memory!\n");
+		LOG(L_ERR,"ERROR:create_in_transaction: no more free memory!\n");
 		goto error;
 	}
 	memset(t,0,sizeof(struct trans));
 
-	/* link the session */
-	t->ses = ses;
 	/* init the timer_link for timeout */
 	t->timeout.payload = t;
-	/* link the outging request */
+	/* link the request buffer */
 	t->req = buf;
-	/* link the outgoing peer */
-	t->peer = p;
+	/* link the incoming peer */
+	t->in_peer = in_peer;
 
 	return t;
 error:
 	return 0;
 }
+
 
 
 
@@ -115,8 +114,8 @@ void timeout_handler(unsigned int ticks, void* param)
 		if (tr->ses) {
 			session_state_machine( tr->ses, AAA_SESSION_REQ_TIMEOUT, 0);
 		}else{
-			write_command( tr->peer->fd, TIMEOUT_PEER_CMD,
-				PEER_TR_TIMEOUT, tr->peer, (void*)tr->info);
+			write_command( tr->out_peer->fd, TIMEOUT_PEER_CMD,
+				PEER_TR_TIMEOUT, tr->out_peer, (void*)tr->info);
 		}
 		destroy_transaction( tr );
 	}

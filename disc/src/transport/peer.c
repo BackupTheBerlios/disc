@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.21 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: peer.c,v 1.22 2003/04/10 21:40:03 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -35,7 +35,7 @@
 #define WAIT_CER_TIMEOUT 5
 #define SEND_DWR_TIMEOUT 35
 
-#define MAX_APPID_PER_PEER 256
+#define MAX_APPID_PER_PEER 64
 
 
 #define list_add_tail_safe( _lh_ , _list_ ) \
@@ -517,13 +517,13 @@ void destroy_peer( struct peer *p)
 
 
 
-int send_req_to_peer( struct trans *tr , struct peer *p)
+int send_req_to_peer(struct trans *tr , struct peer *p)
 {
 	unsigned int ete;
 	str s;
 
 	lock_get( p->mutex );
-	if ( p->state!=PEER_CONN ) {
+	if ( p->state!=PEER_CONN && p->state!=PEER_WAIT_DWA) {
 		LOG(L_INFO,"ERROR:send_req_to_peer: peer is not connected\n");
 		lock_release( p->mutex);
 		return -1;
@@ -532,26 +532,32 @@ int send_req_to_peer( struct trans *tr , struct peer *p)
 	DBG("peer \"%.*s\" available for sending\n",p->aaa_identity.len,
 			p->aaa_identity.s);
 	/* get a new end-to-end ID for computing the hash code */
-	ete = p->endtoendID++;
+	if (tr->in_peer) {
+		/* this is forwarding*/
+		ete = ((unsigned int*)tr->req->s)[4];
+	}else {
+		/* sending local req */
+		ete = p->endtoendID++;
+		((unsigned int*)tr->req->s)[4] = ete;
+	}
 	s.s = (char*)&ete;
 	s.len = END_TO_END_IDENTIFIER_SIZE;
 	tr->linker.hash_code = hash( &s , p->trans_table->hash_size );
 	/* insert into trans hash table */
 	add_cell_to_htable( p->trans_table, &(tr->linker) );
-	tr->peer = p;
 	/* the hash label is used as hop-by-hop ID */
 	((unsigned int*)tr->req->s)[3] = tr->linker.label;
-	((unsigned int*)tr->req->s)[4] = ete;
 	/* send it */
 	if (write( p->sock, tr->req->s, tr->req->len)!=-1) {
 		lock_release( p->mutex);
+		tr->out_peer = p;
 		/* success */
 		return 1;
 	}
+	lock_release( p->mutex);
 	/* write failed*/
 	LOG(L_ERR,"ERROR:send_req_to_peer: write returned error\n");
 	remove_cell_from_htable( p->trans_table, &(tr->linker) );
-	lock_release( p->mutex);
 	return -1;
 }
 
@@ -580,13 +586,14 @@ inline int internal_send_request( str *buf, struct peer *p)
 	struct trans *tr;
 	str s;
 
-	/* build a new transaction for this request */
-	if ((tr=create_transaction( 0/*buf*/, 0/*ses*/, p/*peer*/))==0) {
+	/* build a new outgoing transaction for this request */
+	if ((tr=create_transaction( 0, 0))==0) {
 		LOG(L_ERR,"ERROR:internal_send_request: cannot create a new"
 			" transaction!\n");
 		goto error;
 	}
 	tr->info = p->conn_cnt;
+	tr->out_peer = p;
 
 	/* generate a new end-to-end id */
 	((unsigned int *)buf->s)[4] = p->endtoendID++;
@@ -620,19 +627,24 @@ error:
 
 
 
-inline int internal_send_response( str *buf, struct trans *tr)
+inline int internal_send_response( str *res, str *req, unsigned int res_code,
+																struct peer *p)
 {
+	/* set the result code  AVP value */
+	((unsigned int*)res->s)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE(0))>>2] =
+		htonl( res_code );
+
 	/* set the length and the command code */
-	((unsigned int*)buf->s)[0] |= htonl( buf->len );
-	((unsigned int*)buf->s)[1]  = MASK_MSG_CODE&((unsigned int*)tr->req->s)[1];
+	((unsigned int*)res->s)[0] |= MASK_MSG_CODE&htonl( res->len );
+	((unsigned int*)res->s)[1] |= MASK_MSG_CODE&((unsigned int*)req->s)[1];
 
 	/* set the same application, hop-by-hop and end-to-end Id as in request */
-	((unsigned int*)buf->s)[2] = ((unsigned int*)tr->req->s)[2];
-	((unsigned int*)buf->s)[3] = ((unsigned int*)tr->req->s)[3];
-	((unsigned int*)buf->s)[4] = ((unsigned int*)tr->req->s)[4];
+	((unsigned int*)res->s)[2] = ((unsigned int*)req->s)[2];
+	((unsigned int*)res->s)[3] = ((unsigned int*)req->s)[3];
+	((unsigned int*)res->s)[4] = ((unsigned int*)req->s)[4];
 
 	/* send the message */
-	if ( tcp_send_unsafe( tr->peer, buf->s, buf->len)==-1 ) {
+	if ( tcp_send_unsafe( p, res->s, res->len)==-1 ) {
 		LOG(L_ERR,"ERROR:internal_send_response: tcp_send_unsafe "
 			"returned error!\n");
 		return -1;
@@ -685,7 +697,7 @@ error:
 
 
 
-int send_cea( struct trans *tr, unsigned int result_code)
+int send_cea( str *cer, unsigned int result_code, struct peer *p)
 {
 	char *ptr;
 	str *ce_avp;
@@ -693,7 +705,7 @@ int send_cea( struct trans *tr, unsigned int result_code)
 	int ret;
 
 #ifdef USE_IPV6
-	if (tr->peer->local_ip.af==AF_INET6)
+	if (p->local_ip.af==AF_INET6)
 		ce_avp = &(peer_table->ce_avp_ipv6);
 	else
 #endif
@@ -707,18 +719,13 @@ int send_cea( struct trans *tr, unsigned int result_code)
 	ptr = cea.s;
 	/* copy the standart answer part */
 	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
-
-	/* set the result code  AVP value */
-	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE(0))>>2] =
-		htonl( result_code );
 	ptr += peer_table->std_ans.len;
 	/* set the correct address into host-ip-address AVP */
 	memcpy( ptr, ce_avp->s, ce_avp->len );
-	memcpy( ptr+AVP_HDR_SIZE(0), tr->peer->local_ip.u.addr,
-		tr->peer->local_ip.len);
+	memcpy( ptr+AVP_HDR_SIZE(0), p->local_ip.u.addr, p->local_ip.len);
 
 	/* send the buffer */
-	ret = internal_send_response( &cea, tr);
+	ret = internal_send_response( &cea, cer, result_code, p);
 
 	shm_free( cea.s );
 	return ret;
@@ -784,7 +791,7 @@ unsigned int process_ce( struct peer *p, str *buf , int is_req)
 				break;
 			}
 			acct_app_ids[nr_acct_app_ids++] = ntohl(((unsigned int*)ptr)[2]);
-			if ( acct_app_ids[nr_acct_app_ids-1]==AAA_APP_RELAY ||
+			if ( do_relay || acct_app_ids[nr_acct_app_ids-1]==AAA_APP_RELAY ||
 			((mod=find_module( acct_app_ids[nr_acct_app_ids-1]))!=0
 			&& mod->exports->app_type&DOES_ACCT) )
 				code = AAA_SUCCESS;
@@ -796,7 +803,7 @@ unsigned int process_ce( struct peer *p, str *buf , int is_req)
 				break;
 			}
 			auth_app_ids[nr_auth_app_ids++] = ntohl(((unsigned int*)ptr)[2]);
-			if ( auth_app_ids[nr_auth_app_ids-1]==AAA_APP_RELAY ||
+			if ( do_relay || auth_app_ids[nr_auth_app_ids-1]==AAA_APP_RELAY ||
 			((mod=find_module( auth_app_ids[nr_auth_app_ids-1]))!=0
 			&& mod->exports->app_type&DOES_AUTH) )
 				code = AAA_SUCCESS;
@@ -893,7 +900,7 @@ error:
 
 
 
-int send_dwa( struct trans *tr, unsigned int result_code)
+int send_dwa( str *dwr, unsigned int result_code, struct peer *p)
 {
 	char *ptr;
 	str dwa;
@@ -910,12 +917,8 @@ int send_dwa( struct trans *tr, unsigned int result_code)
 	/* copy the standart part of an answer */
 	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
 
-	/* set the result code */
-	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE(0))>>2] =
-		htonl( result_code );
-
 	/* send the buffer */
-	ret = internal_send_response( &dwa, tr);
+	ret = internal_send_response( &dwa, dwr, result_code, p);
 
 	shm_free( dwa.s );
 	return ret;
@@ -965,7 +968,6 @@ error:
 
 
 
-
 int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 {
 	char *ptr;
@@ -999,7 +1001,7 @@ error:
 
 
 
-int send_dpa( struct trans *tr, unsigned int result_code)
+int send_dpa( str *dpr, unsigned int result_code, struct peer *p)
 {
 	char *ptr;
 	str dpa;
@@ -1016,12 +1018,8 @@ int send_dpa( struct trans *tr, unsigned int result_code)
 	/* copy the standart part of an answer */
 	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
 
-	/* set thr result code */
-	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE(0))>>2] =
-		htonl( result_code );
-
 	/* send the buffer */
-	ret = internal_send_response( &dpa, tr);
+	ret = internal_send_response( &dpa, dpr, result_code, p);
 
 	shm_free( dpa.s );
 	return ret;
@@ -1105,11 +1103,7 @@ void dispatch_message( struct peer *p, str *buf)
 	/* is request or reply? */
 	if (buf->s[VER_SIZE+MESSAGE_LENGTH_SIZE]&0x80) {
 		/* request */
-		tr = create_transaction( buf, 0/*ses*/, p);
-		if (tr) {
-			peer_state_machine( p, event, tr);
-			destroy_transaction( tr );
-		}
+		peer_state_machine( p, event, buf);
 	} else {
 		/* response -> find its transaction and remove it from 
 		 * hash table (search and remove is an atomic operation) */
@@ -1170,6 +1164,7 @@ inline void reset_peer( struct peer *p)
 	/* free the origin realm */
 	if (p->aaa_realm.s)
 		shm_free( p->aaa_realm.s );
+	p->aaa_realm.s = 0;
 }
 
 
@@ -1380,9 +1375,9 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 				case PEER_WAIT_CEA:
 					DBG("DEBUG:peer_state_machine: CER received -> "
 						"sending CEA\n");
-					res = process_ce( p, ((struct trans*)ptr)->req, 1 );
+					res = process_ce( p, (str*)ptr, 1 );
 					/* send the response */
-					if(send_cea((struct trans*)ptr,res)==-1||res!=AAA_SUCCESS){
+					if(send_cea( (str*)ptr, res, p)==-1 || res!=AAA_SUCCESS){
 						tcp_close( p );
 						reset_peer( p );
 						p->state = PEER_UNCONN;
@@ -1407,10 +1402,10 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					DBG("DEBUG:peer_state_machine: DWR received -> "
 						"sending DWA\n");
 					res = AAA_SUCCESS;
-					if (process_dw( p, ((struct trans*)ptr)->req, 1 )==-1)
+					if (process_dw( p, (str*)ptr, 1 )==-1)
 						res = AAA_MISSING_AVP;
 					/* send the response */
-					if(send_dwa((struct trans*)ptr,res)==-1||res!=AAA_SUCCESS){
+					if(send_dwa( (str*)ptr, res, p)==-1 || res!=AAA_SUCCESS){
 						tcp_close( p );
 						reset_peer( p );
 						p->state = PEER_UNCONN;
@@ -1475,10 +1470,10 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					DBG("DEBUG:peer_state_machine: DPR received -> "
 						"sending DPA\n");
 					res = AAA_SUCCESS;
-					if (process_dp( p, ((struct trans*)ptr)->req, 1 )==-1)
+					if (process_dp( p, (str*)ptr, 1 )==-1)
 						res = AAA_MISSING_AVP;
 					/* send the response */
-					send_dpa( (struct trans*)ptr, res);
+					send_dpa( (str*)ptr, res, p);
 					tcp_close( p );
 					reset_peer( p );
 					p->state = PEER_UNCONN;

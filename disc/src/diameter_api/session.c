@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.18 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: session.c,v 1.19 2003/04/10 21:40:03 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -596,6 +596,7 @@ AAAReturnCode  AAAStartSession(
 
 	return AAA_ERR_SUCCESS;
 error:
+	*sessionId = 0;
 	return AAA_ERR_NOMEM;
 }
 

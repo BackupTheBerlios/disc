@@ -13,7 +13,7 @@
 //#include "dest.h"
 
 
-#define CLIENT_CFG_FILE "aaa_server.cfg"
+#define SERVER_CFG_FILE "aaa_server.cfg"
 
 
 /* thread-id of the original thread */
@@ -79,8 +79,10 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
+	do_relay = 1;
+
 	/* init the aaa core */
-	if ( init_aaa_core(CLIENT_CFG_FILE)==-1 )
+	if ( init_aaa_core(SERVER_CFG_FILE)==-1 )
 		exit(-1);
 
 	/* init the aaa server */

@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.2 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: worker.c,v 1.3 2003/04/10 21:40:03 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -21,6 +21,9 @@
 #include "../transport/trans.h"
 #include "../transport/peer.h"
 #include "worker.h"
+
+#define I_AM_FOREIGN_SERVER      1
+#define I_AM_NOT_FOREIGN_SERVER  0
 
 
 static pthread_t *worker_id = 0;
@@ -138,6 +141,7 @@ int get_req_destination( AAAMessage *msg, struct peer_chain **p_chain,
 		}
 	} else {
 		/* it's not my realm -> do routing based on script */
+		// TO DO
 		*p_chain = 0;
 		*module = 0;
 		return 0;
@@ -157,18 +161,39 @@ int get_dest_peers( AAAMessage *msg, struct peer_chain **chaine )
 
 
 
+inline void send_error_reply(AAAMessage *msg, unsigned int response_code)
+{
+	AAAMessage *ans;
+
+	ans = AAANewMessage( msg->commandCode, msg->applicationId,
+		0 /*session*/, msg );
+	if (!ans) {
+		LOG(L_ERR,"ERROR:send_error_reply: cannot create error answer"
+			" back to client!\n");
+	} else {
+		if (AAASetMessageResultCode( ans, response_code)==AAA_ERR_SUCCESS ) {
+			if (AAASendMessage( ans )!=AAA_ERR_SUCCESS )
+				LOG(L_ERR,"ERROR:send_error_reply: unable to send "
+					"answer back to client!\n");
+		}else{
+			LOG(L_ERR,"ERROR:send_error_reply: unable to set the "
+				"error result code into the answer\n");
+		}
+		AAAFreeMessage( &ans );
+	}
+}
+
+
+
 void *server_worker(void *attr)
 {
 	str               buf;
 	AAAMessage        *msg;
-	AAAMessage        *ans;
 	struct peer_chain *pc;
 	struct aaa_module *mod;
 	struct trans      *tr;
 	struct peer       *in_peer;
 	int               res;
-
-	struct session *ses;
 
 	while (1) {
 		/* read a mesage from the queue */
@@ -177,102 +202,119 @@ void *server_worker(void *attr)
 			continue;
 		}
 
-		/* parse the message */
-		msg = AAATranslateMessage( buf.s, buf.len );
-		if (!msg) {
-			LOG(L_ERR,"ERROR:server_worker: dropping message!\n");
-			shm_free( buf.s );
-			continue;
-		}
-		if (!msg->sessionId) {
-			LOG(L_ERR,"ERROR:server_worker: message without sessionId AVP "
-				"received -> droping!\n");
-			shm_free( buf.s );
-			continue;
-		}
-
 		/* process the message */
 		if ( is_req( msg ) ) {
-			/* request -> what should I do with it? */
+			/* request*/
+			msg = AAATranslateMessage( buf.s, buf.len );
+			if (!msg) {
+				LOG(L_ERR,"ERROR:server_worker: dropping message!\n");
+				shm_free( buf.s );
+				continue;
+			}
+			if (!msg->sessionId || !msg->orig_host || !msg->orig_realm ||
+			!msg->dest_realm) {
+				LOG(L_ERR,"ERROR:server_worker: message without sessionId/"
+					"OriginHost/OriginRealm/DestinationRealm AVP received "
+					"-> droping!\n");
+				send_error_reply( msg, AAA_MISSING_AVP);
+				AAAFreeMessage( &msg );
+				continue;
+			}
+			/*-> what should I do with it? */
 			res = get_req_destination( msg, &pc, &mod );
 			if (res!=0) {
 				/* it was an error -> I have to send back an error answer */
-				ans = AAANewMessage( msg->commandCode, msg->applicationId,
-					0 /*session*/, msg );
-				if (!ans) {
-					LOG(L_ERR,"ERROR:server_worker: cannot create error answer"
-						" back to client!\n");
-				} else {
-					if (AAASetMessageResultCode( ans, res)==AAA_ERR_SUCCESS ) {
-						if (AAASendMessage( ans )!=AAA_ERR_SUCCESS )
-							LOG(L_ERR,"ERROR:server_worker: unable to send "
-								"answer back to client!\n");
-					}else{
-						LOG(L_ERR,"ERROR:server_worker: unable to set the "
-							"error result code into the answer\n");
-					}
-					AAAFreeMessage( &ans );
-				}
+				send_error_reply( msg, res);
 				AAAFreeMessage( &msg );
 				continue;
 			}
-			/* build a transaction for it */
-			tr = create_transaction( 0, FAKE_SESSION, in_peer);
-			if (!tr) {
-				LOG(L_ERR,"ERROR:server_worker: dropping request!\n");
-				AAAFreeMessage( &msg );
-				continue;
-			}
-			msg->trans = tr;
-			/* process request */
+			/* process the request */
 			if (mod) {
 				/* it's a local request */
 				/* if the server is statefull, I have to call here the session
 				 * state machine for the incoming request TO DO */
 				msg->sId = &(msg->sessionId->data);
 				/*run the handler for this module */
-				((struct module_exports*)ses->app_ref)->mod_msg( msg, 0);
+				mod->exports->mod_msg( msg, 0);
 			} else {
-				/* forward the request */
+				/* forward the request -> build a transaction for it */
+				tr = create_transaction( &(msg->buf), in_peer);
+				if (!tr) {
+					LOG(L_ERR,"ERROR:server_worker: dropping request!\n");
+					AAAFreeMessage( &msg );
+					continue;
+				}
+				/* remember the received hop_by_hop-Id */
+				tr->orig_hopbyhopId = msg->hopbyhopId;
+				/* am I Foreign server for this request? */
+				if ( msg->orig_host->data.len==in_peer->aaa_identity.len &&
+				!strncmp(msg->orig_host->data.s,in_peer->aaa_identity.s,
+				in_peer->aaa_identity.len) )
+					tr->info = I_AM_FOREIGN_SERVER;
+				else
+					tr->info = I_AM_NOT_FOREIGN_SERVER;
+				/* send it out */
+				for(;pc;pc=pc->next) {
+					if ( (res=send_req_to_peer( tr, pc->p))!=-1) {
+						/* success -> start the timeout timer */
+						add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
+							get_ticks()+TR_TIMEOUT_TIMEOUT );
+						break;
+					}
+				}
+				tr->req = 0;
+				if (res==-1) {
+					LOG(L_ERR,"ERROR:server_worker: unable to forward "
+						"request\n");
+					send_error_reply( msg, AAA_UNABLE_TO_DELIVER);
+				}
 			}
+			/* free the mesage (along with the buffer) */
+			AAAFreeMessage( &msg  );
 		} else {
-#if 0
 			/* response -> performe transaction lookup and remove it from 
 			 * hash table */
-			tr = transaction_lookup( peer,
-				((unsigned int*)buf.s)[4], ((unsigned int*)buf.s)[3]);
+			tr = transaction_lookup(in_peer,msg->endtoendId,msg->hopbyhopId);
 			if (!tr) {
-				LOG(L_ERR,"ERROR:client_worker: unexpected answer received "
+				LOG(L_ERR,"ERROR:server_worker: unexpected answer received "
 					"(without sending any request)!\n");
 				shm_free( buf.s );
 				continue;
 			}
-			/* remember the session! - I will need it later */
-			ses = tr->ses;
-			/* destroy the transaction (also the timeout timer will be stop) */
-			destroy_transaction( tr );
-
-			msg->sId = &(ses->sID);
-
-			if (code==ST_MSG_CODE) {
-				/* it's a session termination answer */
-				/* TO DO - only when the client will support a statefull
-				 * server  */
-				LOG(L_ERR,"ERROR:client_worker: STA received!! very strange!"
-					" - UNIMPLEMENTED!!\n");
-			} else {
-				/* it's an auth answer -> change the state */
-				if (session_state_machine( ses, AAA_AA_RECEIVED, msg)!=-1) {
-					/* message was accepted by the session state machine -> 
-					 * call the handler */
-					((struct module_exports*)ses->app_ref)->
-						mod_msg( msg, ses->context);
-				}
+			/* stop the transaction timeout */
+			rmv_from_timer_list( &(tr->timeout) );
+			/* parse the reply */
+			msg = AAATranslateMessage( buf.s, buf.len );
+			if (!msg) {
+				LOG(L_ERR,"ERROR:server_worker: dropping message!\n");
+				shm_free( buf.s );
+				continue;
 			}
-#endif
+			if (tr->in_peer) {
+				/* I have to forward the reply downstream */
+				msg->hopbyhopId = tr->orig_hopbyhopId;
+				((unsigned int*)msg->buf.s)[3] = tr->orig_hopbyhopId;
+				/* am I Foreign server for this reply? */
+				if (tr->info==I_AM_FOREIGN_SERVER) {
+					mod = find_module(msg->applicationId);
+					if (mod)
+						mod->exports->mod_msg( msg, 0);
+				}
+				/* send the rely */
+				if (send_res_to_peer( &msg->buf, tr->in_peer)==-1) {
+					LOG(L_ERR,"ERROR:server_worker: forwarding reply "
+						"failed\n");
+				}
+			} else {
+				/* look like being a reply to a local request */
+				LOG(L_ERR,"BUG:server_worker: some reply to a local request "
+					"received; but I don't send requests!!!!\n");
+			}
+			/* destroy the transaction */
+			destroy_transaction( tr );
+			/* free the mesage (along with the buffer) */
+			AAAFreeMessage( &msg  );
 		}
-		/* free the mesage (along with the buffer) */
-		AAAFreeMessage( &msg  );
 	}
 
 	return 0;

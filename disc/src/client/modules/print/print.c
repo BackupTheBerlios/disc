@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.7 2003/04/08 13:29:28 bogdan Exp $
+ * $Id: print.c,v 1.8 2003/04/10 21:40:03 bogdan Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -46,20 +46,43 @@ void *print_worker(void *attr)
 	AAASessionId *sID;
 	AAAMessage   *req;
 	AAA_AVP      *avp;
+	int i;
 
 	sleep(5);
 
-	AAAStartSession( &sID, get_my_appref(), 0);
-	req = AAANewMessage( 456, 4, sID, 0);
-	avp = AAACreateAVP( AVP_Destination_Realm, 0, 0, "gmd.de", 6,
-		AVP_DONT_FREE_DATA);
-	AAAAddAVPToMessage( req, avp, req->orig_realm);
-	AAASendMessage( req );
+	while (1) {
+		for (i=0;i<100;i++) {
+			sID = 0;
+			req = 0;
+			avp = 0;
 
-	AAAFreeMessage( &req );
+			if (AAAStartSession( &sID, get_my_appref(), 0)!=AAA_ERR_SUCCESS)
+				goto error;
 
-	while(1)
-		sleep(100);
+			if ( (req=AAANewMessage( 456, 4, sID, 0))==0)
+				goto error;
+
+			if ( (avp=AAACreateAVP( AVP_Destination_Realm, 0, 0,
+			"gmd.de", 6, AVP_DONT_FREE_DATA))==0)
+				goto error;
+
+			AAAAddAVPToMessage( req, avp, req->orig_realm);
+
+			if (AAASendMessage( req )!=AAA_ERR_SUCCESS)
+				AAAEndSession( sID );
+
+			AAAFreeMessage( &req );
+
+			sleep(50);
+			continue;
+error:
+			if (sID)
+				AAAEndSession( sID );
+			if (req)
+				AAAFreeMesage( &req );
+		}
+		//sleep(60);
+	}
 	return 0;
 }
 
