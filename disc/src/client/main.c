@@ -10,7 +10,6 @@
 #include "config.h"
 #include "../globals.h"
 #include "../mem/shm_mem.h"
-#include "../sh_mutex.h"
 #include "../timer.h"
 #include "../msg_queue.h"
 #include "../transport/peer.h"
@@ -131,10 +130,6 @@ int init_client()
 
 	init_random_generator();
 
-	/* init the shared mutexes */
-	if ( (init_shared_mutexes())==0)
-		goto error;
-
 	/**/
 	main_thread = pthread_self();
 
@@ -237,9 +232,6 @@ void close_client()
 
 	/* destroy the msg queue */
 	destroy_msg_queue();
-
-	/* destroy the shared mutexes */
-	destroy_shared_mutexes();
 
 	/* just for debuging */
 	shm_status();

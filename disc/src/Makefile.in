@@ -94,7 +94,7 @@ SUBDIRS = diameter_api transport mem client
 INCLUDES = @INCLTDL@
 
 bin_PROGRAMS = aaa_client
-aaa_client_SOURCES = aaa_lock.c dprint.c hash_table.c sh_mutex.c 					timer.c aaa_module.c 					aaa_lock.h dprint.h hash.h lock_alloc.h sem.h 					timer.h config.h fastlock.h hash_table.h lock_ops.h 					sh_mutex.h utils.h counter.h globals.h list.h 					msg_queue.h msg_queue.c 					locking.h str.h aaa_module.h
+aaa_client_SOURCES = aaa_lock.c dprint.c hash_table.c 					timer.c aaa_module.c 					aaa_lock.h dprint.h hash.h lock_alloc.h sem.h 					timer.h config.h fastlock.h hash_table.h lock_ops.h 					utils.h counter.h globals.h msg_queue.h msg_queue.c 					list.h locking.h str.h aaa_module.h
 
 # hash.c only for tests
 
@@ -113,8 +113,8 @@ CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 aaa_client_OBJECTS =  aaa_lock.$(OBJEXT) dprint.$(OBJEXT) \
-hash_table.$(OBJEXT) sh_mutex.$(OBJEXT) timer.$(OBJEXT) \
-aaa_module.$(OBJEXT) msg_queue.$(OBJEXT)
+hash_table.$(OBJEXT) timer.$(OBJEXT) aaa_module.$(OBJEXT) \
+msg_queue.$(OBJEXT)
 aaa_client_DEPENDENCIES =  mem/libmem.la transport/libtransport.la \
 client/libclient.la
 aaa_client_LDFLAGS = 
@@ -131,7 +131,7 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 TAR = tar
 GZIP_ENV = --best
 DEP_FILES =  .deps/aaa_lock.P .deps/aaa_module.P .deps/dprint.P \
-.deps/hash_table.P .deps/msg_queue.P .deps/sh_mutex.P .deps/timer.P
+.deps/hash_table.P .deps/msg_queue.P .deps/timer.P
 SOURCES = $(aaa_client_SOURCES)
 OBJECTS = $(aaa_client_OBJECTS)
 

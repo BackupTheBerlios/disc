@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.21 2003/03/28 20:27:24 bogdan Exp $
+ * $Id: init_conf.c,v 1.22 2003/04/01 13:39:04 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -111,7 +111,7 @@ AAAReturnCode AAAOpen(char *configFileName)
 	strcpy( config_filename, configFileName);
 
 	/* init the session manager */
-	if (init_session_manager( 1024 )==-1)
+	if (init_session_manager( 1024/*hash_size*/, 512/*shared_locks*/  )==-1)
 		goto mem_error;
 
 	/* init the message manager */

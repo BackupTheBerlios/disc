@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.10 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: session.h,v 1.11 2003/04/01 13:39:04 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -71,6 +71,14 @@ struct session_manager {
 	gen_lock_t *sID_mutex;
 	/* hash_table for the sessions */
 	struct h_table *ses_table;
+	/* mutexes that are distributed to the sessions */
+	gen_lock_t *shared_mutexes;
+	/* mutex for protecting disribution of shared mutexes :-)) */
+	gen_lock_t *shared_mutexes_mutex;
+	/* number of shared mutexes */
+	unsigned int nr_shared_mutexes;
+	/* index showing the next shared mutex to be used */
+	unsigned int shared_mutexes_counter;
 };
 
 
@@ -102,7 +110,8 @@ extern struct session_manager  ses_mgr;
 
 /* builds and init all variables/structures needed for session management
  */
-int init_session_manager( unsigned int ses_hash_size );
+int init_session_manager( unsigned int ses_hash_size,
+											unsigned int nr_shared_mutexes);
 
 
 /*

@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.12 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: session.c,v 1.13 2003/04/01 13:39:04 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -17,7 +17,6 @@
 #include "../utils.h"
 #include "../aaa_lock.h"
 #include "../locking.h"
-#include "../sh_mutex.h"
 #include "../hash_table.h"
 #include "message.h"
 #include "session.h"
@@ -38,7 +37,8 @@ void destroy_session( struct session *ses);
 /*
  * builds and inits all variables/structures needed for session management
  */
-int init_session_manager( unsigned int ses_hash_size )
+int init_session_manager( unsigned int ses_hash_size,
+											unsigned int nr_shared_mutexes )
 {
 	/* init the session manager */
 	memset( &ses_mgr, 0, sizeof(ses_mgr));
@@ -58,12 +58,23 @@ int init_session_manager( unsigned int ses_hash_size )
 	/* build the hash_table */
 	ses_mgr.ses_table = build_htable( ses_hash_size );
 
+	/* build and set the shared mutexes */
+	ses_mgr.shared_mutexes = create_locks(nr_shared_mutexes+1);
+	if (!ses_mgr.shared_mutexes) {
+		LOG(L_ERR,"ERROR:init_ssession_manager: cannot create locks!!\n");
+		goto error;
+	}
+	ses_mgr.shared_mutexes_mutex = ses_mgr.shared_mutexes + nr_shared_mutexes;
+	ses_mgr.nr_shared_mutexes = nr_shared_mutexes;
+	ses_mgr.shared_mutexes_counter = 0;
+
 	LOG(L_INFO,"INFO:init_session_manager: session manager started\n");
 	return 1;
 error:
 	LOG(L_INFO,"INFO:init_session_manager: FAILED to start session manager\n");
 	return -1;
 }
+
 
 
 /*
@@ -79,8 +90,23 @@ void shutdown_session_manager()
 	if (ses_mgr.ses_table)
 		destroy_htable( ses_mgr.ses_table );
 
+	if (ses_mgr.shared_mutexes)
+		destroy_locks( ses_mgr.shared_mutexes, ses_mgr.nr_shared_mutexes);
+
 	LOG(L_INFO,"INFO:shutdown_session_manager: session manager stoped\n");
 	return;
+}
+
+
+
+/* assignes a new shared mutex */
+inline gen_lock_t *get_shared_mutex()
+{
+	unsigned int index;
+	lock_get( ses_mgr.shared_mutexes_mutex );
+	index = (ses_mgr.shared_mutexes_counter++)&(ses_mgr.nr_shared_mutexes-1);
+	lock_release( ses_mgr.shared_mutexes_mutex );
+	return &(ses_mgr.shared_mutexes[index]);
 }
 
 

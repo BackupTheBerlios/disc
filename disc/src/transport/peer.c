@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.12 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: peer.c,v 1.13 2003/04/01 13:39:04 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -20,7 +20,6 @@
 #include "../locking.h"
 #include "../globals.h"
 #include "../timer.h"
-#include "../sh_mutex.h"
 #include "../msg_queue.h"
 #include "../diameter_api/diameter_api.h"
 #include "ip_addr.h"
@@ -415,9 +414,15 @@ int add_peer( str *aaa_identity, str *host, unsigned int port )
 	}
 	memset(p,0,sizeof(struct peer) + aaa_identity->len + host->len + 1 );
 
+	/* create a new mutex for the peer */
+	p->mutex = create_locks( 1 );
+	if (!p->mutex) {
+		LOG(L_ERR,"ERROR:add_peer: cannot build lock!\n");
+		goto error;
+	}
+
 	/* fill the peer structure */
 	p->tl.payload = p;
-	p->mutex = get_shared_mutex();
 	p->aaa_identity.s = (char*)p + sizeof(struct peer);
 	p->aaa_identity.len = aaa_identity->len;
 	p->aaa_host.s = p->aaa_identity.s + aaa_identity->len;
@@ -472,6 +477,7 @@ error:
 
 void destroy_peer( struct peer *p)
 {
+	/* unimplemented */
 }
 
 
