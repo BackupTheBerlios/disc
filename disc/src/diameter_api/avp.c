@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: avp.c,v 1.2 2003/03/10 19:17:32 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  *
@@ -430,8 +430,9 @@ char*  AAAConvertAVPToString(AAA_AVP *avp, char *dest, size_t destLen)
 				avp->data.s);
 			break;
 		case AAA_AVP_INTEGER32_TYPE:
-			l+=snprintf(dest+l,destLen-l,"Int32: <%u>",
-				(unsigned int)avp->data.s);
+			l+=snprintf(dest+l,destLen-l,"Int32: <%u>(%x)",
+				htonl(*((unsigned int*)avp->data.s)),
+				htonl(*((unsigned int*)avp->data.s)));
 			break;
 		case AAA_AVP_ADDRESS_TYPE:
 			switch (avp->data.len) {

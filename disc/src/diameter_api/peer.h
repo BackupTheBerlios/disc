@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.6 2003/03/10 09:16:43 bogdan Exp $
+ * $Id: peer.h,v 1.7 2003/03/10 19:17:32 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -62,6 +62,10 @@ struct peer {
 	struct thread_info *tinfo;
 	/* socket */
 	int sock;
+	/* information needed for reading messages */
+	unsigned int  first_4bytes;
+	unsigned int  buf_len;
+	unsigned char *buf;
 };
 
 
@@ -72,23 +76,29 @@ struct p_table {
 	struct list_head peers ;
 	/* mutex for manipulating the list */
 	aaa_lock *mutex;
+	/* buffers used for a fater CE, WD, DP creation */
+	str std_req;
+	str std_ans;
+	str ce_avp_ipv4;
+	str ce_avp_ipv6;
+	str dpr_avp;
 };
 
 
 enum AAA_PEER_EVENT {
-	TCP_ACCEPT,
-	TCP_CONNECTED,
-	TCP_CONN_IN_PROG,
-	TCP_CONN_FAILED,
-	TCP_CLOSE,
-	CER_RECEIVED,
-	CEA_RECEIVED,
-	DPR_RECEIVED,
-	DPA_RECEIVED,
-	PEER_HANGUP,
-	PEER_TR_TIMEOUT,
-	PEER_CER_TIMEOUT,
-	PEER_RECONN_TIMEOUT
+	TCP_ACCEPT,         /*  0 */
+	TCP_CONNECTED,      /*  1 */
+	TCP_CONN_IN_PROG,   /*  2 */
+	TCP_CONN_FAILED,    /*  3 */
+	TCP_CLOSE,          /*  4 */
+	CER_RECEIVED,       /*  5 */
+	CEA_RECEIVED,       /*  6 */
+	DPR_RECEIVED,       /*  7 */
+	DPA_RECEIVED,       /*  8 */
+	PEER_HANGUP,        /*  9 */
+	PEER_TR_TIMEOUT,    /* 10 */
+	PEER_CER_TIMEOUT,   /* 11 */
+	PEER_RECONN_TIMEOUT /* 12 */
 };
 
 
@@ -113,8 +123,7 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 
 void init_all_peers();
 
-int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event,
-													struct tcp_info *info);
+int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *info);
 
 /* increments the ref_counter of the peer */
 void static inline ref_peer(struct peer *p)

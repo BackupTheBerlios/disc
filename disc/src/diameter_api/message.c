@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: message.c,v 1.2 2003/03/10 19:17:32 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -189,6 +189,7 @@ int process_msg( unsigned char *buf, unsigned int len, struct peer *pr)
 		LOG(L_ERR,"ERROR:process_msg: empty buffer received!\n");
 		goto error;
 	}
+	DBG("****len=%d\n",len);
 
 	/*parse the msg from buffer */
 	if ( (msg=AAATranslateMessage( buf, len ))==0 )
@@ -413,6 +414,7 @@ int send_aaa_message( AAAMessage *msg, struct trans *tr, struct session *ses,
 {
 	unsigned char *buf;
 	unsigned int  len;
+	int ret;
 	str s;
 
 	buf = 0;
@@ -450,10 +452,15 @@ int send_aaa_message( AAAMessage *msg, struct trans *tr, struct session *ses,
 	if (!buf)
 		goto error;
 
-	/* send the message 
-	if ( tcp_send( dst_peer->conn, buf, len) ) {
+	/* send the message */
+	if (msg->commandCode==257||msg->commandCode==280||msg->commandCode==282)
+		ret = tcp_send_unsafe( dst_peer, buf, len);
+	else
+		ret = tcp_send( dst_peer, buf, len);
+	if (ret==-1) {
+		LOG(L_ERR,"ERROR:send_aaa_message: tcp_send returned error!\n");
+		goto error;
 	}
-	*/
 
 	if ( is_req(msg) ) {
 		/* if request -> start the timeout timer */

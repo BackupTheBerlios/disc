@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.3 2003/03/09 15:01:15 bogdan Exp $
+ * $Id: init_conf.c,v 1.4 2003/03/10 19:17:32 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -129,7 +129,7 @@ AAAReturnCode AAAOpen(char *configFileName)
 	config_filename[511] = 0;
 
 	/**/
-	aaa_identity.s = "aaa://fesarius.fokus.gmd.de;protocol=diameter";
+	aaa_identity.s = "aaa://fesarius.fokus.gmd.de;transport=tcp";
 	aaa_identity.len = strlen(aaa_identity.s);
 	aaa_fqdn.s = aaa_identity.s + 6;
 	aaa_fqdn.len = 21;
@@ -176,9 +176,9 @@ AAAReturnCode AAAOpen(char *configFileName)
 
 	/* add the peers from config file */
 	//..................
-	peer.s = "localhost";
+	peer.s = "ugluk.mobis.fokus.gmd.de";
 	peer.len = strlen(peer.s);
-	add_peer( peer_table, &peer, 5, 2000);
+	add_peer( peer_table, &peer, 7, 1812);
 
 	/* start the tcp shell */
 	start_tcp_accept();

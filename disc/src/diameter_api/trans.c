@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.2 2003/03/10 09:16:43 bogdan Exp $
+ * $Id: trans.c,v 1.3 2003/03/10 19:17:32 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -145,6 +145,8 @@ void timeout_handler(unsigned int ticks, void* param)
 		if (tr->ses) {
 			//session_state_machine();
 		}else{
+			write_command( tr->out_peer->fd, TIMEOUT_PEER_CMD,
+				PEER_TR_TIMEOUT, tr->out_peer, 0);
 			//peer_state_machine( tr->out_peer, PEER_TIMEOUT, 0);
 		}
 		destroy_transaction( tr );
