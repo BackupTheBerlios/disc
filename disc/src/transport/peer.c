@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.3 2003/03/14 18:30:01 bogdan Exp $
+ * $Id: peer.c,v 1.4 2003/03/17 16:02:01 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -23,7 +23,7 @@
 #include "../diameter_api/avp.h"
 #include "ip_addr.h"
 #include "resolve.h"
-#include "common.h"
+#include "tcp_shell.h"
 #include "peer.h"
 
 

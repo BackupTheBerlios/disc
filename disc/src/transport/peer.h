@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.3 2003/03/14 18:07:41 bogdan Exp $
+ * $Id: peer.h,v 1.4 2003/03/17 16:02:01 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -11,15 +11,15 @@
 #include "../str.h"
 #include "../locking.h"
 #include "../counter.h"
-#include "ip_addr.h"
+#include "../timer.h"
 #include "../list.h"
+#include "ip_addr.h"
 //#include "globals.h"
 //#include "diameter_types.h"
 #include "trans.h"
-#include "../timer.h"
 
 struct peer;
-#include "common.h"
+#include "tcp_shell.h"
 
 
 #define PEER_TO_DESTROY    1<<0

@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.16 2003/03/14 20:32:10 bogdan Exp $
+ * $Id: init_conf.c,v 1.17 2003/03/17 16:02:01 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -18,7 +18,7 @@
 #include "init_conf.h"
 #include "diameter_types.h"
 #include "../dprint.h"
-#include "../transport/common.h"
+//#include "../transport/common.h"
 #include "../hash_table.h"
 #include "../transport/trans.h"
 #include "../transport/peer.h"
@@ -111,7 +111,7 @@ AAAReturnCode AAAClose()
 		shm_free(config_filename);
 
 	/* stop the socket layer (kill all threads) */
-	terminate_tcp_shell();
+	//terminate_tcp_shell();
 
 	/* stop the peer manager */
 	destroy_peer_manager();
@@ -169,10 +169,10 @@ AAAReturnCode AAAOpen(char *configFileName)
 	//..................
 	peer.s = "ugluk.mobis.fokus.gmd.de";
 	peer.len = strlen(peer.s);
-	add_peer( peer_table, &peer, 7, 1812);
+	//add_peer( peer_table, &peer, 7, 1812);
 
 	/* start the tcp shell */
-	start_tcp_accept();
+	//start_tcp_accept();
 
 	/* finally DONE */
 	is_lib_init = 1;

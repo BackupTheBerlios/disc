@@ -11,8 +11,7 @@
 #include <netinet/in.h>
 #include "../dprint.h"
 #include "peer.h"
-//#include "../globals.h"
-#include "common.h"
+#include "tcp_shell.h"
 #include "tcp_accept.h"
 
 

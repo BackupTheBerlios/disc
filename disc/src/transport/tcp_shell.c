@@ -12,7 +12,7 @@
 #include "peer.h"
 #include "tcp_accept.h"
 #include "tcp_receive.h"
-#include "common.h"
+#include "tcp_shell.h"
 
 
 #define ACCEPT_THREAD_ID      0
