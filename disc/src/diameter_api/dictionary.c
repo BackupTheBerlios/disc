@@ -1,6 +1,6 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- * $Id: dictionary.c,v 1.8 2003/03/19 17:18:51 ilk Exp $
+ * $Id: dictionary.c,v 1.9 2003/03/21 17:15:52 ilk Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,7 +90,7 @@ int findEntry( char** entry){
    FILE* file;
 	file=fopen("dictionary","r");
 	if(file==NULL){
-      LOG(L_ERR,"ERROR:no dictionary found!\n");
+      //LOG(L_ERR,"ERROR:no dictionary found!\n");
       return 0;
    }
    int match=0;
@@ -159,7 +159,7 @@ int vendorNameFromId(AAAVendorId vendorId, char* vendorAttr){
    FILE* file;
 	file=fopen("vendors","r");
 	if(file==NULL){
-      LOG(L_ERR,"ERROR:no vendors file found!\n");
+      //LOG(L_ERR,"ERROR:no vendors file found!\n");
       return 0;
    }
    char num;
