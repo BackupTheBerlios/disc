@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.19 2003/04/08 12:08:20 bogdan Exp $
+ * $Id: peer.c,v 1.20 2003/04/08 22:30:18 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -439,6 +439,8 @@ int add_peer( str *aaa_identity, str *host, unsigned int port )
 	}
 
 	/* fill the peer structure */
+	p->pc.next = 0;
+	p->pc.p = p;
 	p->tl.payload = p;
 	p->aaa_identity.s = (char*)p + sizeof(struct peer);
 	p->aaa_identity.len = aaa_identity->len;
@@ -513,29 +515,29 @@ void destroy_peer( struct peer *p)
 
 
 
-int send_req_to_peers( struct trans *tr , struct peer_chaine *pc)
+int send_req_to_peers( struct trans *tr , struct peer_chain *pc)
 {
 	for( ; pc ; pc=pc->next ) {
-		lock_get( pc->peer->mutex );
-		if ( pc->peer->state!=PEER_CONN ) {
-			lock_release( pc->peer->mutex);
+		lock_get( pc->p->mutex );
+		if ( pc->p->state!=PEER_CONN ) {
+			lock_release( pc->p->mutex);
 			continue;
 		}
 		/* peer available for sending */
-		DBG("peer \"%.*s\" available for sending\n",pc->peer->aaa_identity.len,
-			pc->peer->aaa_identity.s);
-		add_cell_to_htable( pc->peer->trans_table, &(tr->linker) );
-		tr->peer = pc->peer;
+		DBG("peer \"%.*s\" available for sending\n",pc->p->aaa_identity.len,
+			pc->p->aaa_identity.s);
+		add_cell_to_htable( pc->p->trans_table, &(tr->linker) );
+		tr->peer = pc->p;
 		/* the hash label is used as hop-by-hop ID */
 		((unsigned int*)tr->req->s)[3] = tr->linker.label;
-		if (write( pc->peer->sock, tr->req->s, tr->req->len)!=-1) {
-			lock_release( pc->peer->mutex);
+		if (write( pc->p->sock, tr->req->s, tr->req->len)!=-1) {
+			lock_release( pc->p->mutex);
 			/* success */
 			return 1;
 		} else {
 			/* write failed*/
-			remove_cell_from_htable( pc->peer->trans_table, &(tr->linker) );
-			lock_release( pc->peer->mutex);
+			remove_cell_from_htable( pc->p->trans_table, &(tr->linker) );
+			lock_release( pc->p->mutex);
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.13 2003/04/08 12:08:20 bogdan Exp $
+ * $Id: peer.h,v 1.14 2003/04/08 22:30:18 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -20,7 +20,6 @@ struct peer;
 #include "tcp_shell.h"
 
 
-
 struct tcp_info {
 	struct ip_addr *local;
 	unsigned int   sock;
@@ -30,6 +29,12 @@ struct tcp_info {
 struct safe_list_head {
 	struct list_head lh;
 	gen_lock_t         *mutex;
+};
+
+
+struct peer_chain {
+	struct peer_chain *next;
+	struct peer       *p;
 };
 
 
@@ -76,7 +81,12 @@ struct peer {
 	unsigned int last_activ_time;
 	/* counter that tells how many time this peer was connected */
 	unsigned int conn_cnt;
+	/* is is a peer_chain that conatines only this peer */
+	struct peer_chain  pc;
 };
+
+
+
 #include "trans.h"
 
 
@@ -97,11 +107,6 @@ struct p_table {
 	str dpr_avp;
 };
 
-
-struct peer_chaine {
-	struct peer_chaine *next;
-	struct peer        *peer;
-};
 
 
 enum AAA_PEER_EVENT {
@@ -162,7 +167,7 @@ int add_peer( str *aaa_identity, str *host, unsigned int port);
 
 void init_all_peers();
 
-int send_req_to_peers( struct trans *tr , struct peer_chaine *pc);
+int send_req_to_peers( struct trans *tr , struct peer_chain *pc);
 
 int send_res_to_peer( str *buf, struct peer *p);
 

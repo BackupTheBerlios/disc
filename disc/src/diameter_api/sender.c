@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.1 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: sender.c,v 1.2 2003/04/08 22:30:18 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -110,7 +110,7 @@ inline static unsigned int generate_endtoendID()
  */
 int send_request( AAAMessage *msg)
 {
-	struct peer_chaine *pc;
+	struct peer_chain *pc;
 	unsigned int ete;
 	struct trans *tr;
 	str s;
@@ -133,16 +133,16 @@ int send_request( AAAMessage *msg)
 	ete = generate_endtoendID();
 	((unsigned int *)msg->buf.s)[4] = ete;
 
-	pc = (struct peer_chaine*)msg->peers;
+	pc = (struct peer_chain*)msg->peers;
 
 	/* calculating the hash_code (over the end-to-end Id) */
 	s.s = (char*)&ete;
 	s.len = END_TO_END_IDENTIFIER_SIZE;
-	tr->linker.hash_code = hash( &s , pc->peer->trans_table->hash_size );
+	tr->linker.hash_code = hash( &s , pc->p->trans_table->hash_size );
 
 	/* send the request */
 	DBG(" before send_req_to_peers!\n");
-	if (send_req_to_peers(tr, (struct peer_chaine*)msg->peers)==-1) {
+	if (send_req_to_peers(tr, (struct peer_chain*)msg->peers)==-1) {
 		LOG(L_ERR,"ERROR:send_aaa_request: send returned error!\n");
 		goto error;
 	}
@@ -208,7 +208,7 @@ error:
  * message by AAASetServer() */
 AAAReturnCode  AAASendMessage(AAAMessage *msg)
 {
-	struct peer_chaine *pc;
+	struct peer_chain *pc;
 	struct session     *ses;
 	struct trans       *tr;
 	unsigned int       event;

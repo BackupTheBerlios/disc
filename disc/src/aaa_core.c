@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.4 2003/04/08 22:06:24 andrei Exp $
+ * $Id: aaa_core.c,v 1.5 2003/04/08 22:30:18 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -172,10 +172,6 @@ void destroy_aaa_core()
 
 int init_aaa_core(char *cfg_file)
 {
-	/*
-	str aaa_id;
-	str host;
-	*/
 	void* shm_mempool;
 	struct peer_entry* pl;
 
@@ -239,14 +235,6 @@ int init_aaa_core(char *cfg_file)
 			goto error;
 		}
 	}
-	
-	/*..................
-	host.s   = "ugluk.mobis.fokus.gmd.de";
-	host.len = strlen(host.s);
-	aaa_id.s   = "aaa://ugluk.mobis.fokus.gmd.de:1812;transport=tcp";
-	aaa_id.len = strlen( aaa_id.s );
-	add_peer( &aaa_id, &host, 1812);
-	*/
 
 	/* init the message queue between transport layer and session one */
 	if (init_msg_queue()==-1) {

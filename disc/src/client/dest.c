@@ -1,5 +1,5 @@
 /*$
- * $Id: dest.c,v 1.3 2003/04/07 19:51:57 bogdan Exp $$
+ * $Id: dest.c,v 1.4 2003/04/08 22:30:18 bogdan Exp $$
  *$
  * 2003-04-01 created by bogdan$
  */
@@ -12,25 +12,25 @@
 #include "../diameter_msg/diameter_msg.h"
 
 
-static struct peer_chaine *all_peers;
+static struct peer_chain *all_peers;
 
 
 int init_dest_peers()
 {
 	struct list_head   *lh;
-	struct peer_chaine *pc, *last;
+	struct peer_chain *pc, *last;
 
 	all_peers = 0;
 	last = 0;
 
 	list_for_each( lh, &(peer_table->peers) ) {
-		pc = (struct peer_chaine*)shm_malloc(sizeof(struct peer_chaine));
+		pc = (struct peer_chain*)shm_malloc(sizeof(struct peer_chain));
 		if (!pc) {
 			LOG(L_ERR,"ERROR:init_dest_peers: no more free memory!\n");
 			goto error;
 		}
 		/* add to list */
-		pc->peer = list_entry(lh, struct peer, all_peer_lh);
+		pc->p = list_entry(lh, struct peer, all_peer_lh);
 		pc->next = 0;
 		if (!last) {
 			all_peers = pc;
@@ -49,7 +49,7 @@ error:
 
 void destroy_dest_peers()
 {
-	struct peer_chaine *pc, *pc_foo;
+	struct peer_chain *pc, *pc_foo;
 
 	pc = all_peers;
 	while(pc) {
@@ -61,7 +61,7 @@ void destroy_dest_peers()
 
 
 
-int get_dest_peers( AAAMessage *msg, struct peer_chaine **chaine )
+int get_dest_peers( AAAMessage *msg, struct peer_chain **chaine )
 {
 	if (chaine)
 		*chaine = all_peers;

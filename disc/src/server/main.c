@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include "../globals.h"
 #include "../aaa_core.h"
-//#include "worker.h"
+#include "worker.h"
 //#include "dest.h"
 
 
@@ -37,11 +37,11 @@ static void sig_handler(int signo)
 
 int init_aaa_server()
 {
-#if 0
 	/* starts the worker threads */
-	if (start_client_workers(DEAFULT_CLIENT_WORKER_THREADS)==-1 ) {
+	if (start_server_workers(DEAFULT_SERVER_WORKER_THREADS)==-1 ) {
 		goto error;
 	}
+#if 0
 	/* init the dest peers */
 	if ( init_dest_peers()==-1 ) {
 		goto error;
@@ -57,12 +57,12 @@ error:
 
 void destroy_aaa_server()
 {
-	#if 0
 	/* stop all the worker threads */
-	stop_client_workers();
+	stop_server_workers();
+#if 0
 	/**/
 	destroy_dest_peers();
-	#endif
+#endif
 
 }
 
