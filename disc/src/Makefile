@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 2003/03/14 18:29:11 bogdan Exp $
+# $Id: Makefile,v 1.7 2003/03/17 16:31:28 andrei Exp $
 #
 #
 # 2003-03-12  added SHM_MEM & other defines from ser;
@@ -8,7 +8,7 @@
 #set some vars from the environment (and not make builtins)
 CC := $(shell echo "$${CC}")
 
-NAME=diameter_api
+NAME=aaa_client
 #version number
 VERSION = 0
 PATCHLEVEL = 0
@@ -177,13 +177,12 @@ dist:
 
 .PHONY: clean
 clean:
-	@rm -fr $(BIN)
-	@rm -f $(objs) $(NAME) $(objs:.o=.il) 2>/dev/null
+	-@rm -f $(BIN) $(objs) $(objs:.o=.il) 2>/dev/null
 
 
 .PHONY: proper
 proper: clean
-	-@rm -f $(depends) $(auto_gen) 2>/dev/null
+	--@rm -f $(depends) $(auto_gen) 2>/dev/null
 
 
 ifeq (,$(MAKECMDGOALS))
