@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.h,v 1.3 2003/04/02 15:05:13 bogdan Exp $
+ * $Id: aaa_module.h,v 1.4 2003/04/02 19:08:52 bogdan Exp $
  */
 /* History:
  * --------
@@ -20,6 +20,7 @@ struct module_exports{
 	void (*mod_destroy)(); /* called on exit */
 	
 	int (*mod_run)(AAAMessage*, void*); /* called for each message */
+	int (*mod_Tout)(int, void*); /* called for all TimeOut event */
 };
 
 

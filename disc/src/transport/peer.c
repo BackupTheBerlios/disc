@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.15 2003/04/02 15:05:13 bogdan Exp $
+ * $Id: peer.c,v 1.16 2003/04/02 19:08:53 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -647,7 +647,7 @@ int send_cea( struct trans *tr, unsigned int result_code)
 	str cea;
 
 #ifdef USE_IPV6
-	if (dst_peer->local_ip.af==AF_INET6)
+	if (tr->peer->local_ip.af==AF_INET6)
 		ce_avp = &(peer_table->ce_avp_ipv6);
 	else
 #endif
