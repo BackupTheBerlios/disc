@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.h,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: hash_table.h,v 1.2 2003/03/11 18:06:29 bogdan Exp $
  *
  * 2003-01-29 created by bogdan
  *
@@ -80,7 +80,7 @@ struct h_table {
 	/* lists */
 };
 
-
+extern struct h_table *hash_table;
 
 
 /* builds and inits the hash table */

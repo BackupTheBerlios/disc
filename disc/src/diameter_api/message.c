@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.4 2003/03/10 23:04:34 bogdan Exp $
+ * $Id: message.c,v 1.5 2003/03/11 18:06:29 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -30,7 +30,6 @@
 
 /* local var */
 struct msg_manager  *msg_mgr=0;
-
 
 
 #define get_3bytes(_b) \
@@ -172,7 +171,14 @@ int  accept_local_request( AAAMessage *msg )
 
 
 
+int process_buffer()
+{
+	return -1;
+}
 
+
+
+#if 0
 int process_msg( unsigned char *buf, unsigned int len, struct peer *pr)
 {
 	AAAMessage     *msg;
@@ -315,7 +321,7 @@ error:
 		AAAFreeMessage( &msg );
 	return -1;
 }
-
+#endif
 
 
 
@@ -442,7 +448,6 @@ int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 	/* the hash label is used as hop-by-hop ID */
 	((unsigned int*)buf->s)[3] = tr->linker.label;
 
-	DBG("send_aaa_request: sending req.....\n");
 	/* send the request */
 	if (!ses)
 		ret = tcp_send_unsafe( dst_peer, buf->s, buf->len);
@@ -453,7 +458,6 @@ int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 		LOG(L_ERR,"ERROR:send_aaa_request: tcp_send returned error!\n");
 		goto error;
 	}
-	DBG("success!\n");
 
 	/* start the timeout timer */
 	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
@@ -461,6 +465,7 @@ int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 
 	return 1;
 error:
+	free( buf->s );
 	if (tr)
 		destroy_transaction(tr);
 	return -1;
@@ -484,6 +489,8 @@ int send_aaa_response( str *buf, struct trans *tr)
 
 	/* destroy everything */
 	destroy_transaction( tr );
+	free( buf->s );
+
 	return ret;
 }
 
@@ -722,7 +729,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	/* if it's a response, I have to find its transaction */
 	if ( !is_req(msg) ) {
 		/* it should have end-to-end-ID and hop-by-hop-ID set */
-		tr = transaction_lookup( hash_table, msg,0);
+		tr = transaction_lookup(msg->endtoendID, msg->hopbyhopID, 0);
 		if (!tr) {
 			LOG(L_ERR,"ERROR:AAASendMessage: cannot send a response that"
 				" doesn't belong to any transaction!\n");

@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.4 2003/03/10 19:17:32 bogdan Exp $
+ * $Id: init_conf.c,v 1.5 2003/03/11 18:06:29 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -43,6 +43,10 @@ str aaa_realm;                       /* realm */
 str aaa_fqdn;
 str product_name = {"AAA FFS",7};    /* product name */
 unsigned int vendor_id = 12345;      /* vendor id */
+unsigned int supported_auth_app_id =
+	(1<<AAA_APP_RELAY) | (1<<AAA_APP_MOBILE_IP);
+unsigned int supported_acc_app_id = 0;
+
 
 
 
@@ -129,7 +133,7 @@ AAAReturnCode AAAOpen(char *configFileName)
 	config_filename[511] = 0;
 
 	/**/
-	aaa_identity.s = "aaa://fesarius.fokus.gmd.de;transport=tcp";
+	aaa_identity.s = "aaa://fesarius.fokus.gmd.de:1912;transport=tcp";
 	aaa_identity.len = strlen(aaa_identity.s);
 	aaa_fqdn.s = aaa_identity.s + 6;
 	aaa_fqdn.len = 21;

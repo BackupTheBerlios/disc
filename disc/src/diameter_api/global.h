@@ -1,5 +1,5 @@
 /*
- * $Id: global.h,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: global.h,v 1.2 2003/03/11 18:06:29 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -38,6 +38,13 @@ extern str product_name;
 
 /* vendor-id */
 extern unsigned int vendor_id;
+
+/* */
+extern unsigned int supported_auth_app_id;
+
+/**/
+unsigned int supported_acc_app_id;
+
 
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.2 2003/03/10 09:16:43 bogdan Exp $
+ * $Id: diameter_types.h,v 1.3 2003/03/11 18:06:29 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -113,28 +113,42 @@ typedef enum {
           AAA_DOMAIN_FORWARD
       } AAADomainInterconnect;
 
-// The following are the result codes returned from remote servers as
-// part of messages
-      typedef   enum {
-          AAA_SUCCESS = 0,
-          AAA_FAILURE,
-          AAA_POOR_REQUEST,
-          AAA_INVALID_AUTH,
-          AAA_UNKNOWN_SESSION_ID,
-          AAA_USER_UNKNOWN,
-          AAA_COMMAND_UNSUPPORTED,
-          AAA_TIMEOUT,
-          AAA_AVP_UNSUPPORTED,
-          AAA_REDIRECT_INDICATION,
-          AAA_REALM_NOT_SERVED,
-          AAA_UNSUPPORTED_TRANSFORM,
-          AAA_AUTHENTICATION_REJECTED,
-          AAA_AUTHORIZATION_REJECTED,
-          AAA_INVALID_AVP_VALUE,
-          AAA_MISSING_AVP,
-          AAA_UNABLE_TO_DELIVER
-      } AAAResultCode;
-
+/* The following are the result codes returned from remote servers as
+ * part of messages */
+typedef enum {
+	AAA_MUTI_ROUND_AUTH           = 1001,
+	AAA_SUCCESS                   = 2001,
+	AAA_COMMAND_UNSUPPORTED       = 3001,
+	AAA_UNABLE_TO_DELIVER         = 3002,
+	AAA_REALM_NOT_SERVED          = 3003,
+	AAA_TOO_BUSY                  = 3004,
+	AAA_LOOP_DETECTED             = 3005,
+	AAA_REDIRECT_INDICATION       = 3006,
+	AAA_APPLICATION_UNSUPPORTED   = 3007,
+	AAA_INVALID_HDR_BITS          = 3008,
+	AAA_INVALID_AVP_BITS          = 3009,
+	AAA_UNKNOWN_PEER              = 3010,
+	AAA_AUTHENTICATION_REJECTED   = 4001,
+	AAA_OUT_OF_SPACE              = 4002,
+	AAA_ELECTION_LOST             = 4003,
+	AAA_AVP_UNSUPPORTED           = 5001,
+	AAA_UNKNOWN_SESSION_ID        = 5002,
+	AAA_AUTHORIZATION_REJECTED    = 5003,
+	AAA_INVALID_AVP_VALUE         = 5004,
+	AAA_MISSING_AVP               = 5005,
+	AAA_RESOURCES_EXCEEDED        = 5006,
+	AAA_CONTRADICTING_AVPS        = 5007,
+	AAA_AVP_NOT_ALLOWED           = 5008,
+	AAA_AVP_OCCURS_TOO_MANY_TIMES = 5009,
+	AAA_NO_COMMON_APPLICATION     = 5010,
+	AAA_UNSUPPORTED_VERSION       = 5011,
+	AAA_UNABLE_TO_COMPLY          = 5012,
+	AAA_INVALID_BIT_IN_HEADER     = 5013,
+	AAA_INVALIS_AVP_LENGTH        = 5014,
+	AAA_INVALID_MESSGE_LENGTH     = 5015,
+	AAA_INVALID_AVP_BIT_COMBO     = 5016,
+	AAA_NO_COMMON_SECURITY        = 5017,
+} AAAResultCode;
 
 
 /*   The following type allows the client to specify which direction to

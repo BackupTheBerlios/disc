@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.2 2003/03/10 23:04:34 bogdan Exp $
+ * $Id: trans.h,v 1.3 2003/03/11 18:06:29 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -53,7 +53,7 @@ int init_trans_manager();
 void destroy_trans_manager();
 
 
-struct trans* create_transaction(str*, struct session*, struct peer*);
+struct trans* create_transaction( str*, struct session*, struct peer*);
 
 
 void destroy_transaction( void* );
@@ -61,17 +61,17 @@ void destroy_transaction( void* );
 
 /* search into hash table a transaction, based on 
  */
-inline static struct trans* transaction_lookup(struct h_table *table,
-										AAAMessage *msg, int rm)
+inline static struct trans* transaction_lookup(unsigned int endtoendID,
+											unsigned int hopbyhopID, int rm)
 {
 	str          s;
 	unsigned int hash_code;
 
-	s.s = (char*)&msg->endtoendID;
-	s.len = sizeof(msg->endtoendID);
+	s.s = (char*)&endtoendID;
+	s.len = sizeof(endtoendID);
 	hash_code = hash( &s );
 	return (struct trans*)cell_lookup
-		( table, hash_code, msg->hopbyhopID, TRANSACTION_CELL_TYPE, rm);
+		( hash_table, hash_code, hopbyhopID, TRANSACTION_CELL_TYPE, rm);
 }
 
 #endif

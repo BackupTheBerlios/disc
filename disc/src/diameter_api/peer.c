@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.10 2003/03/10 23:04:34 bogdan Exp $
+ * $Id: peer.c,v 1.11 2003/03/11 18:06:29 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -33,6 +33,15 @@
 
 #define to_32x_len( _len_ ) \
 	( (_len_)+(((_len_)&3)?4-((_len_)&3):0) )
+
+
+unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ] = {
+	0xffffffff,   /* AAA_APP_RELAY */
+	0x00000000,   /* AAA_APP_DIAMETER_COMMON_MSG */
+	0x00000001,   /* AAA_APP_NASREQ */
+	0x00000002,   /* AAA_APP_MOBILE_IP */
+	0x00000003    /* AAA_APP_DIAMETER_BASE_ACC */
+};
 
 
 int build_msg_buffers(struct p_table *peer_table);
@@ -169,7 +178,10 @@ void destroy_peer_manager()
 
 int build_msg_buffers(struct p_table *table)
 {
-	char         *ptr;
+	int  nr_auth_app;
+	int  nr_acc_app;
+	char *ptr;
+	int  i;
 
 	/* standard request */
 	table->std_req.len = AAA_MSG_HDR_SIZE +            /* header */
@@ -183,7 +195,6 @@ int build_msg_buffers(struct p_table *table)
 	/* diameter header */
 	ptr[0] = 0x01;
 	ptr[4] = 0x80;
-	//((unsigned int*)ptr)[2] = htonl( vendor_id );
 	ptr += AAA_MSG_HDR_SIZE;
 	/* origin host AVP */
 	((unsigned int*)ptr)[0] = htonl(264);
@@ -200,6 +211,7 @@ int build_msg_buffers(struct p_table *table)
 	memcpy( ptr, aaa_realm.s, aaa_realm.len);
 	ptr += to_32x_len(aaa_realm.len);
 
+
 	/* standard answer */
 	table->std_ans.len = AAA_MSG_HDR_SIZE +            /* header */
 		AVP_HDR_SIZE + 4 +                             /* result-code  */
@@ -213,7 +225,6 @@ int build_msg_buffers(struct p_table *table)
 	/* diameter header */
 	ptr[0] = 0x01;
 	ptr[4] = 0x00;
-	//((unsigned int*)ptr)[2] = htonl( vendor_id );
 	ptr += AAA_MSG_HDR_SIZE;
 	/* result code AVP */
 	((unsigned int*)ptr)[0] = htonl(268);
@@ -235,12 +246,22 @@ int build_msg_buffers(struct p_table *table)
 	memcpy( ptr, aaa_realm.s, aaa_realm.len);
 	ptr += to_32x_len(aaa_realm.len);
 
+
 	/* CE avps IPv4 */
+	nr_auth_app = nr_acc_app = 0;
+	for(i=0;i<AAA_APP_MAX_ID;i++) {
+		if ((1<<i)&supported_auth_app_id)
+			nr_auth_app++;
+		if ((1<<i)&supported_acc_app_id)
+			nr_acc_app++;
+	}
+	/* build the avps */
 	table->ce_avp_ipv4.len =
 		AVP_HDR_SIZE + 4 +                             /* host-ip-address  */
 		AVP_HDR_SIZE + 4 +                             /* vendor-id  */
 		AVP_HDR_SIZE + to_32x_len(product_name.len) +  /* product-name */
-		AVP_HDR_SIZE + 4;                              /* auth-app-id */
+		nr_auth_app*(AVP_HDR_SIZE + 4) +               /* auth-app-id */
+		nr_acc_app*(AVP_HDR_SIZE + 4);                 /* acc-app-id */
 	table->ce_avp_ipv4.s = malloc( table->ce_avp_ipv4.len );
 	if (!table->ce_avp_ipv4.s)
 		goto error;
@@ -265,12 +286,26 @@ int build_msg_buffers(struct p_table *table)
 	memcpy( ptr, product_name.s, product_name.len);
 	ptr += to_32x_len(product_name.len);
 	/* auth-app-id AVP */
-	((unsigned int*)ptr)[0] = htonl(258);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
-	ptr[4] = 1<<6;
-	ptr += AVP_HDR_SIZE;
-	((unsigned int*)ptr)[0] = htonl( 0xffffffff ); //????????
-	ptr += 4;
+	for(i=0;i<AAA_APP_MAX_ID;i++)
+		if ((1<<i)&supported_auth_app_id) {
+			((unsigned int*)ptr)[0] = htonl(258);
+			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+			ptr[4] = 1<<6;
+			ptr += AVP_HDR_SIZE;
+			((unsigned int*)ptr)[0] = htonl( AAA_APP_ID[i] );
+			ptr += 4;
+		}
+	/* acc-app-id AVP */
+	for(i=0;i<AAA_APP_MAX_ID;i++)
+		if ((1<<i)&supported_acc_app_id) {
+			((unsigned int*)ptr)[0] = htonl(259);
+			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+			ptr[4] = 1<<6;
+			ptr += AVP_HDR_SIZE;
+			((unsigned int*)ptr)[0] = htonl( AAA_APP_ID[i] );
+			ptr += 4;
+		}
+
 
 	/* CE avps IPv6 */
 	table->ce_avp_ipv6.len = table->ce_avp_ipv4.len + 12;
@@ -284,6 +319,7 @@ int build_msg_buffers(struct p_table *table)
 	ptr += AVP_HDR_SIZE + 16;
 	memcpy( ptr, table->ce_avp_ipv4.s+AVP_HDR_SIZE+4,
 		table->ce_avp_ipv4.len-AVP_HDR_SIZE-4);
+
 
 	/* DPR avp */
 	table->dpr_avp.len = AVP_HDR_SIZE + 4; /* disconnect cause  */
@@ -397,12 +433,11 @@ int send_cer( struct peer *dst_peer)
 	/**/
 	memcpy( ptr, peer_table->std_req.s, peer_table->std_req.len );
 	((unsigned int*)ptr)[0] |= htonl( cer.len );
-	((unsigned int*)ptr)[1] |= htonl( 257 );
+	((unsigned int*)ptr)[1] |= CE_MSG_CODE;
 	ptr += peer_table->std_req.len;
 	/**/
 	memcpy( ptr, peer_table->ce_avp_ipv4.s, peer_table->ce_avp_ipv4.len );
 	memcpy( ptr + AVP_HDR_SIZE, &dst_peer->local_ip, sizeof(struct ip_addr) );
-
 
 	/* send the buffer */
 	return send_aaa_request( &cer, 0, dst_peer);
@@ -412,40 +447,113 @@ error:
 
 
 
-int send_cea( struct trans *tr, unsigned int result_code, str *error_msg,
-													struct ip_addr *my_ip)
+int process_cer( str *buf )
 {
-	AAAMessage   *cea_msg;
+	return 1;
+}
 
-	cea_msg = 0;
-	//if (!tr || !tr->req || !tr->peer)
-	//	goto error;
 
-	/* build a CEA */
-//	cea_msg = build_rpl_from_req(tr->in_req, result_code, error_msg);
-	if (!cea_msg)
+
+int send_cea( struct trans *tr, unsigned int result_code)
+{
+	char *ptr;
+	str cea;
+
+	cea.len = peer_table->std_ans.len + peer_table->ce_avp_ipv4.len;
+	cea.s = malloc( cea.len );
+	if (!cea.s) {
+		LOG(L_ERR,"ERROR:send_cer: no more free memory\n");
 		goto error;
-
-	/* is it a protocol error code? */
-	if (result_code<3000 || result_code>=4000){
-		/* add CE specific avps */
-		//if (add_ce_avps( &cea_msg->avpList, my_ip)==-1)
-		//	goto error;
 	}
+	ptr = cea.s;
+	/**/
+	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
+	((unsigned int*)ptr)[0] |= htonl( cea.len );
+	((unsigned int*)ptr)[1] |= CE_MSG_CODE;
+	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
+		htonl( result_code );
+	ptr += peer_table->std_ans.len;
+	/**/
+	memcpy( ptr, peer_table->ce_avp_ipv4.s, peer_table->ce_avp_ipv4.len );
+	memcpy( ptr + AVP_HDR_SIZE, &tr->peer->local_ip, sizeof(struct ip_addr) );
 
-	/* send the message */
-	//send_aaa_message( cea_msg, tr, 0, tr->peer);
+
+	/* send the buffer */
+	return send_aaa_response( &cea, tr);
 
 	return 1;
 error:
-	LOG(L_ERR,"ERROR:send_cea: failed to build and send cea!!!\n");
-	if (cea_msg)
-		AAAFreeMessage( &cea_msg );
 	return -1;
 }
 
 
 
+int process_cea( str *buf )
+{
+	/* check the response code */
+
+	return 1;
+}
+
+
+
+int send_dwr( struct peer *dst_peer)
+{
+	char *ptr;
+	str dwr;
+
+	dwr.len = peer_table->std_req.len ;
+	dwr.s = malloc( dwr.len );
+	if (!dwr.s) {
+		LOG(L_ERR,"ERROR:send_dwr: no more free memory\n");
+		goto error;
+	}
+	ptr = dwr.s;
+	/**/
+	memcpy( ptr, peer_table->std_req.s, peer_table->std_req.len );
+	((unsigned int*)ptr)[0] |= htonl( dwr.len );
+	((unsigned int*)ptr)[1] |= DW_MSG_CODE;
+
+	/* send the buffer */
+	return send_aaa_request( &dwr, 0, dst_peer);
+error:
+	return -1;
+}
+
+
+
+int send_dwa( struct trans *tr, unsigned int result_code)
+{
+	char *ptr;
+	str dwa;
+
+	dwa.len = peer_table->std_ans.len;
+	dwa.s = malloc( dwa.len );
+	if (!dwa.s) {
+		LOG(L_ERR,"ERROR:send_dwa: no more free memory\n");
+		goto error;
+	}
+	ptr = dwa.s;
+	/**/
+	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
+	((unsigned int*)ptr)[0] |= htonl( dwa.len );
+	((unsigned int*)ptr)[1] |= DW_MSG_CODE;
+	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
+		htonl( result_code );
+
+	ptr += peer_table->std_ans.len;
+
+	/* send the buffer */
+	return send_aaa_response( &dwa, tr);
+
+	return 1;
+error:
+	return -1;
+}
+
+
+
+#if 0
 int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 {
 	AAAMessage *dpr_msg;
@@ -508,6 +616,70 @@ error:
 	if (dpa_msg)
 		AAAFreeMessage( &dpa_msg );
 	return -1;
+}
+#endif
+
+
+
+void dispatch_message( struct peer *p, unsigned char *ptr, unsigned int len)
+{
+	struct trans *tr;
+	unsigned int code;
+	int          event;
+	str          buf;
+
+	/* get message code */
+	code = ((unsigned int*)ptr)[1]&MASK_MSG_CODE;
+	/* check the message code */
+	switch ( code ) {
+		case CE_MSG_CODE:
+			event = CER_RECEIVED;
+			break;
+		case DW_MSG_CODE:
+			event = DWR_RECEIVED;
+			break;
+		case DP_MSG_CODE:
+			event = DPR_RECEIVED;
+			break;
+		default:
+			/* it's a session message*/
+			LOG(L_ERR,"UNIMPLEMENTED: message for a session arrived ->"
+				" discard it!!\n");
+			free( ptr );
+			return;
+	}
+
+	buf.s   = ptr;
+	buf.len = len;
+
+	/* is request or reply? */
+	if (ptr[VER_SIZE+MESSAGE_LENGTH_SIZE]&0x80) {
+		/* request */
+		tr = create_transaction( &buf, 0/*ses*/, p);
+		if (tr) {
+			if (peer_state_machine( p, event, tr)==-1)
+				destroy_transaction( tr );
+		} else {
+			free( ptr );
+		}
+	} else {
+		/* response -> find its transaction and remove it from 
+		 * hash table (search and remove is an atomic operation) */
+		tr = transaction_lookup( ((unsigned int*)ptr)[4],
+			((unsigned int*)ptr)[3], 1);
+		if (!tr) {
+			LOG(L_ERR,"ERROR:dispatch_message: respons received, but no"
+				" transaction found!\n");
+			free( ptr );
+		} else {
+			/* destroy the transaction along with the originator request */
+			destroy_transaction( tr );
+			/*make from a request event a response event */
+			event++;
+			/* call the peer machine */
+			peer_state_machine( p, event, &buf );
+		}
+	}
 }
 
 
@@ -595,9 +767,13 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					p->sock = info->sock;
 					memcpy( &p->local_ip, info->local, sizeof(struct ip_addr));
 					/* send cer */
-					send_cer( p );
-					/* new state */
-					p->state = PEER_WAIT_CEA;
+					if (send_cer( p )!=-1) {
+						/* new state */
+						p->state = PEER_WAIT_CEA;
+					} else {
+						tcp_close( p );
+						reset_peer( p );
+					}
 					unlock( p->mutex );
 					break;
 				default:
@@ -686,6 +862,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					DBG("DEBUG:peer_state_machine: transaction timeout\n");
 					tcp_close( p );
 					reset_peer( p );
+					p->state = PEER_UNCONN;
 					unlock( p->mutex );
 					break;
 				default:
@@ -699,7 +876,13 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			switch (p->state) {
 				case PEER_WAIT_CEA:
 					DBG("DEBUG:peer_state_machine: CEA received\n");
-					p->state = PEER_CONN;
+					if ( process_cea( (str*)ptr )==-1 ) {
+						tcp_close( p );
+						reset_peer( p );
+						p->state = PEER_UNCONN;
+					} else {
+						p->state = PEER_CONN;
+					}
 					unlock( p->mutex );
 					break;
 				default:
@@ -732,6 +915,40 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					goto error;
 			}
 			break;
+		case DWR_RECEIVED:
+			lock( p->mutex );
+			switch (p->state) {
+				case PEER_CONN:
+				case PEER_WAIT_DWA:
+				case PEER_WAIT_DPA:
+					if (send_dwa((struct trans*)ptr,2001)==-1) {
+						tcp_close( p );
+						reset_peer( p );
+						p->state = PEER_UNCONN;
+					}
+					unlock( p->mutex );
+					break;
+				default:
+					unlock( p->mutex );
+					error_code = 1;
+					goto error;
+			}
+			break;
+		case DWA_RECEIVED:
+			lock( p->mutex );
+			switch (p->state) {
+				case PEER_WAIT_DWA:
+					p->state = PEER_CONN;
+					unlock( p->mutex );
+					break;
+				default:
+					unlock( p->mutex );
+					error_code = 1;
+					goto error;
+			}
+			break;
+
+
 		case DPR_RECEIVED:
 			lock( p->mutex );
 			switch (p->state) {

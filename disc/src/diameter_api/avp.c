@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.2 2003/03/10 19:17:32 bogdan Exp $
+ * $Id: avp.c,v 1.3 2003/03/11 18:06:29 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  *
@@ -435,15 +435,18 @@ char*  AAAConvertAVPToString(AAA_AVP *avp, char *dest, size_t destLen)
 				htonl(*((unsigned int*)avp->data.s)));
 			break;
 		case AAA_AVP_ADDRESS_TYPE:
+			i = 1;
 			switch (avp->data.len) {
-				case 4: i=0;
-				case 6: i=2;
+				case 4: i=i*0;
+				case 6: i=i*2;
 					l+=snprintf(dest+l,destLen-l,"Address IPv4: <%d.%d.%d.%d>",
-						avp->data.s[i+0],avp->data.s[i+1],
-						avp->data.s[i+2],avp->data.s[i+3]);
+						(unsigned char)avp->data.s[i+0],
+						(unsigned char)avp->data.s[i+1],
+						(unsigned char)avp->data.s[i+2],
+						(unsigned char)avp->data.s[i+3]);
 					break;
-				case 16: i=0;
-				case 18: i=2;
+				case 16: i=i*0;
+				case 18: i=i*2;
 					l+=snprintf(dest+l,destLen-l,
 						"Address IPv6: <%x.%x.%x.%x.%x.%x.%x.%x>",
 						((avp->data.s[i+0]<<8)+avp->data.s[i+1]),
