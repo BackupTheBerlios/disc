@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.h,v 1.1 2003/04/07 18:23:46 andrei Exp $
+ * $Id: cfg_parser.h,v 1.2 2003/04/07 21:27:52 andrei Exp $
  */
 /*
  * History:
@@ -23,6 +23,8 @@
 #define MAX_LINE_SIZE 800
 
 #define CFG_TOKENS 10 /* max numbers of tokens on a line */
+
+enum cfg_errors { CFG_OK=0, CFG_ERR=-1, CFG_PARAM_ERR=-2, CFG_RUN_ERR=-3 };
 
 struct cfg_line{
 	int type;
@@ -50,5 +52,8 @@ extern struct cfg_def cfg_ids[]; /* null terminated array */
 int cfg_parse_line(char* line, struct cfg_line* cl);
 int cfg_parse_stream(FILE* stream);
 int cfg_run_def(struct cfg_line* cl);
+
+int cfg_getstr(char* p, str* r);
+int cfg_getint(char* p, int* i);
 
 #endif

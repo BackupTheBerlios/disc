@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.c,v 1.1 2003/04/07 18:23:46 andrei Exp $
+ * $Id: cfg_parser.c,v 1.2 2003/04/07 21:27:52 andrei Exp $
  *
  * configuration parser
  *
@@ -27,7 +27,6 @@
 
 
 
-
 /* params: null terminated text line => fills cl
  * returns 0, or on error -1. */
 int cfg_parse_line(char* line, struct cfg_line* cl)
@@ -42,10 +41,13 @@ int cfg_parse_line(char* line, struct cfg_line* cl)
 	char* end;
 	char* t;
 	int r;
+
+#define end_test(x, e) ((x)>=(e) || *(x)=='#' || *(x)=='\n' || *(x)=='\r')
 	
+	memset(cl, 0, sizeof(*cl));
 	end=line+strlen(line);
 	tmp=eat_space_end(line, end);
-	if ((tmp==end)||(is_empty_end(tmp, end))) {
+	if ((end_test(tmp, end))||(is_empty_end(tmp, end))) {
 		cl->type=CFG_EMPTY;
 		goto skip;
 	}
@@ -55,29 +57,32 @@ int cfg_parse_line(char* line, struct cfg_line* cl)
 	}
 	cl->id=tmp;
 	tmp=eat_token2_end(cl->id,end, '=');
-	if (tmp==end) goto error;
+	if (end_test(tmp, end)) goto error;
 	t=tmp;
 	tmp=eat_space_end(tmp,end);
-	if (tmp==end) goto error;
+	if (end_test(tmp, end)) goto error;
 	if (*tmp!='=') goto error;
 	*t=0; /* zero terminate*/
 	tmp++;
 	
 	for (r=0; r<CFG_TOKENS; r++){
 		tmp=eat_space_end(tmp,end);
-		if (tmp==end) goto error;
-		if (*tmp=='#') goto end;
+		if (end_test(tmp, end)) goto end;
 		t=tmp;
 		tmp=eat_token_end(t, end);
-		if (tmp<end) *tmp=0; /* zero terminate*/
+		if (tmp<end) {*tmp=0; tmp++;} /* zero terminate*/
 		cl->value[r]=t;
 		cl->token_no++;
+		/*
+		printf (" token %d (%d) <%s>, *%x (%x, %x) \n", r, cl->token_no, t,
+				*tmp, tmp, end);
+		*/
 	}
 	if (tmp+1<end){
 		if (!is_empty_end(tmp+1,end)){
 			/* check if comment */
 			tmp=eat_space_end(tmp+1, end);
-			if (*tmp!='#'){
+			if (!end_test(tmp,end)){
 					/* extra chars at the end of line */
 					goto error_extra_tokens;
 			}
@@ -200,7 +205,7 @@ int cfg_run_def(struct cfg_line *cl)
 						return -2;
 					}
 					if (def->c) return def->c(cl, def->value);
-					else return cfg_getint(cl->value[1], def->value);
+					else return cfg_getint(cl->value[0], def->value);
 					break;
 				case STR_VAL:
 					if (cl->token_no>1){
@@ -209,7 +214,7 @@ int cfg_run_def(struct cfg_line *cl)
 						return -2;
 					}
 					if (def->c) return def->c(cl, def->value);
-					else return cfg_getstr(cl->value[1], def->value);
+					else return cfg_getstr(cl->value[0], def->value);
 					break;
 				case GEN_VAL:
 					if (def->c) return def->c(cl, def->value);

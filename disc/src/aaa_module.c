@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.6 2003/04/04 16:59:24 bogdan Exp $
+ * $Id: aaa_module.c,v 1.7 2003/04/07 21:27:52 andrei Exp $
  */
 /*
  * History:
@@ -17,6 +17,7 @@
 
 
 struct aaa_module* modules=0;
+str module_path={MODULE_SEARCH_PATH, sizeof(MODULE_SEARCH_PATH)};
 
 
 int init_module_loading()
@@ -40,7 +41,8 @@ int init_module_loading()
 	
 	ret=lt_dlsetsearchpath(MODULE_SEARCH_PATH);
 	if (ret){
-		LOG(L_CRIT, "ERROR: init_module_loading: lt_dlinit failed: %s\n",
+		LOG(L_CRIT, "ERROR: init_module_loading: lt_dlsetsearchpath "
+					"failed: %s\n",
 				lt_dlerror());
 		goto error;
 	}

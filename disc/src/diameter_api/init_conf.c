@@ -1,9 +1,10 @@
 /*
- * $Id: init_conf.c,v 1.23 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: init_conf.c,v 1.24 2003/04/07 21:27:52 andrei Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
  * 2003-03-13  added config suport (cfg_parse_stream(), cfg_ids) (andrei)
+ * 2003-04-07  moved all the above to $(topdir)/cfg_init.c  (andrei)
  *
  */
 

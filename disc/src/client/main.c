@@ -18,6 +18,8 @@
 
 #include "../diameter_api/diameter_api.h"
 
+#include "../cfg_init.h"
+
 #include "worker.h"
 #include "dest.h"
 
@@ -109,18 +111,27 @@ void init_random_generator()
 
 
 
-
+#define CLIENT_CFG_FILE "aaa_client.cfg"
 int init_aaa_client()
 {
 	str aaa_id;
 	str host;
 
 	/* read config file */
+	
+	/*
 	aaa_identity.s = "aaa://fesarius.fokus.gmd.de:1812;transport=tcp";
 	aaa_identity.len = strlen(aaa_identity.s);
 	aaa_realm.s = "fokus.gmd.de";
 	aaa_realm.len = strlen(aaa_realm.s);
+	*/
 
+	/* init modules loading */
+	init_module_loading();
+	if (read_config_file(CLIENT_CFG_FILE)!=0){
+		fprintf(stderr, "bad config %s\n", CLIENT_CFG_FILE);
+		goto error;
+	}
 	/* init the transaction manager */
 	if (init_trans_manager()==-1) {
 		goto error;
@@ -165,10 +176,10 @@ int init_aaa_client()
 	/* start the tcp shell */
 	start_tcp_accept();
 
-	/* init modules loading */
-	init_module_loading();
 	/* load a module */
+/*
 	load_module("client/modules/print/print");
+*/
 	init_modules();
 	
 	return 1;
