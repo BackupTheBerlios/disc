@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.11 2003/03/11 18:06:29 bogdan Exp $
+ * $Id: peer.c,v 1.12 2003/03/11 20:52:13 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -490,9 +490,54 @@ error:
 
 int process_cea( str *buf )
 {
-	/* check the response code */
+	static unsigned int pattern = 0x0000001f;
+	unsigned int mask = 0;
+	unsigned int n;
+	char *ptr;
+	char *foo;
 
+	for_all_AVPS_do_switch( buf , foo , ptr ) {
+		case 268: /* result_code */
+			set_AVP_mask( mask, 0);
+			n = ntohl( ((unsigned int *)ptr)[2] );
+			if (n!=AAA_SUCCESS) {
+				LOG(L_ERR,"ERROR:process_cea: CEA has a non-success "
+					"code : %d\n",n);
+				goto error;
+			}
+			break;
+		case 264: /* orig host */
+			set_AVP_mask( mask, 1);
+			break;
+		case 296: /* orig realm */
+			set_AVP_mask( mask, 2);
+			break;
+		case 257: /* host ip address */
+			set_AVP_mask( mask, 3);
+			break;
+		case 266: /* vendor ID */
+			set_AVP_mask( mask, 4);
+			break;
+		case 269: /*product name */
+			set_AVP_mask( mask, 5);
+			break;
+		case 259: /*acc app id*/
+			break;
+		case 258: /*auth app id*/
+			break;
+	}
+
+	if (pattern!=mask) {
+		LOG(L_ERR,"ERROR:process_cea: cea has missing avps(%x<>%x)!!\n",
+			pattern,mask);
+		goto error;
+	}
+
+	free( buf->s );
 	return 1;
+error:
+	free( buf->s );
+	return -1;
 }
 
 
