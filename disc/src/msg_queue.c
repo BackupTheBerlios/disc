@@ -1,5 +1,5 @@
 /*
- * $Id: msg_queue.c,v 1.4 2003/04/16 10:58:45 bogdan Exp $
+ * $Id: msg_queue.c,v 1.5 2003/04/16 17:21:05 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -18,14 +18,15 @@ struct queue_unit {
 	struct peer *p;
 };
 
-static int msg_pipe[2];
+static int msg_pipe[2] = {-1,-1};
 gen_lock_t *msg_lock;
 
+/*
 static unsigned int max_queued_size = 0;
 static unsigned int max_queued_units = 0;
 static unsigned int cur_queued_size = 0;
 static unsigned int cur_queued_units = 0;
-
+*/
 
 int init_msg_queue()
 {
@@ -34,11 +35,12 @@ int init_msg_queue()
 			strerror(errno));
 		goto error;
 	}
+	/*
 	msg_lock = create_locks( 1 );
 	if (!msg_lock) {
 		LOG(L_ERR,"ERROR:init_msg_queue: cannot create lock\n");
 		goto error;
-	}
+	}*/
 	return 1;
 
 error:
@@ -52,22 +54,25 @@ void destroy_msg_queue()
 	str           buf;
 	struct peer   *p;
 
+	/*
 	LOG(L_INFO,"INFO:destroy_msg_queue: max_queued_size  = %u bytes\n",
 			max_queued_size);
 	LOG(L_INFO,"INFO:destroy_msg_queue: max_queued_units = %u \n",
 			max_queued_units);
-	destroy_locks( msg_lock, 1);
+	destroy_locks( msg_lock, 1);*/
 
 	/*empty the pipe */
-	while (ioctl(msg_pipe[0],FIONREAD,&available) &&
-	available>=sizeof(struct queue_unit) ) {
-		get_from_queue( &buf, &p);
-		DBG("DEBUG:destroy_msg_queue: dumping unused mesage from queue\n");
-		shm_free( buf.s );
+	if (msg_pipe[0]!=-1) {
+		while (ioctl(msg_pipe[0],FIONREAD,&available) &&
+		available>=sizeof(struct queue_unit) ) {
+			get_from_queue( &buf, &p);
+			DBG("DEBUG:destroy_msg_queue: dumping unused mesage from queue\n");
+			shm_free( buf.s );
+		}
 	}
 
-	close(msg_pipe[0]);
-	close(msg_pipe[1]);
+	if (msg_pipe[0]!=-1) close(msg_pipe[0]);
+	if (msg_pipe[1]!=-1) close(msg_pipe[1]);
 }
 
 

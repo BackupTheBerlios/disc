@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_shell.c,v 1.8 2003/04/15 17:43:57 bogdan Exp $
+ * $Id: tcp_shell.c,v 1.9 2003/04/16 17:21:05 bogdan Exp $
  *
  *  History:
  *  --------
@@ -187,9 +187,9 @@ bind_done:
 
 	return 1;
 error:
-	close(server_sock4);
+	if (server_sock4!=-1) close(server_sock4);
 #ifdef USE_IPV6
-	close(server_sock6);
+	if (server_sock6!=-1) close(server_sock6);
 #endif
 	return -1;
 }
