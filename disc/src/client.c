@@ -1,5 +1,5 @@
 /*
- * $Id: client.c,v 1.3 2003/04/18 17:38:19 bogdan Exp $
+ * $Id: client.c,v 1.4 2003/04/21 16:49:22 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -79,7 +79,7 @@ void *client_worker(void *attr)
 			destroy_transaction( tr );
 
 			/* parse the message */
-			msg = AAATranslateMessage( buf.s, buf.len );
+			msg = AAATranslateMessage( buf.s, buf.len, 1/*attach buffer*/ );
 			if (!msg) {
 				LOG(L_ERR,"ERROR:client_worker: error parsing message!\n");
 				shm_free( buf.s );

@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_msg.h,v 1.8 2003/04/11 17:48:02 bogdan Exp $
+ * $Id: diameter_msg.h,v 1.9 2003/04/21 16:49:22 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -57,6 +57,7 @@
 	#define ST_MSG_CODE      0x00000113
 	#define MASK_MSG_CODE    0x00ffffff
 #endif
+
 
 
 typedef unsigned int    AAACommandCode;
@@ -300,7 +301,8 @@ AAAReturnCode AAABuildMsgBuffer(
 
 AAAMessage* AAATranslateMessage(
 		unsigned char* source,
-		unsigned int sourceLen );
+		unsigned int sourceLen,
+		int attach_buf );
 
 
 /* AVPS

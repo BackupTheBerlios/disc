@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.10 2003/04/18 20:40:45 bogdan Exp $
+ * $Id: server.c,v 1.11 2003/04/21 16:49:22 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -202,7 +202,7 @@ void *server_worker(void *attr)
 		}
 
 		/* parse the message */
-		msg = AAATranslateMessage( buf.s, buf.len );
+		msg = AAATranslateMessage( buf.s, buf.len , 1/*attach buffer*/ );
 		if (!msg) {
 			LOG(L_ERR,"ERROR:server_worker: dropping message!\n");
 			shm_free( buf.s );

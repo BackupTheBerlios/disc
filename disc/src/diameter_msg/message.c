@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.6 2003/04/21 12:47:17 bogdan Exp $
+ * $Id: message.c,v 1.7 2003/04/21 16:49:22 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -280,7 +280,8 @@ AAAResultCode  AAASetMessageResultCode(
 
 
 /* This function convert message to message structure */
-AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen)
+AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
+															int attach_buf)
 {
 	unsigned char *ptr;
 	AAAMessage    *msg;
@@ -399,8 +400,10 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen)
 	}
 
 	/* link the buffer to the message */
-	msg->buf.s = source;
-	msg->buf.len = msg_len;
+	if (attach_buf) {
+		msg->buf.s = source;
+		msg->buf.len = msg_len;
+	}
 
 	//AAAPrintMessage( msg );
 	return  msg;
