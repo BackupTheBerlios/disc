@@ -3,15 +3,17 @@
  *
  */
 #include <stdio.h>
-#include "diameter_types.h"
+#include "diameter_api.h"
 
 #define MAXWORDLEN 1024;
-#if 0
+
 FILE* file;
 
 AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
 						                                AAAVendorId vendorId,
 							                              AAADictionaryEntry *entry){
+                                                     
+   return AAAFindDictionaryEntry(vendorId,NULL,avpCode,NULL,entry);                                                   
 }
 
 AAAValue AAAValueFromName(char *avpName,
@@ -19,9 +21,11 @@ AAAValue AAAValueFromName(char *avpName,
 	                        char *valueName){
 }
 
-AAAReturnCode AAADictionaryEntryFromName(char *avpName,
-													               AAAVendorId vendorId,
-																				 AAADictionaryEntry *entry){
+AAAReturnCode AAADictionaryEntryFromName( char *avpName,
+                                          AAAVendorId vendorId,
+														AAADictionaryEntry *entry){
+  
+   return AAAFindDictionaryEntry(vendorId,avpName,NULL,NULL,entry);
 }
 
 AAAValue AAAValueFromAVPCode(AAA_AVPCode avpCode,
@@ -42,24 +46,39 @@ boolean_t AAAGetCommandCode(char *commandNamInsert the AVP avp into this avpList
 AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
                                        char *avpName
                                        AAA_AVPCode avpCode,
-                                       AAAValue value){
-
+                                       AAAValue value
+                                       AAADictionaryEntry *entry){
+   char vendorName="ATTRIBUTE";;
+   char* vendorAttr=&vendorName;
+   char* charEntry[4];
+   
    if(vendorId != NULL){
-      AAAFindDictionaryEntryWord(vendorName+"ATTRIBUTE",avpName,avpCode); 
-   }  
-   else
-      AAAFindDictionaryEntryWord("ATTRIBUTE",avpName,avpCode);
+      if(vendorNameFromId(vendorId,vendorAttr))
+         return AAA_ERR_FAILURE; //wrong vendorId
+   }
+   AAADictionaryEntry *entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
+   if(entry==NULL)
+      return AAA_ERR_FAILURE;
+   entry[0]=vendorAttr;
+   entry[1]=avpName;
+   entry[2]=avpCode;
+   entry[3]=avpType;
+   if(!findEntry(charEntry))
+      return AAA_ERR_FAILURE;
+   entry->vendorId=vendorId;
+   strcpy(entry->avpName,entry[1]);   
+   entry->avpCode=atoi(charEntry[2]);
+   //entry->avpType=
+   
+
    
 }
-bool FindEntry( char* entry){
+bool findEntry( char* entry){
    FILE* file;
-	entry=malloc(sizeof(AAADictionaryEntry));
-   if(entry==NULL)
-      return AAA_ERR_NOMEM;
 	file=fopen("dictionary","r");
 	if(file==NULL){
       LOG(L_ERR,"ERROR:no dictionary found!\n");
-      return AAA_ERR_FAILURE;
+      return false;
    }
    bool match=false;
    while(match!=true && findWord(firstWord)){
@@ -122,4 +141,30 @@ int readWord(char* buf,int size){
    return strlen(buf);
       
 }
-#endif
+
+bool vendorNameFromId(AAAVendorId vendorId, char* vendorAttr){
+   FILE* file;
+	file=fopen("vendors","r");
+	if(file==NULL){
+      LOG(L_ERR,"ERROR:no vendors file found!\n");
+      return NULL;
+   }
+   char num;
+   char* vendorValue;
+   char* vendorName;
+   int vid;
+   while((num=fgetc(file))!=EOF){
+      if(num == '#')
+         while ((num=fgetc(file))!='\n' || num!=EOF);
+      else{
+         ungetc(num,file);
+         if(fscanf("%s %s %i %s\n",vendorAttr,vendorValue,vid,vendorName)=4){
+            if(vid==vendorId){
+               return true;
+            }
+         }
+         else
+            while ((num=fgetc(file))!='\n' || num!=EOF);
+   }
+   return false;
+}
