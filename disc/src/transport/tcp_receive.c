@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.13 2003/04/15 12:04:44 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.14 2003/04/15 17:43:57 bogdan Exp $
  *
  *  History:
  *  --------
@@ -304,11 +304,10 @@ void *do_receive(void *arg)
 		}
 
 		/*no timeout specified, therefore must never get into this if*/
-		if (nready == 0) 
+		if (nready == 0)
 			assert(0);
 
 		if ( FD_ISSET( tinfo->cmd_pipe[0], &ret_rd_set) ) {
-			nready--;
 			/* read the command */
 			ncmd = read( tinfo->cmd_pipe[0], &cmd, COMMAND_SIZE);
 			if ( ncmd!=COMMAND_SIZE ){
@@ -361,32 +360,36 @@ void *do_receive(void *arg)
 							"code %d -> ignoring command\n",cmd.code);
 				}
 			}
+			if (--nready==0)
+				continue;
 		}
 
 		list_for_each( lh, &peers) {
-			if (!nready--)
+			if (!nready)
 				break;
 			p = list_entry( lh, struct peer, thd_peer_lh);
 
 			if ( FD_ISSET( p->sock, &ret_rd_set) ) {
-				option = -1;
-				ioctl( p->sock, FIONREAD, &option);
-				if (option==0) {
-					/* FIN received */
-					LOG(L_INFO,"INFO:do_receive: FIN received for socket"
-						" %d.\n",p->sock);
-					peer_state_machine( p, TCP_CONN_CLOSE, 0);
-				} else {
+				nready--;
+				//option = -1;
+				//ioctl( p->sock, FIONREAD, &option);
+				//if (option==0) {
+				//	/* FIN received */
+				//	LOG(L_INFO,"INFO:do_receive: FIN received for socket"
+				//		" %d.\n",p->sock);
+				//	peer_state_machine( p, TCP_CONN_CLOSE, 0);
+				//} else {
 					/* data received */
 					if (do_read( p )==-1) {
 						LOG(L_ERR,"ERROR:do_receive: error reading-> close\n");
 						peer_state_machine( p, TCP_CONN_CLOSE, 0);
 					}
-				}
+				//}
 				continue;
 			}
 
 			if ( FD_ISSET( p->sock, &ret_wr_set) ) {
+				nready--;
 				DBG("DEBUG:do_receive: connect done on socket %d\n",p->sock);
 				FD_CLR( p->sock, &tinfo->wr_set);
 				length = sizeof(option);

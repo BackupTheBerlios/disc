@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.5 2003/04/09 18:12:44 andrei Exp $
+ * $Id: timer.c,v 1.6 2003/04/15 17:43:57 bogdan Exp $
  *
  * 
  *  2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -159,6 +159,12 @@ int add_to_timer_list( struct timer_link* tl, struct timer* timer_list,
 {
 	/* lock the list */
 	lock_get(timer_list->mutex);
+	if (is_in_timer_list( tl )) {
+		LOG(L_ERR,"BUG:add_into_timer_list: trying to insert an element that "
+			"already is into a timer list\n");
+		lock_release(timer_list->mutex);
+		return -1;
+	}
 	/* add the element into the list */
 	tl->timeout = timeout;
 	tl->prev_tl = timer_list->last_tl.prev_tl;
@@ -182,6 +188,12 @@ int insert_into_timer_list( struct timer_link* t_link, struct timer* t_list,
 
 	/* lock the list */
 	lock_get(t_list->mutex);
+	if (is_in_timer_list( t_link )) {
+		LOG(L_ERR,"BUG:insert_into_timer_list: trying to insert an element "
+			"that already is into a timer list\n");
+		lock_release(t_list->mutex);
+		return -1;
+	}
 	/* add the element into the list */
 	t_link->timeout = timeout;
 	/* look for the corect possition */
@@ -205,19 +217,21 @@ int insert_into_timer_list( struct timer_link* t_link, struct timer* t_list,
 
 int rmv_from_timer_list( struct timer_link* tl )
 {
+	/* lock the list */
+	lock_get(tl->timer_list->mutex);
 	if (is_in_timer_list( tl )) {
-		/* lock the list */
-		lock_get(tl->timer_list->mutex);
 		tl->prev_tl->next_tl = tl->next_tl;
 		tl->next_tl->prev_tl = tl->prev_tl;
 		tl->next_tl = 0;
 		tl->prev_tl = 0;
 		/* unlock the list */
 		DBG("DEBUG: rmv_from_timer_list[%p]: %p\n",tl->timer_list,tl);
-		lock_release(tl->timer_list->mutex);
 		tl->timer_list = 0;
+		lock_release(tl->timer_list->mutex);
+		return 1;
 	}
-	return 1;
+	lock_release(tl->timer_list->mutex);
+	return -1;
 }
 
 

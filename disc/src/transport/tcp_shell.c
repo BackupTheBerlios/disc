@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_shell.c,v 1.7 2003/04/11 17:48:02 bogdan Exp $
+ * $Id: tcp_shell.c,v 1.8 2003/04/15 17:43:57 bogdan Exp $
  *
  *  History:
  *  --------
@@ -350,7 +350,7 @@ int get_new_receive_thread()
 
 	if ( ti->tl.next!=&ti->tl && get_payload(ti->tl.next)->load<ti->load ){
 		/* remove the first element */
-		list_del( rcv_thread_list.next );
+		list_del_zero( rcv_thread_list.next );
 		/* put it back in list into the corect position */
 		list_for_each( pos, &rcv_thread_list ) {
 			if ( get_payload(pos)->load==ti->load ) {

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.29 2003/04/15 15:09:04 bogdan Exp $
+ * $Id: peer.c,v 1.30 2003/04/15 17:43:57 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -51,7 +51,7 @@
 	do{ \
 		if ( (_lh_)->next ) {\
 			lock_get( (_list_)->mutex );\
-			list_del( (_lh_) );\
+			list_del_zero( (_lh_) );\
 			(_lh_)->next = (_lh_)->prev = 0;\
 			lock_release( (_list_)->mutex );\
 		}\
@@ -155,7 +155,7 @@ void destroy_peer_manager(struct p_table *peer_table)
 		/* destroy all the peers */
 		list_for_each_safe( lh, foo, &(peer_table->peers)) {
 			/* free the peer */
-			list_del( lh );
+			list_del_zero( lh );
 			p = list_entry( lh, struct peer, all_peer_lh);
 			destroy_peer( p );
 		}
@@ -1448,7 +1448,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					lock_release( p->mutex );
 					break;
 				default:
-					LOG(L_CRIT,"BUUUUG:peer_state_machine: peer_is_inactiv "
+					LOG(L_CRIT,"BUG:peer_state_machine: peer_is_inactiv "
 						"triggered outside PEER_CONN state!\n");
 					list_add_tail_safe( &p->lh, &activ_peers );
 					lock_release( p->mutex );
@@ -1607,7 +1607,7 @@ void peer_timer_handler(unsigned int ticks, void* param)
 			p  = list_entry( lh , struct peer , lh);
 			if (p->last_activ_time+SEND_DWR_TIMEOUT<=ticks) {
 				/* remove it from the list */
-				list_del( lh );
+				list_del_zero( lh );
 				/* send command to peer */
 				write_command( p->fd, INACTIVITY_CMD, 0, p, 0);
 			} else {

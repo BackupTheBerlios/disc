@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.c,v 1.5 2003/04/07 15:17:51 bogdan Exp $
+ * $Id: hash_table.c,v 1.6 2003/04/15 17:43:57 bogdan Exp $
  *
  * 2003-01-29  created by bogdan
  * 2003-03-12  converted to use shm_malloc (andrei)
@@ -119,11 +119,18 @@ int add_cell_to_htable( struct h_table *table, struct h_link *link)
 /*
  * Removes a cell from the hash_table
  */
-void remove_cell_from_htable(struct h_table *table, struct h_link *link)
+int remove_cell_from_htable(struct h_table *table, struct h_link *link)
 {
 	lock_get( table->mutex );
-	list_del( &(link->lh) );
+	if (link->lh.next==0 || link->lh.prev==0) {
+		LOG(L_WARN,"WARNING:remove_cell_from_htable: removing a cell already "
+			"removed\n");
+		lock_release( table->mutex );
+		return -1;
+	}
+	list_del_zero( &(link->lh) );
 	lock_release( table->mutex );
+	return 1;
 }
 
 

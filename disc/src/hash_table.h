@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.h,v 1.7 2003/04/07 15:17:51 bogdan Exp $
+ * $Id: hash_table.h,v 1.8 2003/04/15 17:43:57 bogdan Exp $
  *
  * 2003-01-29 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -72,7 +72,7 @@ int hash( str *s, unsigned int hash_size);
 
 
 /* remove a cell from the hash table */
-void remove_cell_from_htable(struct h_table *table , struct h_link *link);
+int remove_cell_from_htable(struct h_table *table , struct h_link *link);
 
 
 /* search on an entry a cell having a given label  */
@@ -116,7 +116,7 @@ static inline struct h_link *cell_lookup_and_remove(struct h_table *table,
 	list_for_each( lh, &(entry->lh) ) {
 		if ( ((struct h_link*)lh)->label==label ) {
 			link = (struct h_link*)lh;
-			list_del( lh );
+			list_del_zero( lh );
 			break;
 		}
 	}

@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.9 2003/04/15 15:09:04 bogdan Exp $
+ * $Id: trans.c,v 1.10 2003/04/15 17:43:57 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -114,6 +114,15 @@ void timeout_handler(unsigned int ticks, void* param)
 		tr  = (struct trans*)tl->payload;
 		DBG("DEBUG:timeout_handler: transaction %p expired!\n",tr);
 		tl = tl->next_tl;
+		/* remove the transaction from hash table */
+		if (remove_cell_from_htable(tr->out_peer->trans_table,
+		&(tr->linker))==-1) {
+			LOG(L_NOTICE,"NOTICE:trans_timeout_handler: race-condition "
+				"between trasaction timeout and incoming reply -> timeout "
+				"drop\n");
+			continue;
+		}
+
 		/* process the transaction */
 		if (tr->timeout_f)
 			tr->timeout_f( tr );
