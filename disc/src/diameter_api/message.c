@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.12 2003/03/14 18:29:42 bogdan Exp $
+ * $Id: message.c,v 1.13 2003/03/17 16:39:46 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -440,7 +440,7 @@ struct trans *send_aaa_request( str *buf, struct session *ses, struct peer *p)
 	 * calculating the hash_code */
 	s.s = (char*)&ete;
 	s.len = END_TO_END_IDENTIFIER_SIZE;
-	tr->linker.hash_code = hash( &s );
+	//tr->linker.hash_code = hash( &s );
 	//tr->linker.type = TRANSACTION_CELL_TYPE;
 	//add_cell_to_htable( hash_table, (struct h_link*)tr ); ??????????
 	/* the hash label is used as hop-by-hop ID */

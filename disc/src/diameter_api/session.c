@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.4 2003/03/14 18:30:00 bogdan Exp $
+ * $Id: session.c,v 1.5 2003/03/17 16:39:46 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -459,7 +459,7 @@ AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 	/* compute the hash code; !!!IMPORTANT!!! -> this must happen before 
 	 * inserting the session into the hash table, otherwise, the entry to
 	 * insert on , will not be known */
-	session->linker.hash_code = hash( &(session->sID) );
+	//session->linker.hash_code = hash( &(session->sID) );
 
 	/* insert the session into the hash table */
 	//add_cell_to_htable( hash_table, (struct h_link*)session);

@@ -43,6 +43,7 @@ int init_tcp_shell( unsigned int nr_receivers)
 		goto error;
 	}
 	memset(tinfo, 0, sizeof((nr_receivers+1)*sizeof(struct thread_info)));
+	nr_recv_threads = nr_receivers;
 
 	/* prepare the list for receive threads */
 	INIT_LIST_HEAD(  &rcv_thread_list );
@@ -66,7 +67,7 @@ int init_tcp_shell( unsigned int nr_receivers)
 	}
 
 	/* receive threads */
-	for(i=0; i<NR_RECEIVE_THREADS; i++) {
+	for(i=0; i<nr_recv_threads; i++) {
 		if (pipe( tinfo[RECEIVE_THREAD_ID(i)].cmd_pipe )!=0) {
 			LOG(L_ERR,"ERROR:init_tcp_shell: cannot create pipe for receive "
 				"thread %d : %s\n", i,strerror(errno));
@@ -102,7 +103,7 @@ void terminate_tcp_shell()
 	write( tinfo[ACCEPT_THREAD_ID].cmd_pipe[1], &cmd, COMMAND_SIZE);
 
 	/* ... and to the receiver threads */
-	for(i=0; i<NR_RECEIVE_THREADS; i++)
+	for(i=0; i<nr_recv_threads; i++)
 		write( tinfo[RECEIVE_THREAD_ID(i)].cmd_pipe[1] , &cmd, COMMAND_SIZE);
 
 	/* now wait for them to end */
@@ -110,7 +111,7 @@ void terminate_tcp_shell()
 	pthread_join( tinfo[ACCEPT_THREAD_ID].tid, 0);
 	LOG(L_INFO,"INFO:terminate_tcp_shell: accept thread terminated\n");
 	/* receive threads */
-	for(i=0; i<NR_RECEIVE_THREADS; i++) {
+	for(i=0; i<nr_recv_threads; i++) {
 		pthread_join( tinfo[RECEIVE_THREAD_ID(i)].tid, 0);
 		LOG(L_INFO,"INFO:terminate_tcp_shell: receive thread %d "
 			"terminated\n",i);

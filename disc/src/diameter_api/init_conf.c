@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.17 2003/03/17 16:02:01 bogdan Exp $
+ * $Id: init_conf.c,v 1.18 2003/03/17 16:39:46 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -39,8 +39,8 @@ static char *config_filename = 0;
 #define DEFAULT_LISTENING_PORT 1812
 
 /* external vars */
-struct h_table *hash_table;           /* hash table for sessions and trans */
-struct p_table *peer_table;           /* table with peers */
+//struct h_table *hash_table;           /* hash table for sessions and trans */
+//struct p_table *peer_table;           /* table with peers */
 str aaa_identity= {0, 0};             /* aaa identity */
 str aaa_realm= {0, 0};                /* realm */
 str aaa_fqdn= {0, 0 };
@@ -114,7 +114,7 @@ AAAReturnCode AAAClose()
 	//terminate_tcp_shell();
 
 	/* stop the peer manager */
-	destroy_peer_manager();
+	//destroy_peer_manager();
 
 	/* stop the message manager */
 	destroy_msg_manager();
@@ -158,12 +158,12 @@ AAAReturnCode AAAOpen(char *configFileName)
 		goto mem_error;
 
 	/* init peer manager */
-	if (init_peer_manager( )==-1)
-		goto mem_error;
+	//if (init_peer_manager( )==-1)
+	//	goto mem_error;
 
 	/* init the socket layer */
-	if (init_tcp_shell()==-1)
-		goto mem_error;
+	//if (init_tcp_shell()==-1)
+	//	goto mem_error;
 
 	/* add the peers from config file */
 	//..................

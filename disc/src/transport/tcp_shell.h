@@ -8,7 +8,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "../list.h"
-#include "../hash_table.h"
 #include "ip_addr.h"
 #include "peer.h"
 
@@ -55,7 +54,7 @@ enum COMMAND_CODES {
 
 
 
-int init_tcp_shell(void);
+int init_tcp_shell(unsigned int nr_receivers);
 
 void terminate_tcp_shell(void);
 

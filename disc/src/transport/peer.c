@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.4 2003/03/17 16:02:01 bogdan Exp $
+ * $Id: peer.c,v 1.5 2003/03/17 16:39:46 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -79,8 +79,10 @@ static struct safe_list_head activ_peers;
 
 
 
-int init_peer_manager()
+struct p_table *init_peer_manager( unsigned int trans_hash_size )
 {
+	struct p_table *peer_table;
+
 	/* allocate the peer vector */
 	peer_table = (struct p_table*)shm_malloc( sizeof(struct p_table) );
 	if (!peer_table) {
@@ -88,6 +90,9 @@ int init_peer_manager()
 		goto error;
 	}
 	memset( peer_table, 0, sizeof(struct p_table) );
+
+	/* size of the transaction hash table */
+	peer_table->trans_hash_size = trans_hash_size;
 
 	/* init the peer list */
 	INIT_LIST_HEAD( &(peer_table->peers) );
@@ -154,7 +159,7 @@ error:
 
 
 
-void destroy_peer_manager()
+void destroy_peer_manager(struct p_table *peer_table)
 {
 	struct list_head *lh, *foo;
 	struct timer_link *tl, *tl_t;
@@ -429,6 +434,9 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 
 	/* get a thread to listen for this peer */
 	p->fd = get_new_receive_thread();
+
+	/* build the hash tbale for the transactions */
+	p->trans_table = build_htable(/*?????????????????/*/);
 
 	/* insert the peer into the list */
 	lock_get( peer_table->mutex );

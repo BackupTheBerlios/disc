@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.4 2003/03/17 16:02:01 bogdan Exp $
+ * $Id: peer.h,v 1.5 2003/03/17 16:39:46 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -13,9 +13,8 @@
 #include "../counter.h"
 #include "../timer.h"
 #include "../list.h"
+#include "../hash_table.h"
 #include "ip_addr.h"
-//#include "globals.h"
-//#include "diameter_types.h"
 #include "trans.h"
 
 struct peer;
@@ -49,10 +48,12 @@ struct peer {
 	/* local ip*/
 	struct ip_addr local_ip;
 	unsigned int state;
+	/* hash table with all the peer's transactions */
+	struct h_table *trans_table;
 	/* linking information */
 	struct list_head  all_peer_lh;
 	struct list_head  thd_peer_lh;
-	/* mutex for changing the status */
+	/* mutex */
 	gen_lock_t *mutex;
 	/* ref counter*/
 	atomic_cnt ref_cnt;
@@ -88,6 +89,8 @@ struct p_table {
 	struct list_head peers ;
 	/* mutex for manipulating the list */
 	gen_lock_t *mutex;
+	/* size of the hash table used for keeping th transactions */
+	unsigned int trans_hash_size;
 	/* buffers used for a fater CE, WD, DP creation */
 	str std_req;
 	str std_ans;
@@ -140,14 +143,14 @@ typedef enum {
 
 
 /* peer table */
-extern struct p_table *peer_table;
+//extern struct p_table *peer_table;
 /* List with all known application identifiers */
 extern unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ];
 
 
 
 
-int init_peer_manager();
+struct p_table *init_peer_manager( unsigned int trans_hash_size );
 
 void destroy_peer_manager();
 
@@ -180,7 +183,7 @@ static inline struct peer* lookup_peer_by_host( str *host )
 	struct list_head *lh;
 	struct peer *p;
 	struct peer *res=0;
-
+#if 0
 	lock_get( peer_table->mutex );
 
 	list_for_each( lh, &(peer_table->peers)) {
@@ -194,6 +197,7 @@ static inline struct peer* lookup_peer_by_host( str *host )
 	}
 
 	lock_release( peer_table->mutex );
+#endif
 	return res;
 }
 
@@ -204,7 +208,7 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 	struct list_head *lh;
 	struct peer *p;
 	struct peer *res=0;
-
+#if 0
 	lock_get( peer_table->mutex );
 
 	list_for_each( lh, &(peer_table->peers)) {
@@ -218,6 +222,7 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 	}
 
 	lock_release( peer_table->mutex );
+#endif
 	return res;
 }
 
@@ -228,7 +233,7 @@ static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 	struct list_head *lh;
 	struct peer *p;
 	struct peer *res=0;
-
+#if 0
 	lock_get( peer_table->mutex );
 
 	list_for_each( lh, &(peer_table->peers)) {
@@ -241,6 +246,7 @@ static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 	}
 
 	lock_release( peer_table->mutex );
+#endif
 	return res;
 }
 
