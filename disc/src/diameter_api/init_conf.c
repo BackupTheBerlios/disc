@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.12 2003/03/13 19:16:07 bogdan Exp $
+ * $Id: init_conf.c,v 1.13 2003/03/13 19:25:26 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -38,7 +38,7 @@
 
 /* local vars */
 static int  is_lib_init = 0;
-static char *config_filename;
+static char *config_filename = 0;
 
 
 /* external vars */
@@ -107,7 +107,9 @@ AAAReturnCode AAAClose()
 	}
 	is_lib_init = 0;
 
-	/* close all open connections */
+	/* free the memory for config filename */
+	if (config_filename)
+		shm_free(config_filename);
 
 	/* stop the timer */
 	destroy_timer();
@@ -177,7 +179,7 @@ AAAReturnCode AAAOpen(char *configFileName)
 	fclose(cfg_file);
 
 	/* save the name of the config file  */
-	config_filename = shm_malloc( sizeof(configFileName)+1 );
+	config_filename = shm_malloc( strlen(configFileName)+1 );
 	if (!config_filename) {
 		LOG(L_CRIT, "ERROR:AAAOpen: cannot allocate memory!\n");
 		goto error_config;
