@@ -1,4 +1,4 @@
-#if 0
+#if 1
 
 #include <stdio.h>
 
@@ -17,18 +17,18 @@ int hash_fn_int(int *i) {
 		return *i%4;
 };
 
-int hash_key_cmp_int(struct hash_entry *e, int *i) {
-		printf ("\t compare %d with %d\n", ((struct dummy *)(e->data))->i, *i);
-		return ! (((struct dummy *)(e->data))->i == *i);
+int hash_key_cmp_int(struct dummy *d, int *i) {
+		printf ("\t compare %d with %d\n", d->i, *i);
+		return ! (d->i == *i);
 };
 
 int hash_fn_chr(char *c) {
 		return *c%2;
 };
 
-int hash_key_cmp_chr(struct hash_entry *e, char *c) {
-		printf ("\t compare '%c' with '%c'\n", ((struct dummy *)(e->data))->c, *c);
-		return !(((struct dummy *)(e->data))->c == *c);
+int hash_key_cmp_chr(struct dummy *d, char *c) {
+		printf ("\t compare '%c' with '%c'\n", d->c, *c);
+		return !(d->c == *c);
 };
 
 void print_dummy(void *d) {

@@ -12,7 +12,7 @@ struct hash_entry {
 
 typedef int (*hash_funct)(void *key);				// returns an integer identifying the bucket
 typedef void *(*hash_get_key)(void *data);
-typedef int (*hash_key_cmp)(struct hash_entry *e, void *key);
+typedef int (*hash_key_cmp)(void *data, void *key);
 
 
 struct hash_table {
@@ -76,7 +76,7 @@ struct hash_entry *lookup_hash_group_##NAME(struct hash_group *g, void *k) {\
 		printf("\tidx: %d\n", t->idx);\
 		e = list_entry(pos, struct hash_entry, table[t->idx]);\
 \
-		if (t->key_cmp(e, k) == 0)\
+		if (t->key_cmp(e->data, k) == 0)\
 			return e;\
 	}\
 	return NULL;\
