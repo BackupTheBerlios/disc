@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.h,v 1.13 2003/04/14 14:56:00 bogdan Exp $
+ * $Id: aaa_module.h,v 1.14 2003/04/16 14:27:17 andrei Exp $
  */
 /* History:
  * --------
@@ -58,6 +58,7 @@ int init_module_loading();
 int load_module(char*);
 int init_modules();
 void destroy_modules();
+void unload_modules();
 struct aaa_module* find_module(unsigned int app_id);
 struct module_param* get_module_param(char* module, char* param_name); 
 

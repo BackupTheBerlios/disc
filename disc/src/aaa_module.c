@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.13 2003/04/13 23:01:16 andrei Exp $
+ * $Id: aaa_module.c,v 1.14 2003/04/16 14:27:17 andrei Exp $
  */
 /*
  * History:
@@ -193,9 +193,6 @@ void destroy_modules()
 		if ((a->exports)&&(a->exports->mod_destroy)&&(a->is_init))
 			a->exports->mod_destroy();
 	}
-	if (lt_dlexit()!=0){ /* unload modules */
-		LOG(L_CRIT, "ERROR: destroy_modules: lt_dlexit: %s\n", lt_dlerror());
-	};
 	for (a=modules; a;){
 		b = a->next;
 		if (a->path) shm_free(a->path);
@@ -203,6 +200,18 @@ void destroy_modules()
 		a = b;
 	}
 	modules=0;
+}
+
+
+
+/* unload modules - WARNING: do not call this if you use anything from a
+ * module; do not call qm_status after this if you still have non-deallocated
+ * mem. from the modules */
+void unload_modules()
+{
+	if (lt_dlexit()!=0){ /* unload modules */
+		LOG(L_CRIT, "ERROR: destroy_modules: lt_dlexit: %s\n", lt_dlerror());
+	};
 }
 
 

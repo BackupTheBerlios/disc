@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.14 2003/04/16 10:58:45 bogdan Exp $
+ * $Id: aaa_core.c,v 1.15 2003/04/16 14:27:17 andrei Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -34,7 +34,7 @@
 #define CFG_FILE "aaa.cfg"
 
 
-static char id[]="$Id: aaa_core.c,v 1.14 2003/04/16 10:58:45 bogdan Exp $";
+static char id[]="$Id: aaa_core.c,v 1.15 2003/04/16 14:27:17 andrei Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
@@ -346,49 +346,52 @@ void destroy_aaa_core()
 {
 	/* stop the worker threads */
 	stop_workers();
-
+	
 	/* stop & destroy the modules */
 	destroy_modules();
-
+	
 	/* destroy destination peers resolver */
 	if (my_aaa_status==AAA_CLIENT) {
 		/* something here? */
 	} else {
 		/* something for server ???? */
 	}
-
+	
 	/* destroy the msg queue */
 	destroy_msg_queue();
-
+	
 	/* close the libarary */
 	AAAClose();
-
+	
 	/* stop the tcp layer */
 	terminate_tcp_shell();
-
+	
 	/* destroy the transaction manager */
 	destroy_trans_manager();
-
+	
 	/* destroy the peer manager */
 	destroy_peer_manager( peer_table );
-
+	
 	/**/
 	if (aaa_identity.s)
 		shm_free(aaa_identity.s);
-
+	
 	/* destroy tge timer */
 	destroy_timer();
-
+	
 	/* destroy route & peer lists */
 	destroy_route_lst();
 	destroy_cfg_peer_lst();
-
+	
 	/* free some globals*/
 	if (aaa_realm.s) { shm_free(aaa_realm.s); aaa_realm.s=0; }
 	if (aaa_fqdn.s) { shm_free(aaa_fqdn.s); aaa_fqdn.s=0; }
-
+	
 	/* just for debuging */
 	shm_status();
+	/* unload the modules - final step */
+	unload_modules();
+	/* destroy the shared mem. pool */
 	shm_mem_destroy();
 }
 
