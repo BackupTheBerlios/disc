@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.19 2003/03/12 18:58:55 bogdan Exp $
+ * $Id: peer.c,v 1.20 2003/03/12 19:05:22 andrei Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -690,7 +690,7 @@ int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 	str dpr;
 
 	dpr.len = peer_table->std_req.len + peer_table->dpr_avp.len;
-	dpr.s = malloc( dpr.len );
+	dpr.s = shm_malloc( dpr.len );
 	if (!dpr.s) {
 		LOG(L_ERR,"ERROR:send_dpr: no more free memory\n");
 		goto error;
@@ -719,7 +719,7 @@ int send_dpa( struct trans *tr, unsigned int result_code)
 	str dpa;
 
 	dpa.len = peer_table->std_ans.len;
-	dpa.s = malloc( dpa.len );
+	dpa.s =shm_malloc( dpa.len );
 	if (!dpa.s) {
 		LOG(L_ERR,"ERROR:send_dwa: no more free memory\n");
 		goto error;
@@ -841,7 +841,7 @@ void dispatch_message( struct peer *p, str *buf)
 			event++;
 			/* call the peer machine */
 			peer_state_machine( p, event, buf );
-			free(buf->s);
+			shm_free(buf->s);
 		}
 	}
 }
