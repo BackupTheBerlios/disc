@@ -1,6 +1,6 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- * $Id: dictionary.c,v 1.14 2003/04/22 19:58:41 andrei Exp $
+ * $Id: dictionary.c,v 1.15 2003/04/26 11:54:27 ilk Exp $
  *
  * Copyright (C) 2002-2003 Fhg Fokus
  *
@@ -42,7 +42,12 @@ AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
 AAAValue AAAValueFromName(char *avpName,
 	                        char *vendorName,
 	                        char *valueName){
-  return 0;
+									  
+   AAAValue value=0;
+   if(AAAFindValue( vendorName,avpName,valueName,&value)== AAA_ERR_SUCCESS)
+		return value;
+	else
+		return AAA_ERR_NOT_FOUND;
 }
 
 AAAReturnCode AAADictionaryEntryFromName( char *avpName,
@@ -55,13 +60,34 @@ AAAReturnCode AAADictionaryEntryFromName( char *avpName,
 AAAValue AAAValueFromAVPCode(AAA_AVPCode avpCode,
 		                         AAAVendorId vendorId,
 	                           char *valueName){
-  return 0;
+   AAAValue value=0;
+   AAADictionaryEntry *entry;
+   entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
+   if (AAADictionaryEntryFromAVPCode(avpCode,vendorId,entry)==AAA_ERR_SUCCESS){
+		if(AAAFindValue( NULL,entry->avpName,valueName,&value)== AAA_ERR_SUCCESS)
+			return value;
+		else
+			return AAA_ERR_NOT_FOUND;
+	}
+	else
+		return AAA_ERR_NOT_FOUND;
+  
 }
 
 const char *AAALookupValueNameUsingValue(AAA_AVPCode avpCode,
 			                                   AAAVendorId vendorId,
 			                                   AAAValue value){
-  return 0;
+   char* valueName=NULL;
+   AAADictionaryEntry *entry;
+   entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
+   if (AAADictionaryEntryFromAVPCode(avpCode,vendorId,entry)==AAA_ERR_SUCCESS){
+   	if(AAAFindValue( NULL,entry->avpName,valueName,&value)== AAA_ERR_SUCCESS)
+			return valueName;
+		else
+			return NULL;
+	}
+	else
+		return NULL;
 }
 
 boolean_t AAAGetCommandCode(char *commandName,
@@ -131,6 +157,29 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
 
    
 }
+AAAReturnCode AAAFindValue(  char* vendorName,
+										char* avpName,
+                              char* valueName,
+                              AAAValue* value){
+   char* charEntry[4];
+   char vendorVal[]="VALUE";
+   charEntry[0]=vendorVal;
+   charEntry[1]=avpName;
+   charEntry[2]=valueName;
+   if(*value==0)
+   	charEntry[3]=NULL;
+   else{
+		charEntry[3]=(char*)malloc(10);
+      sprintf(charEntry[2],"%i",*value);
+   }
+   if(!findEntry(charEntry,4))
+      return AAA_ERR_NOT_FOUND;
+   valueName=(char*)malloc(strlen(charEntry[2])+1);
+   strcpy(valueName,charEntry[2]);
+   *value=atoi(charEntry[3]);
+   return AAA_ERR_SUCCESS;
+}
+
 int findEntry( char** extEntry, int sizeOfEntry){
 	int match=0;
    char *entry[sizeOfEntry];
