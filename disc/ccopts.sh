@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#$Id: ccopts.sh,v 1.3 2003/04/06 22:19:48 bogdan Exp $
+#$Id: ccopts.sh,v 1.4 2003/04/16 16:04:59 andrei Exp $
 #
 # returns the CFLAGS for the given compiler (maximum optimizations)
 #
@@ -52,7 +52,7 @@ gcc)
 				in
 					i386)
 						CFLAGS="$CFLAGS -minline-all-stringops -malign-double"
-						CFLAGS="$CFLAGS -falign-loops -march=$x86CPU"
+						CFLAGS="$CFLAGS -falign-loops -mcpu=$x86CPU"
 						;;
 					sparc64)
 						CFLAGS="$CFLAGS -mcpu=ultrasparc -mtune=ultrasparc"
