@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.37 2003/04/18 16:17:16 bogdan Exp $
+ * $Id: peer.c,v 1.38 2003/04/18 16:17:59 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -504,7 +504,7 @@ static inline int safe_write(struct peer *p, char *buf, unsigned int len)
 
 	for(n=0;n<len;n++) {
 		DBG(" %x",buf[n]);
-		if (n&7==0)
+		if ((n&7)==0)
 			DBG("\n");
 	}
 
