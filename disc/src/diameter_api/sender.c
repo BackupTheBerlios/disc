@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.10 2003/06/03 10:21:45 bogdan Exp $
+ * $Id: sender.c,v 1.11 2003/08/25 14:52:02 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -54,7 +54,10 @@ extern int (*send_local_request)(AAAMessage*, struct trans*);
 
 
 static void ses_trans_timeout_f( struct trans *tr ) {
-	if (session_state_machine( tr->ses, AAA_SESSION_REQ_TIMEOUT, 0)==1) {
+	static AAAMessage fake_msg;
+
+	fake_msg.commandCode = tr->info;
+	if (session_state_machine(tr->ses,AAA_SESSION_REQ_TIMEOUT,&fake_msg)==1) {
 		/* run the timeout handler */
 		((struct module_exports*)tr->ses->app_ref)->mod_tout(
 			ANSWER_TIMEOUT_EVENT, &(tr->ses->sID), tr->ses->context);
@@ -87,6 +90,12 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		goto error;
 	}
 
+	if (msg->commandCode==274||msg->commandCode==275||msg->commandCode==258) {
+		LOG(L_ERR,"ERROR:AAASendMessage: statefull not "
+			"implemented; cannot send %d!\n",msg->commandCode);
+		goto error;
+	}
+
 	if ( !is_req(msg) ) {
 		/* it's a response */
 		if (my_aaa_status==AAA_CLIENT) {
@@ -106,9 +115,10 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 				case 274: /*ASA*/ event = AAA_SENDING_ASA; break;
 				case 275: /*STA*/ event = AAA_SENDING_STA; break;
 				case 258: /*RAA*/ event = AAA_SENDING_RAA; break;
-				default:  /*AA */ event = AAA_SENDING_AA;  break;
+				case 271: /*acctA*/ event = AAA_SENDING_AcctA; break;
+				default:  /*authA*/ event = AAA_SENDING_AuthA; break;
 			}
-			if (session_state_machine( ses, event, 0)!=1)
+			if (session_state_machine( ses, event, msg)!=1)
 				goto error;
 		}
 
@@ -116,7 +126,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		if (send_res_to_peer( &(msg->buf), (struct peer*)msg->in_peer)==-1) {
 			LOG(L_ERR,"ERROR:send_aaa_response: send returned error!\n");
 			if ( my_aaa_status!=AAA_SERVER )
-				session_state_machine( ses, AAA_SEND_FAILED, 0);
+				session_state_machine( ses, AAA_SEND_FAILED, msg);
 			goto error;
 		}
 	} else {
@@ -141,22 +151,24 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 			goto error;
 		}
 		tr->ses = ses;
+		tr->info = (unsigned int)msg->commandCode;
 
 		/* update the session state */
 		switch (msg->commandCode) {
 			case 274: /*ASR*/ event = AAA_SENDING_ASR; break;
 			case 275: /*STR*/ event = AAA_SENDING_STR; break;
 			case 258: /*RAR*/ event = AAA_SENDING_RAR; break;
-			default:  /*AR */ event = AAA_SENDING_AR;  break;
+			case 271: /*acctA*/ event = AAA_SENDING_AcctR; break;
+			default:  /*authA*/ event = AAA_SENDING_AuthR; break;
 		}
-		if (session_state_machine( ses, event, 0)!=1)
+		if (session_state_machine( ses, event, msg)!=1)
 			goto error;
 
 		/* route and send the message */
 		ret = send_local_request( msg, tr );
 		if (ret==-1) {
 			LOG(L_ERR,"ERROR:AAASendMessage: I wasn't able to send request\n");
-			session_state_machine( ses, AAA_SEND_FAILED, 0);
+			session_state_machine( ses, AAA_SEND_FAILED, msg);
 			goto error;
 		}
 	}

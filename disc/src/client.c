@@ -1,5 +1,5 @@
 /*
- * $Id: client.c,v 1.6 2003/06/03 10:23:33 bogdan Exp $
+ * $Id: client.c,v 1.7 2003/08/25 14:52:02 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  *
@@ -61,12 +61,13 @@ int client_send_local_req( AAAMessage *msg, struct trans *tr )
 
 void *client_worker(void *attr)
 {
-	str            buf;
-	struct peer    *peer;
-	AAAMessage     *msg;
-	unsigned int   code;
-	struct trans   *tr;
-	struct session *ses;
+	str             buf;
+	struct peer     *peer;
+	AAAMessage      *msg;
+	unsigned int    code;
+	struct trans    *tr;
+	struct session  *ses;
+	enum AAA_EVENTS event;
 
 	while (1) {
 		/* read a mesage from the queue */
@@ -117,8 +118,12 @@ void *client_worker(void *attr)
 				LOG(L_ERR,"ERROR:client_worker: STA received!! very strange!"
 					" - UNIMPLEMENTED!!\n");
 			} else {
-				/* it's an auth answer -> change the state */
-				if (session_state_machine( ses, AAA_AA_RECEIVED, msg)==1) {
+				switch (code) {
+					case AC_MSG_CODE: event = AAA_AcctA_RECEIVED; break;
+					default: event = AAA_AuthA_RECEIVED; break;
+				}
+				/* change the state */
+				if (session_state_machine( ses, event, msg)==1) {
 					/* message was accepted by the session state machine ->
 					 * call the handler */
 					((struct module_exports*)ses->app_ref)->

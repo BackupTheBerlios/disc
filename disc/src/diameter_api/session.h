@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.18 2003/04/22 19:58:41 andrei Exp $
+ * $Id: session.h,v 1.19 2003/08/25 14:52:02 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -56,10 +56,14 @@ enum {
 
 /* all possible events for the session state machines */
 enum AAA_EVENTS {
-	AAA_AA_RECEIVED,
-	AAA_AR_RECEIVED,
-	AAA_SENDING_AR,
-	AAA_SENDING_AA,
+	AAA_AcctR_RECEIVED,
+	AAA_AcctA_RECEIVED,
+	AAA_SENDING_AcctR,
+	AAA_SENDING_AcctA,
+	AAA_AuthA_RECEIVED,
+	AAA_AuthR_RECEIVED,
+	AAA_SENDING_AuthR,
+	AAA_SENDING_AuthA,
 	AAA_ASR_RECEIVED,
 	AAA_ASA_RECEIVED,
 	AAA_SENDING_ASR,
@@ -127,6 +131,8 @@ struct session {
 	/* session status */
 	unsigned int state;
 	unsigned int prev_state;
+	/* sent acct. reqs. without resposne/timeout */
+	unsigned int pending_accts;
 };
 
 

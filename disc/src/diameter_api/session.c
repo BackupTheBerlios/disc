@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.26 2003/06/03 10:21:45 bogdan Exp $
+ * $Id: session.c,v 1.27 2003/08/25 14:52:02 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -362,8 +362,6 @@ static void ses_timer_handler( unsigned int ticks, void* param )
 
 
 
-
-
 int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 															AAAMessage *msg)
 {
@@ -375,6 +373,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 		"internal error"
 	};
 	int error_code=0;
+	int pending;
 
 	DBG("DEBUG:session_state_machine: session %p, state = %d, event=%d\n",
 		ses,ses->state,event);
@@ -387,7 +386,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 		case AAA_SERVER_STATELESS:
 			/* I am client to a stateless server */
 			switch( event ) {
-				case AAA_SENDING_AR:
+				case AAA_SENDING_AuthR:
 					/* an auth request has to be sent */
 					lock_get( ses->mutex );
 					switch(ses->state) {
@@ -403,7 +402,27 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 							goto error;
 					}
 					break;
-				case AAA_AA_RECEIVED:
+				case AAA_SENDING_AcctR:
+					/* an accounting request has to be sent */
+					lock_get( ses->mutex );
+					switch(ses->state) {
+						case AAA_PENDING_STATE:
+							if (ses->prev_state==AAA_IDLE_STATE) {
+								lock_release( ses->mutex );
+								error_code = 1;
+								goto error;
+							}
+						case AAA_OPEN_STATE:
+							ses->pending_accts++;
+							lock_release( ses->mutex );
+							break;
+						default:
+							lock_release( ses->mutex );
+							error_code = 1;
+							goto error;
+					}
+					break;
+				case AAA_AuthA_RECEIVED:
 					/* an auth answer was received */
 					lock_get( ses->mutex );
 					switch(ses->state) {
@@ -420,59 +439,112 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 							lock_release( ses->mutex );
 							break;
 						case AAA_TO_DESTROY_STATE:
-							LOG(L_INFO,"INFO:session_state_machine: "
-								"response received for a terminated "
-								"session -> destroy session\n");
+							LOG(L_INFO,"INFO:session_state_machine: response "
+								"received for a terminated session \n");
+							if (ses->prev_state!=AAA_PENDING_STATE) {
+								LOG(L_ERR,"ERROR:session_state_machine: auth. "
+									"resp. received without sending req.!!\n");
+								lock_release( ses->mutex );
+								error_code = 1;
+								goto error;
+							}
+							ses->prev_state = AAA_DISCON_STATE;
+							pending = ses->pending_accts;
 							lock_release( ses->mutex );
-							destroy_session( ses );
-							goto abort;
+							if (pending==0) {
+								LOG(L_INFO,"INFO:session_state_machine: "
+									"destroing session \n");
+								destroy_session( ses );
+								goto abort;
+							}
+							break;
 						default:
 							lock_release( ses->mutex );
 							error_code = 1;
 							goto error;
 					}
+					break;
+				case AAA_AcctA_RECEIVED:
+					/* an accounting answer was received - we should accept
+					 * the acct reply in all state - just check if a req was
+					 * really sent */
+					lock_get( ses->mutex );
+					if (ses->pending_accts==0) {
+						LOG(L_ERR,"ERROR:session_state_machine: more acct. "
+							"responses received than sent acct. requests\n");
+						lock_release( ses->mutex );
+						error_code = 1;
+						goto error;
+					}
+					ses->pending_accts--;
+					if (ses->state==AAA_TO_DESTROY_STATE) {
+						LOG(L_INFO,"INFO:session_state_machine: acct. "
+							"response received for a terminated session\n");
+						pending = ses->pending_accts +
+							1*(ses->prev_state==AAA_PENDING_STATE);
+						lock_release( ses->mutex );
+						if ( pending==0 ) {
+							LOG(L_INFO,"INFO:session_state_machine: "
+								"destroing session \n");
+							destroy_session( ses );
+							goto abort;
+						}
+						break;
+					}
+					lock_release( ses->mutex );
 					break;
 				case AAA_SESSION_REQ_TIMEOUT:
 					/* a session request gave timeout waiting for answer */
-					lock_get( ses->mutex );
-					switch(ses->state) {
-						case AAA_PENDING_STATE:
-							ses->state = ses->prev_state;
-							lock_release( ses->mutex );
-							break;
-						case AAA_TO_DESTROY_STATE:
-							LOG(L_INFO,"INFO:session_state_machine: "
-								"timeout reply received for a terminated "
-								"session -> destroy session\n");
-							lock_release( ses->mutex );
-							destroy_session( ses );
-							goto abort;
-						default:
-							lock_release( ses->mutex );
-							error_code = 1;
-							goto error;
-					}
-					break;
 				case AAA_SEND_FAILED:
 					/* a send operation that was already been registered
 					 * into the session failed */
-					lock_get( ses->mutex );
-					switch(ses->state) {
-						case AAA_PENDING_STATE:
-							ses->state = ses->prev_state;
+					switch (msg->commandCode) {
+						case 271: /* accouting request */
+							lock_get( ses->mutex );
+							ses->pending_accts--;
+							if (ses->state==AAA_TO_DESTROY_STATE) {
+								LOG(L_INFO,"INFO:session_state_machine: acct. "
+								"req. TO/failed for a terminated session\n");
+								pending = ses->pending_accts +
+									1*(ses->prev_state==AAA_PENDING_STATE);
+								lock_release( ses->mutex );
+								if ( pending==0 ) {
+									LOG(L_INFO,"INFO:session_state_machine: "
+										"destroing session \n");
+									destroy_session( ses );
+									goto abort;
+								}
+								break;
+							}
 							lock_release( ses->mutex );
 							break;
-						case AAA_TO_DESTROY_STATE:
-							LOG(L_INFO,"INFO:session_state_machine: "
-								"send failed for a terminated "
-								"session -> destroy session\n");
-							lock_release( ses->mutex );
-							destroy_session( ses );
-							goto abort;
-						default:
-							lock_release( ses->mutex );
-							error_code = 1;
-							goto error;
+						default: /* auth. request */
+							lock_get( ses->mutex );
+							switch(ses->state) {
+								case AAA_PENDING_STATE:
+									ses->state = ses->prev_state;
+									lock_release( ses->mutex );
+									break;
+								case AAA_TO_DESTROY_STATE:
+									LOG(L_INFO,"INFO:session_state_machine: "
+										"timeout/failure received for a "
+										"terminated session\n");
+									ses->prev_state = AAA_DISCON_STATE;
+									pending = ses->pending_accts;
+									lock_release( ses->mutex );
+									if ( pending==0 ) {
+										LOG(L_INFO,"INFO:session_state_machine"
+											": destroing session \n");
+										destroy_session( ses );
+										goto abort;
+									}
+									break;
+								default:
+									lock_release( ses->mutex );
+									error_code = 1;
+									goto error;
+							}
+						
 					}
 					break;
 				default:
@@ -687,9 +759,10 @@ AAAReturnCode AAAEndSession( AAASessionId *sessionId )
 		/* for stateless servers -> just remove it */
 		remove_cell_from_htable( ses_mgr.ses_table, &(ses->linker) );
 		lock_get( ses->mutex );
-		if (ses->state==AAA_PENDING_STATE) {
+		if (ses->state==AAA_PENDING_STATE || ses->pending_accts) {
 			LOG(L_INFO,"INFO:AAAEndSession: removing a session that waits"
-				" for an answer -> destroy postponded\n");
+				" for some answers -> destroy postponded\n");
+			ses->prev_state = ses->state;
 			ses->state = AAA_TO_DESTROY_STATE;
 			lock_release( ses->mutex );
 		} else {

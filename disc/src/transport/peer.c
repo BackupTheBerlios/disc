@@ -1,9 +1,5 @@
 /*
- * $Id: peer.c,v 1.40 2003/04/22 19:58:41 andrei Exp $
- *
- * 2003-02-18  created by bogdan
- * 2003-03-12  converted to shm_malloc/shm_free (andrei)
- * 2003-03-13  converted to locking.h/gen_lock_t (andrei)
+ * $Id: peer.c,v 1.41 2003/08/25 14:52:02 bogdan Exp $
  *
  *
  * Copyright (C) 2002-2003 Fhg Fokus
@@ -23,6 +19,13 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program; if not, write to the Free Software 
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * History:
+ *
+ * 2003-02-18  created by bogdan
+ * 2003-03-12  converted to shm_malloc/shm_free (andrei)
+ * 2003-03-13  converted to locking.h/gen_lock_t (andrei)
+ * 2003-08-25  connection_id changes now when connection close (bogdan)
  */
 
 
@@ -1202,6 +1205,9 @@ inline void reset_peer( struct peer *p)
 	if (p->aaa_realm.s)
 		shm_free( p->aaa_realm.s );
 	p->aaa_realm.s = 0;
+
+	/* change the connection id */
+	p->conn_cnt++;
 }
 
 
@@ -1239,7 +1245,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 						tcp_close( p );
 					}
 					/* update the peer */
-					p->conn_cnt++;
+					/* p->conn_cnt++; */ /*in case of undo(bogdan)*/
 					info = (struct tcp_params*)ptr;
 					p->sock = info->sock;
 					memcpy( &p->local_ip, info->local, sizeof(struct ip_addr));
@@ -1263,7 +1269,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					DBG("DEBUG:peer_state_machine: connect finished ->"
 						" send CER\n");
 					/* update the peer */
-					p->conn_cnt++;
+					/*p->conn_cnt++;*/ /*in case of undo(bogdan)*/
 					p->flags &= !PEER_CONN_IN_PROG;
 					info = (struct tcp_params*)ptr;
 					p->sock = info->sock;
