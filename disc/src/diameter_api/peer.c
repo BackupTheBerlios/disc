@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.15 2003/03/11 21:34:03 bogdan Exp $
+ * $Id: peer.c,v 1.16 2003/03/11 23:02:03 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -31,6 +31,10 @@
 #define RECONN_TIMEOUT   30
 #define WAIT_CER_TIMEOUT 5
 
+
+#define cheack_app_ids( _peer_ ) \
+	( (((_peer_)->supp_acc_app_id)|(supported_acc_app_id)) || \
+	(((_peer_)->supp_auth_app_id)|(supported_auth_app_id))  )
 
 
 unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ] = {
@@ -495,7 +499,7 @@ int process_ce( struct peer *p, str *buf , int is_req)
 			set_AVP_mask( mask, 0);
 			n = ntohl( ((unsigned int *)ptr)[2] );
 			if (n!=AAA_SUCCESS) {
-				LOG(L_ERR,"ERROR:process_cea: CEA has a non-success "
+				LOG(L_ERR,"ERROR:process_ce: CEA has a non-success "
 					"code : %d\n",n);
 				goto error;
 			}
@@ -516,19 +520,27 @@ int process_ce( struct peer *p, str *buf , int is_req)
 			set_AVP_mask( mask, 5);
 			break;
 		case 259: /*acc app id*/
+			n = ntohl( ((unsigned int *)ptr)[2] );
+			for(i=0;i<AAA_APP_MAX_ID;i++)
+				if (n==AAA_APP_ID[i]) {
+					p->supp_acc_app_id |= (1<<i);
+					break;
+				}
+			LOG(L_WARN,"WARNING:process_ce: unknown acc-app-id %d\n",n);
+			break;
 		case 258: /*auth app id*/
 			n = ntohl( ((unsigned int *)ptr)[2] );
 			for(i=0;i<AAA_APP_MAX_ID;i++)
 				if (n==AAA_APP_ID[i]) {
-					p->supp_app_id |= (1<<i);
+					p->supp_auth_app_id |= (1<<i);
 					break;
 				}
-			LOG(L_WARN,"WARNING:process_cea: unknown app-id %d\n",n);
+			LOG(L_WARN,"WARNING:process_ce: unknown auth_app-id %d\n",n);
 			break;
 	}
 
 	if ( mask!=(is_req?req_pattern:rpl_pattern) ) {
-		LOG(L_ERR,"ERROR:process_cea: cea has missing avps(%x<>%x)!!\n",
+		LOG(L_ERR,"ERROR:process_ce: ce(a|r) has missing avps(%x<>%x)!!\n",
 			(is_req?req_pattern:rpl_pattern),mask);
 		goto error;
 	}
@@ -595,6 +607,49 @@ int send_dwa( struct trans *tr, unsigned int result_code)
 error:
 	return -1;
 }
+
+
+
+int process_dw( struct peer *p, str *buf , int is_req)
+{
+	static unsigned int rpl_pattern = 0x00000007;
+	static unsigned int req_pattern = 0x00000006;
+	unsigned int mask = 0;
+	unsigned int n;
+	char *ptr;
+	char *foo;
+
+	for_all_AVPS_do_switch( buf , foo , ptr ) {
+		case 268: /* result_code */
+			set_AVP_mask( mask, 0);
+			n = ntohl( ((unsigned int *)ptr)[2] );
+			if (n!=AAA_SUCCESS) {
+				LOG(L_ERR,"ERROR:process_ce: DWA has a non-success "
+					"code : %d\n",n);
+				goto error;
+			}
+			break;
+		case 264: /* orig host */
+			set_AVP_mask( mask, 1);
+			break;
+		case 296: /* orig realm */
+			set_AVP_mask( mask, 2);
+			break;
+	}
+
+	if ( mask!=(is_req?req_pattern:rpl_pattern) ) {
+		LOG(L_ERR,"ERROR:process_dw: dw(a|r) has missing avps(%x<>%x)!!\n",
+			(is_req?req_pattern:rpl_pattern),mask);
+		goto error;
+	}
+
+	free( buf->s );
+	return 1;
+error:
+	free( buf->s );
+	return -1;
+}
+
 
 
 
@@ -742,6 +797,9 @@ inline void reset_peer( struct peer *p)
 	if (p->buf)
 		free(p->buf);
 	p->buf = 0;
+	/**/
+	p->supp_acc_app_id  = 0;
+	p->supp_auth_app_id = 0;
 }
 
 
@@ -750,7 +808,6 @@ inline void reset_peer( struct peer *p)
 int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 {
 	struct tcp_info *info;
-	struct trans    *tr;
 	static char     *err_msg[]= {
 		"no error",
 		"event - state mismatch",
@@ -939,15 +996,25 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					/* if peer in wait_cer timer list-> take it out */
 					if (p->tl.timer_list==wait_cer_timer)
 						rmv_from_timer_list( &(p->tl) );
-					tr = (struct trans*)ptr;
+				case PEER_WAIT_CEA:
 					DBG("DEBUG:peer_state_machine: CER received -> "
 						"sending CEA\n");
-					//send_cea( tr, 2001, 0, &(tr->in_peer->conn->localaddr));
-					p->state = PEER_CONN;
-					unlock( p->mutex );
-					break;
-				case PEER_WAIT_CEA:
-					// send_cea() - can this be done outside the lock?
+					if (process_ce( p, &(((struct trans*)ptr)->req), 1 )==-1) {
+						LOG(L_ERR,"ERROR:peer_state_machine: bad CER !!\n");
+						send_cea( (struct trans*)ptr, AAA_MISSING_AVP);
+						tcp_close( p );
+						reset_peer( p );
+						p->state = PEER_UNCONN;
+					} else if (cheack_app_ids(p)) {
+						send_cea( (struct trans*)ptr, AAA_SUCCESS);
+						p->state = PEER_CONN;
+					} else {
+						LOG(L_ERR,"ERROR:peer_state_machine: no common app\n");
+						send_cea((struct trans*)ptr,AAA_NO_COMMON_APPLICATION);
+						tcp_close( p );
+						reset_peer( p );
+						p->state = PEER_UNCONN;
+					}
 					unlock( p->mutex );
 					break;
 				default:
@@ -962,10 +1029,13 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 				case PEER_CONN:
 				case PEER_WAIT_DWA:
 				case PEER_WAIT_DPA:
-					if (send_dwa((struct trans*)ptr,2001)==-1) {
-						tcp_close( p );
-						reset_peer( p );
-						p->state = PEER_UNCONN;
+					DBG("DEBUG:peer_state_machine: DWR received -> "
+						"sending DWA\n");
+					if (process_dw( p, &(((struct trans*)ptr)->req), 1 )==-1) {
+						LOG(L_ERR,"ERROR:peer_state_machine: bad DWR !!\n");
+						send_dwa( (struct trans*)ptr, AAA_MISSING_AVP);
+					} else {
+						send_dwa( (struct trans*)ptr, AAA_SUCCESS);
 					}
 					unlock( p->mutex );
 					break;

@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.5 2003/03/11 18:06:29 bogdan Exp $
+ * $Id: init_conf.c,v 1.6 2003/03/11 23:02:03 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -45,7 +45,8 @@ str product_name = {"AAA FFS",7};    /* product name */
 unsigned int vendor_id = 12345;      /* vendor id */
 unsigned int supported_auth_app_id =
 	(1<<AAA_APP_RELAY) | (1<<AAA_APP_MOBILE_IP);
-unsigned int supported_acc_app_id = 0;
+unsigned int supported_acc_app_id = 
+	(1<<AAA_APP_RELAY);
 
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.5 2003/03/11 18:06:29 bogdan Exp $
+ * $Id: message.c,v 1.6 2003/03/11 23:02:03 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -478,7 +478,7 @@ int send_aaa_response( str *buf, struct trans *tr)
 	int ret;
 
 	/* send the message */
-	if (tr->ses)
+	if (!tr->ses)
 		ret = tcp_send_unsafe( tr->peer, buf->s, buf->len);
 	else
 		ret = tcp_send( tr->peer, buf->s, buf->len);

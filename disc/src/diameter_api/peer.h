@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.10 2003/03/11 21:34:03 bogdan Exp $
+ * $Id: peer.h,v 1.11 2003/03/11 23:02:03 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -81,7 +81,8 @@ struct peer {
 	unsigned int  buf_len;
 	unsigned char *buf;
 	/* what kind of app the other peer supports */
-	unsigned int supp_app_id;
+	unsigned int supp_acc_app_id;
+	unsigned int supp_auth_app_id;
 };
 
 
