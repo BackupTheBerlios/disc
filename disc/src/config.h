@@ -1,5 +1,5 @@
 /*
- * $Id: config.h,v 1.6 2003/04/14 14:36:38 andrei Exp $
+ * $Id: config.h,v 1.7 2003/04/14 15:52:08 andrei Exp $
  */
 /* History:
  * --------
@@ -11,7 +11,7 @@
 
 #define MODULE_SEARCH_PATH "client/modules"
 
-#define SHM_MEM_SIZE 1 /* in MB */
+#define SHM_MEM_SIZE 1*1024*1024 /* 1 MB */
 
 /* default listening port for tcp */
 #define DEFAULT_LISTENING_PORT   1812

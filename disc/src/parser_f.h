@@ -1,5 +1,5 @@
 /* 
- * $Id: parser_f.h,v 1.1 2003/04/07 18:23:46 andrei Exp $
+ * $Id: parser_f.h,v 1.2 2003/04/14 15:52:08 andrei Exp $
  *
  * Copyright (C) 2001-2003 Fhg Fokus
  *
@@ -64,8 +64,12 @@ inline static char* eat_lws_end(char* p, char* pend)
 
 inline static char* eat_token_end(char* p, char* pend)
 {
-	for (;(p<pend)&&(*p!=' ')&&(*p!='\t')&&(*p!='\n')&&(*p!='\r')&&(*p!='#');
-			p++);
+	int quotes;
+	quotes=0;
+	for (;(p<pend)&&((quotes%2)||((*p!=' ')&&(*p!='\t')&&(*p!='\n')&&(*p!='\r')
+						&&(*p!='#'))); p++){
+		if (*p=='"') quotes++;
+	}
 	return p;
 }
 
@@ -73,8 +77,12 @@ inline static char* eat_token_end(char* p, char* pend)
 
 inline static char* eat_token2_end(char* p, char* pend, char delim)
 {
-	for (;(p<pend)&&(*p!=(delim))&&(*p!=' ')&&(*p!='\t')&&(*p!='\n')
-			&&(*p!='\r')&&(*p!='#'); p++);
+	int quotes;
+	quotes=0;
+	for (;(p<pend)&&((quotes%2)||((*p!=(delim))&&(*p!=' ')&&(*p!='\t')&&
+					(*p!='\n') &&(*p!='\r')&&(*p!='#'))); p++){
+		if (*p=='"') quotes++;
+	}
 	return p;
 }
 

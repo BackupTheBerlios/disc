@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.12 2003/04/13 23:01:16 andrei Exp $
+ * $Id: aaa_core.c,v 1.13 2003/04/14 15:52:08 andrei Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -34,7 +34,7 @@
 #define CFG_FILE "aaa.cfg"
 
 
-static char id[]="$Id: aaa_core.c,v 1.12 2003/04/13 23:01:16 andrei Exp $";
+static char id[]="$Id: aaa_core.c,v 1.13 2003/04/14 15:52:08 andrei Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
@@ -89,6 +89,7 @@ Usage: " NAME " -f file   \n\
 Options:\n\
     -f file     Configuration file (default " CFG_FILE ")\n\
     -p port     Listen on the specified port (default 1812) \n\
+    -m size     Maximum memory size to use in Mb (default 1) \n\
     -6          Disable ipv6 \n\
     -d          Debugging mode (multiple -d increase the level)\n\
     -E          Log to stderr \n\
@@ -104,7 +105,7 @@ pthread_t main_thread;
 static char* cfg_file=CFG_FILE;
 
 /* shared mem. size*/
-unsigned int shm_mem_size=SHM_MEM_SIZE*1024*1024;
+unsigned int shm_mem_size=0;
 
 /* shm_mallocs log level */
 int memlog=L_DBG;
@@ -161,11 +162,10 @@ int (*send_local_request)(AAAMessage*,struct trans*);
 static int process_cmd_line(int argc, char** argv)
 {
 	char c;
-	int port;
 	char* tmp;
 	
 	opterr=0;
-	while((c=getopt(argc, argv, "f:p:6VhEd"))!=-1){
+	while((c=getopt(argc, argv, "f:p:m:6VhEd"))!=-1){
 		switch(c){
 			case 'f':
 				cfg_file=optarg;
@@ -174,11 +174,19 @@ static int process_cmd_line(int argc, char** argv)
 				debug++;
 				break;
 			case 'p':
-				port=strtol(optarg, &tmp, 10);
-				if ((tmp==0)||(*tmp)){
+				listen_port=strtol(optarg, &tmp, 10);
+				if ((tmp==0)||(*tmp)||(listen_port<=0)){
 					fprintf(stderr, "bad port number: -p %s\n", optarg);
 					goto error;
 				}
+				break;
+			case 'm':
+				shm_mem_size=strtol(optarg, &tmp, 10);
+				if ((tmp==0)||(*tmp)||(shm_mem_size<=0)){
+					fprintf(stderr, "bad port memory size: -m %s\n", optarg);
+					goto error;
+				}
+				shm_mem_size*=1024*1024; /* in megabytes */
 				break;
 			case 'E':
 				log_stderr=1;
@@ -392,10 +400,13 @@ int init_aaa_core(char *cfg_file)
 	struct peer_entry* pl;
 	struct peer* pe;
 
+	/* fix mem size */
+	if (shm_mem_size<=0) shm_mem_size=SHM_MEM_SIZE;
 	/* init mallocs */
 	shm_mempool=malloc(shm_mem_size);
 	if (shm_mempool==0){
-		LOG(L_CRIT,"ERROR:main: initial malloc failed\n");
+		LOG(L_CRIT, "ERROR:main: could not allocate enough memory (%d)\n",
+						shm_mem_size);
 		exit(-1);
 	};
 	if (shm_mem_init_mallocs(shm_mempool, shm_mem_size)<0){
