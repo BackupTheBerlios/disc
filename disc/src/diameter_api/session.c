@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.21 2003/04/18 17:38:19 bogdan Exp $
+ * $Id: session.c,v 1.22 2003/04/21 15:03:45 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -28,13 +28,16 @@ struct session_manager  ses_mgr;
 
 
 /* extra functions */
-struct session* create_session( unsigned short peer_id);
-void destroy_session( struct session *ses);
-void ses_timer_handler( unsigned int ticks, void* param );
+static struct session* create_session( unsigned short peer_id);
+static void destroy_session( struct session *ses);
+static void ses_timer_handler( unsigned int ticks, void* param );
 
 
 #define avp2int( _avp_ ) \
 	( ntohl(*((unsigned int *)(_avp_)->data.s)) )
+
+#define SESSION_TO_DESTROY   1<<0
+
 
 
 
@@ -120,7 +123,7 @@ void shutdown_session_manager()
 
 
 /* assignes a new shared mutex */
-inline gen_lock_t *get_shared_mutex()
+static inline gen_lock_t *get_shared_mutex()
 {
 	unsigned int index;
 	lock_get( ses_mgr.shared_mutexes_mutex );
@@ -137,7 +140,7 @@ inline gen_lock_t *get_shared_mutex()
 /*
  * increments the 64-biti value keept in monoto_sID vector
  */
-inline void inc_64biti(int *vec_64b)
+static inline void inc_64biti(int *vec_64b)
 {
 	vec_64b[0]++;
 	vec_64b[1] += (vec_64b[0]==0);
@@ -149,7 +152,7 @@ inline void inc_64biti(int *vec_64b)
  * Returns an 1 if success or -1 if error.
  * The function is thread safe
  */
-int generate_sessionID( str *sID, unsigned int end_pad_len)
+static int generate_sessionID( str *sID, unsigned int end_pad_len)
 {
 	char *p;
 
@@ -281,7 +284,7 @@ error:
 /************************** SESSION FUNCTION ********************************/
 
 
-struct session* create_session( unsigned short peer_id)
+static struct session* create_session( unsigned short peer_id)
 {
 	struct session *ses;
 
@@ -308,7 +311,7 @@ error:
 
 
 
-void destroy_session( struct session *ses)
+static void destroy_session( struct session *ses)
 {
 	if (ses) {
 		if ( ses->sID.s)
@@ -321,7 +324,7 @@ void destroy_session( struct session *ses)
 
 
 
-void ses_timer_handler( unsigned int ticks, void* param )
+static void ses_timer_handler( unsigned int ticks, void* param )
 {
 	struct timer_link *tl;
 	struct session    *ses;
@@ -397,6 +400,14 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 								ses->state = ses->prev_state;
 							lock_release( ses->mutex );
 							break;
+						case AAA_TO_DESTROY_STATE:
+							LOG(L_INFO,"INFO:session_state_machine: "
+								"response received for a terminated "
+								"session -> destroy session\n");
+							lock_release( ses->mutex );
+							destroy_session( ses );
+							return 1;
+							break;
 						default:
 							lock_release( ses->mutex );
 							error_code = 1;
@@ -410,6 +421,14 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 						case AAA_PENDING_STATE:
 							ses->state = ses->prev_state;
 							lock_release( ses->mutex );
+							break;
+						case AAA_TO_DESTROY_STATE:
+							LOG(L_INFO,"INFO:session_state_machine: "
+								"timeout reply received for a terminated "
+								"session -> destroy session\n");
+							lock_release( ses->mutex );
+							destroy_session( ses );
+							return 1;
 							break;
 						default:
 							lock_release( ses->mutex );
@@ -425,6 +444,14 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 						case AAA_PENDING_STATE:
 							ses->state = ses->prev_state;
 							lock_release( ses->mutex );
+							break;
+						case AAA_TO_DESTROY_STATE:
+							LOG(L_INFO,"INFO:session_state_machine: "
+								"send failed for a terminated "
+								"session -> destroy session\n");
+							lock_release( ses->mutex );
+							destroy_session( ses );
+							return 1;
 							break;
 						default:
 							lock_release( ses->mutex );
@@ -640,11 +667,16 @@ AAAReturnCode AAAEndSession( AAASessionId *sessionId )
 	} else {
 		/* for stateless servers -> just remove it */
 		remove_cell_from_htable( ses_mgr.ses_table, &(ses->linker) );
+		lock_get( ses->mutex );
 		if (ses->state==AAA_PENDING_STATE) {
-			LOG(L_WARN,"WARNING:AAAEndSession: removing a session that waits"
-				" for an answer -> BUG!!! \n");
+			LOG(L_INFO,"INFO:AAAEndSession: removing a session that waits"
+				" for an answer -> destroy postponded\n");
+			ses->state = AAA_TO_DESTROY_STATE;
+			lock_release( ses->mutex );
+		} else {
+			lock_get( ses->mutex );
+			destroy_session( ses );
 		}
-		destroy_session( ses );
 	}
 
 	return AAA_ERR_SUCCESS;

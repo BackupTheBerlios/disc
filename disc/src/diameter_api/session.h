@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.16 2003/04/11 17:48:02 bogdan Exp $
+ * $Id: session.h,v 1.17 2003/04/21 15:03:45 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -31,7 +31,8 @@ enum {
 	AAA_IDLE_STATE,
 	AAA_PENDING_STATE,
 	AAA_OPEN_STATE,
-	AAA_DISCON_STATE
+	AAA_DISCON_STATE,
+	AAA_TO_DESTROY_STATE,
 };
 
 /* all possible events for the session state machines */
