@@ -1,0 +1,5 @@
+#! /bin/sh
+
+# $Id: rebuild,v 1.1 2003/03/27 20:38:04 andrei Exp $
+#
+automake --foreign  && autoconf
