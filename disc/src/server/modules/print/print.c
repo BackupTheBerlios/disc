@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.5 2003/04/14 14:56:00 bogdan Exp $
+ * $Id: print.c,v 1.6 2003/04/14 15:56:56 bogdan Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -69,7 +69,7 @@ int mod_msg(AAAMessage *msg, void *context)
 		AAASendMessage( ans );
 		AAAFreeMessage( &ans );
 	} else {
-		DBG(" print module: got a answer (I'am FA!) - do nothing \n");
+		DBG(" print module: got a answer - do nothing \n");
 
 	}
 	return 1;
