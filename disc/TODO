@@ -1,6 +1,5 @@
-$Id: TODO,v 1.6 2003/04/16 14:27:17 andrei Exp $
+$Id: TODO,v 1.7 2003/04/21 21:09:26 andrei Exp $
 
-- find a name [all]
 - put GNU license in every file [all]
 - different autoconf for modules [andrei]
 - shared lib from diameter_msg [andrei]
@@ -8,8 +7,8 @@ $Id: TODO,v 1.6 2003/04/16 14:27:17 andrei Exp $
 
 - grouped avp [bogdan]
 
-- daemonize [andrei]
 - use *_config.h for autoconf
 - change default log_stderr value to 1
-- add AUTHORS
 - disable NAGLE, set TOS to low delay
+
+- build by default client/modules/mipv6 & client/modules/mipv6_server ?

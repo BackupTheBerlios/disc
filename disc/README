@@ -1,0 +1,8 @@
+$Id: README,v 1.1 2003/04/21 21:09:26 andrei Exp $
+
+
+DISC (DIameter Server Client) is an AAA diameter implementation. DISC can be configured to act as a diameter server or a diameter client.
+DISC enables a flexible plug-in model for new applications. Third parties can easily link their plug-ins with the server or client code and provide thereby adavanced and customized services.
+
+For more information see INSTALL and the example configurations in src/*.cfg.
+

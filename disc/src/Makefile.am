@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.19 2003/04/11 18:09:46 andrei Exp $
+## $Id: Makefile.am,v 1.20 2003/04/21 21:09:26 andrei Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -14,7 +14,7 @@ SUBDIRS = diameter_msg diameter_api transport mem client server
 
 INCLUDES = @INCLTDL@
 
-bin_PROGRAMS = aaa
+bin_PROGRAMS = disc
 common =			aaa_lock.c dprint.c hash_table.c \
 					timer.c aaa_module.c aaa_core.c route.c \
 					cfg_init.c cfg_parser.c aaa_parse_uri.c \
@@ -26,15 +26,15 @@ common =			aaa_lock.c dprint.c hash_table.c \
 					cfg_init.h cfg_parser.h parser_f.h aaa_parse_uri.h \
 					route.h server.h client.h
 
-aaa_SOURCES = $(common)
+disc_SOURCES = $(common)
 # hash.c only for tests
 				
-EXTRA_DIST=	server aaa_client.cfg aaa_server.cfg
+EXTRA_DIST=aaa_client.cfg aaa_server.cfg othrod_client.cfg
 
-aaa_LDADD =	 mem/libmem.la transport/libtransport.la \
+disc_LDADD =	 mem/libmem.la transport/libtransport.la \
 			diameter_api/libdiameter_api.la diameter_msg/libdiameter_msg.la \
 			@LIBLTDL@
 # @LIBADD_DL@ # not needed for newer libtool version (>=1.4)
-aaa_LDFLAGS = -export-dynamic -pthread
+disc_LDFLAGS = -export-dynamic -pthread
 
 

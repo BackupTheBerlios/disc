@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.15 2003/04/16 11:43:53 cco Exp $
+dnl $Id: configure.ac,v 1.16 2003/04/21 21:09:26 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -23,12 +23,11 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.15 2003/04/16 11:43:53 cco Exp $)
-AC_INIT(aaa_client, 0.0.1)
+AC_REVISION($Id: configure.ac,v 1.16 2003/04/21 21:09:26 andrei Exp $)
+AC_INIT(disc, 0.1.0)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 ##AC_CONFIG_HEADERS([ac_config.h])
 AC_CONFIG_SUBDIRS(libltdl)
-dnl add here mipv6/urp autoconf ?
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION, 
 					[nostdinc dist-bzip2 dist-shar dist-zip dist-tarZ])
 # AM_MAINTAINER_MODE
@@ -112,6 +111,54 @@ fi
 if test "$enable_dns_ip_hack" = yes; then
 	AC_DEFINE(DNS_IP_HACK,,[use fast string to ip address conversion])
 fi
+	
+dnl modules 
+	
+AC_ARG_WITH(mipv6_modules, 
+				AC_HELP_STRING([--with-mipv6_modules],
+                        [compile both the mipv6 server and client module (default is NO)]))
+
+if test -z "$with_mipv6_modules"; then
+	with_mipv6_modules=no
+fi
+if test "$with_mipv6_modules" = yes; then
+	with_mipv6_server_module=yes
+	with_mipv6_client_module=yes
+fi
+
+AC_ARG_WITH(mipv6_server_module, 
+				AC_HELP_STRING([--with-mipv6_server_module],
+                        [compile the mipv6 server module (default is NO)]))
+if test -z "$with_mipv6_server_module"; then
+	with_mipv6_server_module=no
+fi
+
+if test "$with_mipv6_server_module" = yes; then
+	extra_output="$extra_output src/server/modules/mipv6_server/Makefile \
+					src/server/modules/mipv6_server/asm/Makefile \
+					src/server/modules/mipv6_server/asm/copsApi/Makefile"
+	AC_CONFIG_FILES([ src/server/modules/mipv6_server/Makefile
+					  src/server/modules/mipv6_server/asm/Makefile
+					  src/server/modules/mipv6_server/asm/copsApi/Makefile ])
+	server_modules="$server_modules mipv6_server"
+	ssl_check=yes
+fi
+
+AC_ARG_WITH(mipv6_client_module, 
+				AC_HELP_STRING([--with-mipv6_client_module],
+                        [compile the mipv6 client module (default is NO)]))
+if test -z "$with_mipv6_client_module"; then
+	with_mipv6_client_module=no
+fi
+
+if test "$with_mipv6_client_module" = yes; then
+	extra_output="$extra_output src/client/modules/mipv6/Makefile"
+	AC_CONFIG_FILES([src/client/modules/mipv6/Makefile])
+	client_modules="$client_modules mipv6"
+	ssl_check=yes
+dnl add here mipv6/urp autoconf ?
+dnl AC_CONFIG_SUBDIRS(src/client/modules/mipv6/urp-0.0.3)
+fi
 
 dnl FIXME: replace the following defines as above
 
@@ -147,8 +194,6 @@ CPPFLAGS="${CPPFLAGS} -D__CPU_${cpu} -D__OS_${os}"
 dnl Checks for programs
 AC_PROG_CC
 
-dnl Check for openssl -- needed by mipv6 module FIXME - move it to 
-dnl mipv6 module cfg
 AC_PROG_CXX
 AC_PROG_CXXCPP
 
@@ -219,8 +264,9 @@ dnl ?libfast on Solaris??
 
 dnl Check for openssl -- needed by mipv6 module FIXME - move it to 
 dnl mipv6 module cfg
-AC_CHECK_LIB(ssl, main)
-
+if test "$ssl_check" = yes; then
+	AC_CHECK_LIB(ssl, main)
+fi
 dnl Checks for header files
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
@@ -283,6 +329,8 @@ AC_CHECK_MEMBERS([struct sockaddr.sa_len], AC_DEFINE([HAVE_SOCKADDR_SA_LEN],,
 dnl substitutions
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
+AC_SUBST(server_modules)
+AC_SUBST(client_modules)
 
 AC_OUTPUT(Makefile src/Makefile src/client/Makefile src/server/Makefile 
 			src/diameter_msg/Makefile
@@ -290,8 +338,6 @@ AC_OUTPUT(Makefile src/Makefile src/client/Makefile src/server/Makefile
 			src/mem/Makefile src/transport/Makefile
 			src/client/modules/Makefile
 			src/client/modules/print/Makefile
-			src/client/modules/mipv6/Makefile
-			src/server/modules/mipv6_server/Makefile
 			src/server/modules/Makefile
 			src/server/modules/print/Makefile
 			)

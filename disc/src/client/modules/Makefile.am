@@ -9,4 +9,4 @@
 
 @SET_MAKE@
 
-SUBDIRS = print
+SUBDIRS = print @client_modules@

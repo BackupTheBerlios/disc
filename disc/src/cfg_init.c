@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_init.c,v 1.9 2003/04/16 17:11:19 andrei Exp $
+ * $Id: cfg_init.c,v 1.10 2003/04/21 21:09:26 andrei Exp $
  *
  * History:
  * --------
@@ -44,7 +44,6 @@ struct cfg_def cfg_ids[]={
 	{"aaa_realm",     STR_VAL,   &aaa_realm,    0                    },
 	{"aaa_fqdn",      STR_VAL,   &aaa_fqdn,     0                    },
 	{"listen_port",   INT_VAL,   &listen_port,  0                    },
-	{"aaa_status",    STR_VAL,   0,              cfg_set_aaa_status  },
 	{"aaa_status",    STR_VAL,   0,              cfg_set_aaa_status  },
 	{"dont_fork",     INT_VAL,   &dont_fork,    0                    },
 	{"chroot",        STR_VAL,   &chroot_dir,   0                    },

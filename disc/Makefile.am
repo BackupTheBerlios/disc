@@ -10,3 +10,5 @@
 @SET_MAKE@
 
 SUBDIRS = libltdl src
+
+EXTRA_DIST= ccopts.sh ccver.sh
