@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: diameter_types.h,v 1.2 2003/03/10 09:16:43 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -9,11 +9,26 @@
 #define _AAA_DIAMETER_TYPES_H
 
 
-//#include <inttypes.h>
 #include "utils/ip_addr.h"
 #include "utils/str.h"
 
 #define AAA_NO_VENDOR_ID   0
+
+#define VER_SIZE                   1
+#define MESSAGE_LENGTH_SIZE        3
+#define FLAGS_SIZE                 1
+#define COMMAND_CODE_SIZE          3
+#define VENDOR_ID_SIZE             4
+#define HOP_BY_HOP_IDENTIFIER_SIZE 4
+#define END_TO_END_IDENTIFIER_SIZE 4
+#define AVP_CODE_SIZE      4
+#define AVP_FLAGS_SIZE     1
+#define AVP_LENGTH_SIZE    3
+#define AVP_VENDOR_ID_SIZE 4
+#define AAA_MSG_HDR_SIZE  \
+	(VER_SIZE + MESSAGE_LENGTH_SIZE + FLAGS_SIZE + COMMAND_CODE_SIZE +\
+	VENDOR_ID_SIZE + HOP_BY_HOP_IDENTIFIER_SIZE + END_TO_END_IDENTIFIER_SIZE)
+
 
 
 

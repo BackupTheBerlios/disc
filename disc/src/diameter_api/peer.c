@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.6 2003/03/09 15:01:15 bogdan Exp $
+ * $Id: peer.c,v 1.7 2003/03/10 09:16:43 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -36,7 +36,6 @@ void peer_timer_handler(unsigned int ticks, void* param);
 static struct timer *del_timer = 0;
 static struct timer *reconn_timer = 0;
 static struct timer *wait_cer_timer = 0;
-
 
 int init_peer_manager()
 {
@@ -130,6 +129,12 @@ void destroy_peer_manager()
 		/* destroy the list */
 		destroy_timer_list( del_timer );
 	}
+
+	if (wait_cer_timer)
+		destroy_timer_list( wait_cer_timer );
+
+	if (reconn_timer)
+		destroy_timer_list( reconn_timer );
 
 	LOG(L_INFO,"INFO:destroy_peer_manager: peer manager stoped\n");
 }
@@ -394,6 +399,11 @@ inline void reset_peer( struct peer *p)
 	if (p->tl.timer_list)
 		rmv_from_timer_list( &(p->tl) );
 	p->sock = -1;
+	/**/
+	p->flags &= !PEER_CONN_IN_PROG;
+	if (!p->flags&PEER_TO_DESTROY)
+		add_to_timer_list( &(p->tl), reconn_timer,
+			get_ticks()+RECONN_TIMEOUT);
 }
 
 
@@ -426,8 +436,12 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event,
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: accepting connection\n");
 					/* if peer in reconn timer list-> take it out*/
-					//if (p->tl.timer_list==reconn_timer)
-					//	rmv_from_timer_list( &(p->tl) );
+					if (p->tl.timer_list==reconn_timer)
+						rmv_from_timer_list( &(p->tl) );
+					else if (p->flags&PEER_CONN_IN_PROG) {
+						tcp_close( p );
+					}
+					/* update the peer */
 					p->sock = info->sock;
 					memcpy( &p->local_ip, info->local, sizeof(struct ip_addr));
 					/* put the peer in wait_cer timer list */
@@ -438,7 +452,6 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event,
 					unlock( p->mutex );
 					break;
 				default:
-					//atomic_dec( &(p->ref_cnt) );
 					unlock( p->mutex );
 					error_code = 1;
 					goto error;
@@ -449,32 +462,36 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event,
 			switch (p->state) {
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: connect finished\n");
+					/* update the peer */
+					p->flags &= !PEER_CONN_IN_PROG;
+					p->sock = info->sock;
+					memcpy( &p->local_ip, info->local, sizeof(struct ip_addr));
+					/* send cer */
 					//send_cer( p, &(p->conn->localaddr) );
+					/* new state */
 					p->state = PEER_WAIT_CEA;
 					unlock( p->mutex );
 					break;
 				default:
-					atomic_dec( &(p->ref_cnt) );
 					unlock( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
-		case TCP_CLOSE:
+		case TCP_CONN_IN_PROG:
 			lock( p->mutex );
 			switch (p->state) {
 				case PEER_UNCONN:
-					DBG("DEBUG:peer_state_machine: peer already closed!\n");
+					DBG("DEBUG:peer_state_machine: connect in progress\n");
+					/* update the peer */
+					p->sock = info->sock;
+					p->flags |= PEER_CONN_IN_PROG;
 					unlock( p->mutex );
 					break;
 				default:
-					DBG("DEBUG:peer_state_machine: closing connection\n");
-					tcp_close( p );
-					reset_peer( p );
-					//atomic_dec( &(p->ref_cnt) );
-					/* new state */
-					p->state = PEER_UNCONN;
 					unlock( p->mutex );
+					error_code = 1;
+					goto error;
 			}
 			break;
 		case TCP_CONN_FAILED:
@@ -482,25 +499,26 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event,
 			switch (p->state) {
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: connect failed\n");
-					/* put the peer in reconnect timer list for later retring
-					 * only if the peer is not marked for delete, otherwise
-					 * unref the peer */
-					if (!p->flags&PEER_TO_DESTROY)
-						add_to_timer_list( &(p->tl), reconn_timer,
-							get_ticks()+RECONN_TIMEOUT);
-					else
-						atomic_dec( &(p->ref_cnt) );
+					reset_peer( p );
 					p->state = PEER_UNCONN;
 					unlock( p->mutex );
 					break;
 				default:
-					atomic_dec( &(p->ref_cnt) );
 					unlock( p->mutex );
 					error_code = 1;
 					goto error;
 			}
 			break;
-		case PEER_TIMEOUT:
+		case TCP_CLOSE:
+			lock( p->mutex );
+			DBG("DEBUG:peer_state_machine: closing connection\n");
+			tcp_close( p );
+			reset_peer( p );
+			/* new state */
+			p->state = PEER_UNCONN;
+			unlock( p->mutex );
+			break;
+		case PEER_CER_TIMEOUT:
 			lock( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_CER:
@@ -511,13 +529,40 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event,
 					unlock( p->mutex );
 					break;
 				default:
-					DBG("DEBUG:peer_state_machine: closing connection\n");
+					unlock( p->mutex );
+					error_code = 1;
+					goto error;
+			}
+			break;
+		case PEER_RECONN_TIMEOUT:
+			lock( p->mutex );
+			switch (p->state) {
+				case PEER_UNCONN:
+					DBG("DEBUG:peer_state_machine: reconnecting peer\n");
+					if (p->flags&PEER_CONN_IN_PROG)
+						tcp_close( p );
+					write_command( p->fd, CONNECT_CMD, 0, p, 0);
+					unlock( p->mutex );
+					break;
+				default:
+					unlock( p->mutex );
+					DBG("DEBUG:peer_state_machine: no reason to reconnect\n");
+			}
+			break;
+		case PEER_TR_TIMEOUT:
+			lock( p->mutex );
+			switch (p->state) {
+				case PEER_WAIT_CEA:
+				case PEER_WAIT_DPA:
+					DBG("DEBUG:peer_state_machine: transaction timeout\n");
 					tcp_close( p );
 					reset_peer( p );
-					//atomic_dec( &(p->ref_cnt) );
-					/* new state */
-					p->state = PEER_UNCONN;
 					unlock( p->mutex );
+					break;
+				default:
+					unlock( p->mutex );
+					error_code = 1;
+					goto error;
 			}
 			break;
 		case CEA_RECEIVED:
@@ -654,7 +699,7 @@ void peer_timer_handler(unsigned int ticks, void* param)
 		if (!p->flags&PEER_TO_DESTROY) {
 			/* try again to connect the peer */
 			DBG("DEBUG:peer_timer_handler: re-tring to connect peer %p \n",p);
-			write_command( p->fd, CONNECT_CMD, 0, p, 0);
+			write_command( p->fd, TIMEOUT_PEER_CMD, PEER_RECONN_TIMEOUT, p, 0);
 		}
 	}
 
@@ -665,9 +710,8 @@ void peer_timer_handler(unsigned int ticks, void* param)
 		p  = (struct peer*)tl->payload;
 		tl = tl->next_tl;
 		/* close the connection */
-		DBG("DEBUG:peer_timer_handler: peer %p hasn't received a CER! ->"
-			" close it!!\n",p);
-		write_command( p->fd, TIMEOUT_PEER_CMD, 0, p, 0);
+		DBG("DEBUG:peer_timer_handler: peer %p hasn't received CER yet!\n",p);
+		write_command( p->fd, TIMEOUT_PEER_CMD, PEER_CER_TIMEOUT, p, 0);
 	}
 
 

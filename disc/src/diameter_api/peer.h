@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.5 2003/03/09 15:01:15 bogdan Exp $
+ * $Id: peer.h,v 1.6 2003/03/10 09:16:43 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -22,8 +22,8 @@ struct peer;
 #include "tcp_shell/common.h"
 
 
-#define PEER_TO_DESTROY  1<<0
-
+#define PEER_TO_DESTROY    1<<0
+#define PEER_CONN_IN_PROG  1<<1
 
 /* peer table */
 extern struct p_table *peer_table;
@@ -77,25 +77,26 @@ struct p_table {
 
 enum AAA_PEER_EVENT {
 	TCP_ACCEPT,
-	TCP_CLOSE,
-	TCP_EXPIRED,
 	TCP_CONNECTED,
+	TCP_CONN_IN_PROG,
 	TCP_CONN_FAILED,
-	TCP_UNREACHABLE,
+	TCP_CLOSE,
 	CER_RECEIVED,
 	CEA_RECEIVED,
 	DPR_RECEIVED,
 	DPA_RECEIVED,
 	PEER_HANGUP,
-	PEER_TIMEOUT
+	PEER_TR_TIMEOUT,
+	PEER_CER_TIMEOUT,
+	PEER_RECONN_TIMEOUT
 };
 
 
 enum AAA_PEER_STATE {
 	PEER_UNCONN,
+	PEER_CONN,
 	PEER_WAIT_CER,
 	PEER_WAIT_CEA,
-	PEER_CONN,
 	PEER_WAIT_DPA
 };
 

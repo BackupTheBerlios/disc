@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_api.h,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: diameter_api.h,v 1.2 2003/03/10 09:16:43 bogdan Exp $
  *
  * 2002-10-04 created by illya (komarov@fokus.gmd.de)
  *
@@ -8,18 +8,6 @@
 
 #ifndef _AAA_DIAMETER_API_H
 #define _AAA_DIAMETER_API_H
-
-#define VER_SIZE                   1
-#define MESSAGE_LENGTH_SIZE        3
-#define FLAGS_SIZE                 1
-#define COMMAND_CODE_SIZE          3
-#define VENDOR_ID_SIZE             4
-#define HOP_BY_HOP_IDENTIFIER_SIZE 4
-#define END_TO_END_IDENTIFIER_SIZE 4
-#define AVP_CODE_SIZE      4
-#define AVP_FLAGS_SIZE     1
-#define AVP_LENGTH_SIZE    3
-#define AVP_VENDOR_ID_SIZE 4
 
 #include "diameter_types.h"
 

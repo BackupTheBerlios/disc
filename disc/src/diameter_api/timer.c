@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: timer.c,v 1.2 2003/03/10 09:16:43 bogdan Exp $
  *
  */
 
@@ -213,6 +213,7 @@ int rmv_from_timer_list( struct timer_link* tl )
 		tl->next_tl = 0;
 		tl->prev_tl = 0;
 		/* unlock the list */
+		DBG("DEBUG: rmv_from_timer_list[%p]: %p\n",tl->timer_list,tl);
 		unlock(tl->timer_list->mutex);
 		tl->timer_list = 0;
 	}

@@ -1,5 +1,5 @@
 /*
- * $Id: message.h,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: message.h,v 1.2 2003/03/10 09:16:43 bogdan Exp $
  *
  * 2003-02-07 created by bogdan
  *
@@ -22,10 +22,6 @@ struct msg_manager {
 	aaa_lock     *end_to_end_lock;
 };
 
-
-#define AAA_MSG_HDR_SIZE  \
-	(VER_SIZE + MESSAGE_LENGTH_SIZE + FLAGS_SIZE + COMMAND_CODE_SIZE +\
-	VENDOR_ID_SIZE + HOP_BY_HOP_IDENTIFIER_SIZE + END_TO_END_IDENTIFIER_SIZE)
 
 #define is_req(_msg_) \
 	(((_msg_)->flags)&0x80)
