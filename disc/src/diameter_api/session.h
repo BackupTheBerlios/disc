@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.3 2003/03/14 18:07:13 bogdan Exp $
+ * $Id: session.h,v 1.4 2003/03/17 15:52:05 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -116,7 +116,7 @@ inline static struct session* session_lookup(struct h_table *table,
 	if (parse_sessionID(  sID, &hash_code, &label)!=1)
 		return 0;
 	return (struct session*)cell_lookup
-		( table, hash_code, label, 0);
+		( table, hash_code, label);
 }
 
 

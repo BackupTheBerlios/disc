@@ -6,31 +6,43 @@
 #include <pthread.h>
 #include "../list.h"
 #include "../dprint.h"
-#include "ip_addr.h"
 #include "../aaa_lock.h"
+#include "../locking.h"
+#include "ip_addr.h"
 #include "peer.h"
 #include "tcp_accept.h"
 #include "tcp_receive.h"
 #include "common.h"
-#include "../locking.h"
 
 
 #define ACCEPT_THREAD_ID      0
 #define RECEIVE_THREAD_ID(_n) (1+(_n))
 
 
-static struct thread_info  tinfo[NR_THREADS];
+/* array with all the threads created by the tcp_shell */
+static struct thread_info  *tinfo;
+static unsigned int        nr_recv_threads;
+/* linked list with the receiving threads ordered by load */
 static struct list_head    rcv_thread_list;
 static gen_lock_t          *list_mutex;
+
 
 #define get_payload( _pos ) \
 		list_entry( (_pos), struct thread_info, tl )
 
 
 
-int init_tcp_shell(void)
+int init_tcp_shell( unsigned int nr_receivers)
 {
 	unsigned int i;
+
+	tinfo = (struct thread_info*)shm_malloc
+		( (nr_receivers+1)*sizeof(struct thread_info) );
+	if (!tinfo) {
+		LOG(L_ERR,"ERRROR:init_tcp_shell: no more free memory\n");
+		goto error;
+	}
+	memset(tinfo, 0, sizeof((nr_receivers+1)*sizeof(struct thread_info)));
 
 	/* prepare the list for receive threads */
 	INIT_LIST_HEAD(  &rcv_thread_list );
@@ -41,8 +53,6 @@ int init_tcp_shell(void)
 	}
 
 	/* build the threads */
-	memset(tinfo, 0, sizeof(tinfo));
-
 	/* accept thread */
 	if (pipe( tinfo[ACCEPT_THREAD_ID].cmd_pipe )!=0) {
 		LOG(L_ERR,"ERROR:init_tcp_shell: cannot create pipe for accept "

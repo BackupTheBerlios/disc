@@ -8,18 +8,20 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "../list.h"
+#include "../hash_table.h"
 #include "ip_addr.h"
 #include "peer.h"
 
 
-#define NR_RECEIVE_THREADS  1
-#define NR_THREADS          (1+NR_RECEIVE_THREADS)
-
 
 struct thread_info {
+	/* linker into the peer list */
 	struct list_head  tl;
+	/* thread  id */
 	pthread_t         tid;
+	/* number of peer per thread */
 	unsigned int      load;
+	/* commad pipe */
 	unsigned int      cmd_pipe[2];
 	fd_set            rd_set;
 	fd_set            wr_set;
