@@ -1,9 +1,10 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- * $Id: dictionary.c,v 1.11 2003/03/26 17:18:45 ilk Exp $
+ * $Id: dictionary.c,v 1.12 2003/04/16 16:32:25 ilk Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "dictionary.h"
 
 #define MAXWORDLEN 1024;
@@ -113,14 +114,13 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
    
 }
 int findEntry( char** extEntry, int sizeOfEntry){
+	int match=0;
+   char *entry[sizeOfEntry];
    file=fopen("dictionary","r");
 	if(file==NULL){
       //LOG(L_ERR,"ERROR:no dictionary found!\n");
       return 0;
    }
-   int s=0;
-   int match=0;
-   char *entry[sizeOfEntry];
    while(!match && findWord(extEntry[0])){
       int i;
       int size=MAXWORDLEN;
