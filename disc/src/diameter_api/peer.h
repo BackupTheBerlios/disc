@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: peer.h,v 1.2 2003/03/07 17:20:08 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -47,7 +47,7 @@ struct peer {
 	/* flags */
 	unsigned char flags;
 	/* command pipe */
-	unsigned int cmd_pipe_in;
+	unsigned int fd;
 };
 
 
@@ -86,13 +86,6 @@ enum AAA_PEER_STATE {
 	PEER_CONN,
 	PEER_WAIT_DPA
 };
-
-/* info passed on a TCP_ACCEPT event */
-typedef struct _accept_info {
-	struct ip_addr  localaddr;
-	struct ip_addr  peeraddr;
-	int             socket;
-}accept_info;
 
 
 
@@ -171,7 +164,7 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 
 
 /* search into the peer table for the peer having the given IP address */
-static inline int lookup_peer_fd_by_ip( struct ip_addr *ip )
+static inline struct peer* lookup_peer_fd_by_ip( struct ip_addr *ip )
 {
 	struct peer *p;
 
@@ -188,7 +181,7 @@ static inline int lookup_peer_fd_by_ip( struct ip_addr *ip )
 		ref_peer( p );
 
 	unlock( peer_table->mutex );
-	return (p?p->cmd_pipe_in:-1);
+	return p;
 }
 
 

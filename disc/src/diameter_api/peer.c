@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: peer.c,v 1.2 2003/03/07 17:20:08 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -184,7 +184,7 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 	p->port = port;
 
 	/* get a thread to listen for this peer */
-	p->cmd_pipe_in = get_new_peer_thread();
+	p->fd = get_new_peer_thread();
 
 	/* insert the peer into the list */
 	lock( peer_table->mutex );
@@ -220,7 +220,7 @@ void init_all_peers()
 	while (p) {
 		/* open tcp connection */
 		atomic_inc( &(p->ref_cnt) );
-		res = tcp_connect( &(p->ip) ,p->port, p->cmd_pipe_in );
+		res = tcp_connect( p );
 		DBG("DEBUG:init_all_peers: conecting peer %p, res=%d\n",p,res);
 		p = p->next;
 	}
@@ -423,7 +423,7 @@ inline void reset_peer( struct peer *p)
 int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event,
 																void *info)
 {
-	accept_info    *acc_inf;
+	//accept_info    *acc_inf;
 	struct trans   *tr;
 	static char    *err_msg[]= {
 		"no error"
@@ -453,7 +453,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event,
 					//if (p->conn)
 					//	DBG("ELECTION!!!!!\n");
 					/* open the tcp connection */
-					acc_inf = (accept_info*)info;
+					//acc_inf = (accept_info*)info;
 #if 0
 					conn = tcp_open( p, acc_inf->socket, &(acc_inf->localaddr),
 						&(acc_inf->peeraddr) );
@@ -673,7 +673,7 @@ void peer_timer_handler(unsigned int ticks, void* param)
 		if (!p->flags&PEER_TO_DESTROY) {
 			/* try again to connect the peer */
 			DBG("DEBUG:peer_timer_handler: re-tring to connect peer %p \n",p);
-			tcp_connect( &(p->ip), p->port, p->cmd_pipe_in );
+			tcp_connect( p );
 		} else {
 			atomic_dec( &(p->ref_cnt) );
 		}
