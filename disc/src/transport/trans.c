@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.11 2003/04/18 17:38:19 bogdan Exp $
+ * $Id: trans.c,v 1.12 2003/04/21 12:45:42 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -125,18 +125,15 @@ void timeout_handler(unsigned int ticks, void* param)
 			LOG(L_NOTICE,"NOTICE:trans_timeout_handler: race-condition "
 				"between trasaction timeout and incoming reply -> timeout "
 				"drop\n");
-			continue;
 		} else {
 			/* I successfuly removed the transaction from both timer list and
 			 * hash table -> I will inherit the reference from timer list and
 			 * loose the one from hash_table */
 			atomic_dec( &tr->ref_cnt );
+			/* process the transaction */
+			if (tr->timeout_f)
+				tr->timeout_f( tr );
 		}
-
-		/* process the transaction */
-		if (tr->timeout_f)
-			tr->timeout_f( tr );
-
 		/* destroy the transaction */
 		destroy_transaction( tr );
 	}
