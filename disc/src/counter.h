@@ -1,12 +1,13 @@
 /*
- * $Id: counter.h,v 1.3 2003/04/22 19:58:41 andrei Exp $
+ * $Id: counter.h,v 1.4 2003/11/18 16:46:21 cco Exp $
  *
  * 2003-02-19 added by bogdan
  *
  *
- * Copyright (C) 2002-2003 Fhg Fokus
+ * 
  *
- * This file is part of disc, a free diameter server/client.
+ * this file is taken from the linux kernel sources.
+ * 
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -3,10 +3,11 @@
 
 
 /* Linux list implementation plus a few addings */
+
 /*
- * Copyright (C) 2002-2003 Fhg Fokus
- *
- * This file is part of disc, a free diameter server/client.
+ *  this file is taken from the linux kernel sources.
+ *  (linux-2.4.x/include/linux/list.h)
+ * 
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
