@@ -1,4 +1,4 @@
-/* $Id: shm_mem.c,v 1.1 2003/03/14 15:40:53 bogdan Exp $
+/* $Id: shm_mem.c,v 1.2 2003/03/14 18:07:28 bogdan Exp $
  *
  * Shared memory functions
  *
@@ -38,7 +38,6 @@
 #include <stdlib.h>
 
 #include "shm_mem.h"
-#include "../config.h"
 #include "../globals.h"
 
 #ifdef  SHM_MMAP

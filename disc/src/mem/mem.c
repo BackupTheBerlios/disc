@@ -1,5 +1,5 @@
 /*
- * $Id: mem.c,v 1.1 2003/03/14 15:40:53 bogdan Exp $
+ * $Id: mem.c,v 1.2 2003/03/14 18:07:13 bogdan Exp $
  *
  * Copyright (C) 2001-2003 Fhg Fokus
  *
@@ -27,7 +27,6 @@
 
 
 #include <stdio.h>
-#include "../config.h"
 #include "../dprint.h"
 #include "../globals.h"
 #include "mem.h"

@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.2 2003/03/13 13:07:55 andrei Exp $
+ * $Id: session.h,v 1.3 2003/03/14 18:07:13 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -11,9 +11,9 @@
 
 
 #include "diameter_types.h"
-#include "utils/aaa_lock.h"
-#include "hash_table.h"
-#include "locking.h"
+#include "../aaa_lock.h"
+#include "../hash_table.h"
+#include "../locking.h"
 
 
 /* all possible states of the session state machine */
@@ -116,7 +116,7 @@ inline static struct session* session_lookup(struct h_table *table,
 	if (parse_sessionID(  sID, &hash_code, &label)!=1)
 		return 0;
 	return (struct session*)cell_lookup
-		( table, hash_code, label, SESSION_CELL_TYPE, 0);
+		( table, hash_code, label, 0);
 }
 
 

@@ -1,4 +1,4 @@
-/* $Id: q_malloc.h,v 1.1 2003/03/14 15:40:53 bogdan Exp $
+/* $Id: q_malloc.h,v 1.2 2003/03/14 18:07:28 bogdan Exp $
  *
  * simple & fast malloc library
  *
@@ -105,7 +105,6 @@ struct qm_block{
 	struct qm_frag_full free_hash[QM_HASH_SIZE];
 	/*struct qm_frag_end free_lst_end;*/
 };
-
 
 
 struct qm_block* qm_malloc_init(char* address, unsigned int size);

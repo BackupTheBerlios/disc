@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.2 2003/03/14 17:15:38 bogdan Exp $
+ * $Id: peer.h,v 1.3 2003/03/14 18:07:41 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -19,7 +19,7 @@
 #include "../timer.h"
 
 struct peer;
-#include "tcp_shell/common.h"
+#include "common.h"
 
 
 #define PEER_TO_DESTROY    1<<0
@@ -45,9 +45,9 @@ struct peer {
 	str aaa_host;
 	/* location of the peer as ip:port */
 	unsigned int port;
-	IP_ADDR ip;
+	struct ip_addr ip;
 	/* local ip*/
-	IP_ADDR local_ip;
+	struct ip_addr local_ip;
 	unsigned int state;
 	/* linking information */
 	struct list_head  all_peer_lh;

@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.2 2003/03/14 17:15:38 bogdan Exp $
+ * $Id: trans.h,v 1.3 2003/03/14 18:07:56 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -72,8 +72,9 @@ inline static struct trans* transaction_lookup(unsigned int endtoendID,
 	s.s = (char*)&endtoendID;
 	s.len = sizeof(endtoendID);
 	hash_code = hash( &s );
-	return (struct trans*)cell_lookup
-		( hash_table, hash_code, hopbyhopID, TRANSACTION_CELL_TYPE, rm);
+	//return (struct trans*)cell_lookup
+	//	( hash_table, hash_code, hopbyhopID, TRANSACTION_CELL_TYPE, rm);
+	return 0;
 }
 
 #endif

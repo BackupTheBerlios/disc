@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.1 2003/03/14 16:05:58 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.2 2003/03/14 18:07:56 bogdan Exp $
  *
  *  History:
  *  --------
@@ -15,13 +15,13 @@
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include "../dprint.h"
-#include "../utils/ip_addr.h"
-#include "../utils/list.h"
-#include "../utils/str.h"
-#include "../diameter_types.h"
-#include "../peer.h"
-#include "../message.h"
-#include "receive.h"
+#include "ip_addr.h"
+#include "../list.h"
+#include "../str.h"
+#include "../diameter_api/diameter_types.h"
+#include "peer.h"
+#include "../diameter_api/message.h"
+#include "tcp_receive.h"
 #include "common.h"
 
 

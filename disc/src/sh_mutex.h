@@ -1,12 +1,12 @@
 /*
- * $Id: sh_mutex.h,v 1.1 2003/03/14 15:28:59 bogdan Exp $
+ * $Id: sh_mutex.h,v 1.2 2003/03/14 18:06:43 bogdan Exp $
  *
  * 2003-02-26 created by bogdan
  *
  */
 
 
-#include "utils/aaa_lock.h"
+#include "aaa_lock.h"
 #include "locking.h"
 
 

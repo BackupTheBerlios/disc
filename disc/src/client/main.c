@@ -17,7 +17,7 @@
 #include <signal.h>
 #include <pthread.h>
 #include <sys/types.h>
-#include "diameter_api.h"
+#include "../diameter_api/diameter_api.h"
 
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.1 2003/03/14 16:05:58 bogdan Exp $
+ * $Id: trans.c,v 1.2 2003/03/14 18:07:56 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -8,14 +8,14 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "dprint.h"
-#include "utils/counter.h"
+#include "../dprint.h"
+//#include "utils/counter.h"
 #include "trans.h"
-#include "hash_table.h"
-#include "globals.h"
-#include "diameter_api.h"
+#include "../hash_table.h"
+//#include "globals.h"
+#include "../diameter_api/diameter_api.h"
 
-#include "mem/shm_mem.h"
+#include "../mem/shm_mem.h"
 
 
 struct timer *tr_timeout_timer=0;
@@ -27,10 +27,6 @@ void timeout_handler(unsigned int ticks, void* param);
 
 int init_trans_manager()
 {
-	/* register a destroy function for transactions */
-	register_destroy_func( hash_table, TRANSACTION_CELL_TYPE,
-		destroy_transaction);
-
 	/* build the timer list for transaction timeout */
 	tr_timeout_timer = new_timer_list();
 	if (!tr_timeout_timer) {
@@ -103,7 +99,7 @@ void destroy_transaction( void *vp)
 		atomic_dec( &(t->peer->ref_cnt) );
 
 	/* unlink the transaction from hash_table */
-	remove_cell_from_htable( hash_table, (struct h_link*)t );
+	//remove_cell_from_htable( hash_table, (struct h_link*)t );
 
 	/* free the messages */
 	if (t->req.s)

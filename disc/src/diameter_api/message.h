@@ -1,5 +1,5 @@
 /*
- * $Id: message.h,v 1.7 2003/03/13 18:46:37 bogdan Exp $
+ * $Id: message.h,v 1.8 2003/03/14 18:06:58 bogdan Exp $
  *
  * 2003-02-07 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -9,11 +9,11 @@
 #ifndef _AAA_DIAMETER_MESSAGE_H
 #define _AAA_DIAMETER_MESSAGE_H
 
-#include "locking.h"
+#include "../locking.h"
 #include "diameter_types.h"
-#include "peer.h"
+#include "../transport/peer.h"
 #include "session.h"
-#include "trans.h"
+#include "../transport/trans.h"
 
 
 struct msg_manager {

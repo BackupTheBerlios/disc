@@ -1,4 +1,4 @@
-/* $Id: mem.h,v 1.1 2003/03/14 15:40:53 bogdan Exp $
+/* $Id: mem.h,v 1.2 2003/03/14 18:07:13 bogdan Exp $
  *
  * memory related stuff (malloc & friends)
  * 
@@ -37,8 +37,8 @@
 
 #ifndef mem_h
 #define mem_h
-#include "../config.h"
 #include "../dprint.h"
+
 
 #ifdef PKG_MALLOC
 #	ifdef VQ_MALLOC

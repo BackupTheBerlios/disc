@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4 2003/03/14 16:44:33 bogdan Exp $
+# $Id: Makefile,v 1.5 2003/03/14 18:06:43 bogdan Exp $
 #
 #
 # 2003-03-12  added SHM_MEM & other defines from ser;
@@ -22,7 +22,7 @@ ARCH = $(shell uname -m |sed -e s/i.86/i386/ -e s/sun4u/sparc64/  \
 
 #defines
 ALLDEP=Makefile
-BIN=client
+BIN=aaa_client
 CFLAGS=
 LIBS= -lpthread -lresolv
 LDFLAGS=

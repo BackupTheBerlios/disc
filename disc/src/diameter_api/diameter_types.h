@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.6 2003/03/14 17:15:38 bogdan Exp $
+ * $Id: diameter_types.h,v 1.7 2003/03/14 18:06:58 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -9,7 +9,7 @@
 #define _AAA_DIAMETER_TYPES_H
 
 
-#include "../ip_addr.h"
+#include "../transport/ip_addr.h"
 #include "../str.h"
 
 #define AAA_NO_VENDOR_ID   0

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.1 2003/03/14 16:05:58 bogdan Exp $
+ * $Id: peer.c,v 1.2 2003/03/14 18:07:28 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -12,23 +12,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "dprint.h"
-#include "utils/str.h"
-#include "diameter_types.h"
-#include "diameter_api.h"
-#include "locking.h"
-#include "utils/str.h"
-#include "utils/ip_addr.h"
-#include "utils/resolve.h"
-#include "tcp_shell/common.h"
-#include "globals.h"
-#include "timer.h"
-#include "sh_mutex.h"
+#include "../dprint.h"
+#include "../str.h"
+//#include "diameter_types.h"
+//#include "diameter_api.h"
+#include "../locking.h"
+#include "ip_addr.h"
+#include "resolve.h"
+#include "common.h"
+#include "../diameter_api/globals.h"
+#include "../timer.h"
+#include "../sh_mutex.h"
 #include "peer.h"
-#include "message.h"
-#include "avp.h"
+#include "../diameter_api/message.h"
+#include "../diameter_api/avp.h"
 
-#include "mem/shm_mem.h"
+#include "../mem/shm_mem.h"
 
 
 #define PEER_TIMER_STEP  1
