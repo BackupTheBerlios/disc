@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_init.c,v 1.7 2003/04/11 17:48:02 bogdan Exp $
+ * $Id: cfg_init.c,v 1.8 2003/04/13 23:01:16 andrei Exp $
  *
  * History:
  * --------
@@ -32,24 +32,26 @@ static int cfg_echo(struct cfg_line* cl, void* value);
 static int cfg_error(struct cfg_line* cl, void* value);
 static int cfg_include(struct cfg_line* cl, void* value);
 static int cfg_set_aaa_status(struct cfg_line* cl, void* value);
+static int cfg_set_mod_param(struct cfg_line* cl, void* unused);
 
 
 
 /* config info (null terminated array)*/
 struct cfg_def cfg_ids[]={
-	{"debug",        INT_VAL,   &debug,        0                   },
-	{"log_stderr",   INT_VAL,   &log_stderr,   0                   },
-	{"aaa_realm",    STR_VAL,   &aaa_realm,    0                   },
-	{"aaa_fqdn",     STR_VAL,   &aaa_fqdn,     0                   },
-	{"listen_port",  INT_VAL,   &listen_port,  0                   },
-	{"aaa_status",   STR_VAL,   0,              cfg_set_aaa_status  },
-	{"module_path",  STR_VAL,   &module_path,   cfg_set_module_path },
-	{"module",       GEN_VAL,   0,              cfg_load_modules    },
-	{"peer",         GEN_VAL,   add_cfg_peer,   cfg_addpair         },
-	{"route",        GEN_VAL,   add_route,      cfg_addpair         },
-	{"echo",         GEN_VAL,   0,              cfg_echo            },
-	{"_error",       GEN_VAL,   0,              cfg_error           },
-	{"include",      STR_VAL,   0,              cfg_include         },
+	{"debug",         INT_VAL,   &debug,        0                    },
+	{"log_stderr",    INT_VAL,   &log_stderr,   0                    },
+	{"aaa_realm",     STR_VAL,   &aaa_realm,    0                    },
+	{"aaa_fqdn",      STR_VAL,   &aaa_fqdn,     0                    },
+	{"listen_port",   INT_VAL,   &listen_port,  0                    },
+	{"aaa_status",    STR_VAL,   0,              cfg_set_aaa_status  },
+	{"module_path",   STR_VAL,   &module_path,   cfg_set_module_path },
+	{"set_mod_param", GEN_VAL,   0,              cfg_set_mod_param   },
+	{"module",        GEN_VAL,   0,              cfg_load_modules    },
+	{"peer",          GEN_VAL,   add_cfg_peer,   cfg_addpair         },
+	{"route",         GEN_VAL,   add_route,      cfg_addpair         },
+	{"echo",          GEN_VAL,   0,              cfg_echo            },
+	{"_error",        GEN_VAL,   0,              cfg_error           },
+	{"include",       STR_VAL,   0,              cfg_include         },
 	{0,0,0,0}
 };
 
@@ -251,5 +253,60 @@ error:
 error_mem:
 	LOG(L_CRIT, "ERROR: cfg: memory allocation error\n");
 	ret=CFG_MEM_ERR;
+	goto error;
+}
+
+
+
+/* sets a module parameter */
+int cfg_set_mod_param(struct cfg_line* cl, void* unused)
+{
+	int ret;
+	str mod_name;
+	str param_name;
+	str value;
+	int int_val;
+	struct module_param* p;
+		
+	ret=CFG_OK;
+	if ((cl->token_no<3)){ /* mod name param_name value */
+		LOG(L_CRIT, "ERROR: cfg: invalid number of "
+					"parameters for peer\n");
+		ret=CFG_PARAM_ERR;
+		goto error;
+	}
+	
+	ret=cfg_getstr(cl->value[0], &mod_name);
+	if (ret!=0) goto error;
+	ret=cfg_getstr(cl->value[1], &param_name);
+	if (ret!=0) goto error;
+	p=get_module_param(mod_name.s, param_name.s);
+	if (p==0) goto error_noparam;
+	switch(p->type){
+		case INT_TYPE:
+			ret=cfg_getint(cl->value[2], &int_val);
+			if (ret!=0) goto error_value;
+			*((int*)p->pvalue)=int_val;
+			break;
+		case STR_TYPE:
+			ret=cfg_getstr(cl->value[2], &value);
+			if (ret!=0) goto error_value;
+			*(char**)(p->pvalue)=value.s;
+			break;
+		default:
+			LOG(L_CRIT, "BUG: cfg: unknown param type %d\n", p->type);
+			ret=CFG_PARAM_ERR;
+	}
+	
+error:
+	return ret;
+error_value:
+	LOG(L_ERR, "ERROR: cfg: bad value: %s\n", cl->value[3]);
+	ret=CFG_PARAM_ERR;
+	goto error;
+error_noparam:
+	LOG(L_ERR, "ERROR: cfg: no param <%s> found for module <%s>\n",
+			mod_name.s, param_name.s);
+	ret=CFG_RUN_ERR;
 	goto error;
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.11 2003/04/12 20:53:50 bogdan Exp $
+ * $Id: aaa_core.c,v 1.12 2003/04/13 23:01:16 andrei Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -34,7 +34,7 @@
 #define CFG_FILE "aaa.cfg"
 
 
-static char id[]="$Id: aaa_core.c,v 1.11 2003/04/12 20:53:50 bogdan Exp $";
+static char id[]="$Id: aaa_core.c,v 1.12 2003/04/13 23:01:16 andrei Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
@@ -390,6 +390,7 @@ int init_aaa_core(char *cfg_file)
 {
 	void* shm_mempool;
 	struct peer_entry* pl;
+	struct peer* pe;
 
 	/* init mallocs */
 	shm_mempool=malloc(shm_mem_size);
@@ -454,10 +455,12 @@ int init_aaa_core(char *cfg_file)
 		goto error;
 	}
 	for (pl=cfg_peer_lst; pl; pl=pl->next){
-		if (add_peer(&pl->full_uri, &pl->uri.host, pl->uri.port_no)<0){
+		if ((pe=add_peer(&pl->full_uri, &pl->uri.host, pl->uri.port_no))==0){
 			fprintf(stderr, "ERROR: failed to add peer <%.*s>\n",
 					pl->full_uri.len, pl->full_uri.s);
 			goto error;
+		}else{
+			pl->peer=pe; /* remember it for do_route */
 		}
 	}
 

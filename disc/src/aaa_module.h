@@ -1,9 +1,10 @@
 /*
- * $Id: aaa_module.h,v 1.10 2003/04/12 20:53:50 bogdan Exp $
+ * $Id: aaa_module.h,v 1.11 2003/04/13 23:01:16 andrei Exp $
  */
 /* History:
  * --------
  *  2003-03-28  created by andrei
+ *  2003-04-13  added module parameters (andrei)
  */
 
 #ifndef aaa_module_h
@@ -16,11 +17,20 @@
 
 extern str module_path;
 
+enum param_types { INT_TYPE, STR_TYPE };
+
+struct module_param{
+	char* name;
+	enum param_types type;
+	void* pvalue;
+};
+
 struct module_exports{
 	char* name; /* module name, must be unique */
 	unsigned int mod_type; /* module's type - server or client */
 	unsigned int app_id; /* application id*/
 	unsigned int flags; /* flags */
+	struct module_param* params;/* module parameters, null terminated array*/
 	
 	int (*mod_init)();   /* module initialization function */
 	void (*mod_destroy)(); /* called on exit */
@@ -48,5 +58,6 @@ int load_module(char*);
 int init_modules();
 void destroy_modules();
 struct aaa_module* find_module(unsigned int app_id);
+struct module_param* get_module_param(char* module, char* param_name); 
 
 #endif /*aaa_module_h*/

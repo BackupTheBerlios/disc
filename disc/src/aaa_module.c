@@ -1,11 +1,12 @@
 /*
- * $Id: aaa_module.c,v 1.12 2003/04/12 20:53:50 bogdan Exp $
+ * $Id: aaa_module.c,v 1.13 2003/04/13 23:01:16 andrei Exp $
  */
 /*
  * History:
  * --------
  *  2003-03-27  created by andrei
  *  2003-04-02  LTDL_SET_PRELOADED_SYMBOLS added (andrei)
+ *  2003-04-13  module parameters added (andrei)
  */
 
 #include <ltdl.h>
@@ -212,5 +213,30 @@ struct aaa_module* find_module(unsigned int app_id)
 	
 	for (a=modules; a; a=a->next)
 		if ((a->exports)&&(a->exports->app_id==app_id)) return a;
+	return 0;
+}
+
+
+struct aaa_module* find_module_by_name(char* name)
+{
+	struct aaa_module* a;
+	
+	for (a=modules; a; a=a->next)
+		if ((a->exports)&&(strcmp(a->exports->name, name)==0)) return a;
+	return 0;
+}
+
+
+struct module_param* get_module_param(char* module, char* param_name)
+{
+	struct aaa_module* a;
+	struct module_param* p;
+	
+	if ((a=find_module_by_name(module))==0)  goto no_module_found;
+	for (p=a->exports->params;p&&(p->name);p++){
+		if (strcmp(param_name, p->name)==0)
+			return p;
+	}
+no_module_found:
 	return 0;
 }

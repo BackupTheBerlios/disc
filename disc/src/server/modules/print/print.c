@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.1 2003/04/12 20:57:34 bogdan Exp $
+ * $Id: print.c,v 1.2 2003/04/13 23:01:16 andrei Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -7,6 +7,7 @@
  * History:
  * --------
  *  2003-03-28  created by andrei
+ *  2003-04-14  updated exports to the new format (w/ mod params) (andrei)
  */
 
 #include <stdio.h>
@@ -29,6 +30,7 @@ struct module_exports exports = {
 	AAA_SERVER,
 	4,
 	DOES_AUTH|DOES_ACCT,
+	0, /* no  mod params */
 	
 	mod_init,
 	mod_destroy,

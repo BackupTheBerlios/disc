@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.3 2003/04/13 00:36:35 bogdan Exp $
+ * $Id: server.c,v 1.4 2003/04/13 23:01:16 andrei Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -21,6 +21,7 @@
 #include "diameter_api/diameter_api.h"
 #include "transport/trans.h"
 #include "transport/peer.h"
+#include "route.h"
 
 
 
@@ -119,6 +120,7 @@ static inline void process_incoming_request(AAAMessage *msg,struct peer *in_p )
 				/* no module to deal with this kind of application */
 				send_error_reply( msg, AAA_APPLICATION_UNSUPPORTED);
 			}
+			return;
 		} else {
 			/* I'm not the destination host -> am I peer with the dest-host? */
 			out_p = lookup_peer_by_identity( &(msg->dest_host->data) );
@@ -126,6 +128,7 @@ static inline void process_incoming_request(AAAMessage *msg,struct peer *in_p )
 				/* the destination host is one of my peers */
 				if (forward_request( msg, in_p, out_p)==-1)
 					send_error_reply( msg, AAA_UNABLE_TO_DELIVER);
+				return;
 			}
 			/* do routing based on dest realm */
 		}
@@ -139,6 +142,7 @@ static inline void process_incoming_request(AAAMessage *msg,struct peer *in_p )
 				/* no module to deal with this kind of application */
 				send_error_reply( msg, AAA_APPLICATION_UNSUPPORTED);
 			}
+			return;
 		}
 		/* do routing based on dest realm */
 	}
@@ -170,8 +174,10 @@ static inline void process_incoming_request(AAAMessage *msg,struct peer *in_p )
 	} else {
 		/* it's not my realm -> do routing based on script */
 		// TO DO
-		DBG(" routing tabel - call UNIMPLEMENTED\n ");
-		send_error_reply( msg, AAA_UNABLE_TO_DELIVER);
+		DBG(" routing tabel  \n ");
+		if (do_route(msg, in_p)<0){
+			send_error_reply( msg, AAA_UNABLE_TO_DELIVER);
+		}
 	}
 }
 

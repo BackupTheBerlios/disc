@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.12 2003/04/13 00:36:35 bogdan Exp $
+ * $Id: print.c,v 1.13 2003/04/13 23:01:16 andrei Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -7,6 +7,7 @@
  * History:
  * --------
  *  2003-03-28  created by andrei
+ *  2003-04-14  added module params (andrei)
  */
 
 #include <stdio.h>
@@ -23,12 +24,22 @@ static void mod_destroy();
 static int mod_msg(AAAMessage *msg, void *context);
 static int mod_tout(int event, AAASessionId* sId, void *context);
 
+static int foo=0;
+static char* bar="default";
+
+static struct module_param params[]={
+	{"foo",  INT_TYPE, &foo},
+	{"bar",  STR_TYPE, &bar},
+	{0,0,0} /* null terminated array */
+};
+
 
 struct module_exports exports = {
 	"print",
-	AAA_SERVER,
+	AAA_CLIENT,
 	4,
 	DOES_AUTH|DOES_ACCT,
+	params,
 	
 	mod_init,
 	mod_destroy,
@@ -41,6 +52,7 @@ struct module_exports exports = {
 int mod_init()
 {
 	DBG("print module : initializing...\n");
+	DBG("print module : foo=%d, bar=%s\n", foo, bar);
 
 	return 0;
 }

@@ -1,13 +1,15 @@
 /*
- * $Id: route.c,v 1.5 2003/04/09 18:12:44 andrei Exp $
+ * $Id: route.c,v 1.6 2003/04/13 23:01:16 andrei Exp $
  */
 /*
  * History:
  * --------
  *  2003-04-08  created by andrei
+ *  2003-04-13  added do_route (andrei)
  */
 
 
+#include "globals.h"
 #include "route.h"
 #include "dprint.h"
 #include "mem/shm_mem.h"
@@ -81,6 +83,8 @@ int add_route(str* realm, str* dst)
 	struct route_entry* ri;
 	int ret;
 	
+
+	if (my_aaa_status<AAA_SERVER) goto error_client;
 	/* find coreponding peer, try alias match, full uri(id) match and
 	 *  host match */
 	for (pe=cfg_peer_lst; pe; pe=pe->next){
@@ -134,6 +138,11 @@ error_no_peer:
 	LOG(L_ERR, "ERROR: add_route: no peer <%.*s> found\n", dst->len, dst->s);
 	ret=-1;
 	goto end;
+error_client:
+	LOG(L_CRIT, "ERROR: routes allowed only in server mode "
+			" (set aaa_status to server)\n");
+	ret=-1;
+	goto end;
 }
 
 
@@ -155,6 +164,47 @@ struct peer_entry* route_dest(str* realm)
 	}
 	DBG("WARNING: route_dest: no route found for <%s>\n", realm->s);
 	return 0;
+}
+
+
+
+/* send the msg according to the routing table
+ * returns 0 on success, <0 on error */
+int do_route(AAAMessage *msg, struct peer *in_p)
+{
+	struct peer_entry* pl;
+	struct trans* tr;
+	
+	pl=route_dest(&in_p->aaa_realm);
+	if (pl==0) goto noroute;
+	/* transaction stuff */
+	tr=create_transaction(&(msg->buf), in_p);
+	if (tr==0) goto error_transaction;
+	update_forward_transaction_from_msg(tr, msg, in_p);
+	/* try to send it to the first peer in the route */
+	for(;pl;pl=pl->next){
+		if (pl->peer){
+			if (send_req_to_peer(tr, pl->peer)<0){
+				LOG(L_WARN, "WARNING: do_route: unable to send to %.*s\n",
+						pl->full_uri.len, pl->full_uri.s);
+				continue; /*try next peer*/
+			}else{
+				DBG("do_route: sending msg to %.*s\n", pl->full_uri.len,
+						pl->full_uri.s);
+				goto end;
+			}
+		}
+	}
+	/* if we are here => all sends failed */
+	/* cleanup */
+	destroy_transaction(tr);
+noroute:
+	LOG(L_WARN, "WARNING: do_route: dropping message, no peers/route found\n");
+end:
+	return 0;
+error_transaction:
+	LOG(L_ERR, "ERROR: do_route: unable to create transaction\n");
+	return -1;
 }
 
 
