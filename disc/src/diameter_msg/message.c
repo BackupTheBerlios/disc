@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.5 2003/04/11 17:48:02 bogdan Exp $
+ * $Id: message.c,v 1.6 2003/04/21 12:47:17 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -199,7 +199,7 @@ AAAMessage *AAANewMessage(
 
 		/* add a success result-code avp ;-))) */
 		avp = 0;
-		code = AAA_SUCCESS;
+		code = htonl(AAA_SUCCESS);
 		avp = AAACreateAVP( AVP_Result_Code, 0, 0, (char*)&code, sizeof(code),
 			AVP_DUPLICATE_DATA);
 		if (!avp || AAAAddAVPToMessage( msg, avp, msg->sessionId)
