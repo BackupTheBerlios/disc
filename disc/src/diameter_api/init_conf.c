@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.13 2003/03/13 19:25:26 bogdan Exp $
+ * $Id: init_conf.c,v 1.14 2003/03/14 14:11:14 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -51,7 +51,7 @@ struct p_table *peer_table;           /* table with peers */
 str aaa_identity= {0, 0};             /* aaa identity */
 str aaa_realm= {0, 0};                /* realm */
 str aaa_fqdn= {0, 0 };
-str product_name = {"AAA FFS",7};     /* product name */
+str product_name = {"AAA FokusFastServer",19};     /* product name */
 unsigned int vendor_id = VENDOR_ID;   /* vendor id */
 unsigned int listen_port = DEFAULT_LISTENING_PORT;   /* listening port */
 unsigned int supported_auth_app_id =
@@ -60,7 +60,7 @@ unsigned int supported_acc_app_id =
 	(1<<AAA_APP_RELAY);
 
 /* config info */
-
+int i;
 struct cfg_def cfg_ids[]={
 	{"debug",        INT_VAL,   &debug        },
 	{"log_stderr",   INT_VAL,   &log_stderr   },
@@ -68,6 +68,7 @@ struct cfg_def cfg_ids[]={
 	{"aaa_realm",    STR_VAL,   &aaa_realm    },
 	{"aaa_fqdn",     STR_VAL,   &aaa_fqdn     },
 	{"listen_port",  INT_VAL,   &listen_port  },
+	{"do_relay",     INT_VAL,   &i},
 	{0,0,0}
 };
 
@@ -95,6 +96,35 @@ void init_random_generator()
 	}
 	seed+=getpid()+time(0);
 	srand(seed);
+}
+
+
+
+int read_config_file()
+{
+	FILE* cfg_file;
+
+	/* read the parameters from confg file */
+	if ((cfg_file=fopen(configFileName, "r"))==0){
+		LOG(L_CRIT,"ERROR:AAAOpen: reading config file: %s\n",strerror(errno));
+		goto error;
+	}
+	if (cfg_parse_stream(cfg_file)!=0){
+		fclose(cfg_file);
+		LOG(L_CRIT,"ERROR:AAAOpen: reading config file(%s)\n", configFileName);
+		goto error;
+	}
+	fclose(cfg_file);
+
+	/* check the params */
+	if ((aaa_identity.s==0)||(aaa_fqdn.s==0)||(aaa_realm.s==0)){
+		LOG(L_CRIT, "critical config parameters missing --exiting\n");
+		goto error_config;
+	}
+
+	return 1;
+error:
+	return -1;
 }
 
 
@@ -147,7 +177,6 @@ AAAReturnCode AAAOpen(char *configFileName)
 {
 	str peer;
 	void* shm_mempool;
-	FILE* cfg_file;
 
 	/* check if the lib is already init */
 	if (is_lib_init) {
@@ -167,16 +196,8 @@ AAAReturnCode AAAOpen(char *configFileName)
 	};
 
 	/* read the config file */
-	if ((cfg_file=fopen(configFileName, "r"))==0){
-		LOG(L_CRIT,"ERROR:AAAOpen: reading config file: %s\n",strerror(errno));
+	if ( read_config_file(configFileName)!=1)
 		goto error_config;
-	}
-	if (cfg_parse_stream(cfg_file)!=0){
-		fclose(cfg_file);
-		LOG(L_CRIT,"ERROR:AAAOpen: reading config file(%s)\n", configFileName);
-		goto error_config;
-	}
-	fclose(cfg_file);
 
 	/* save the name of the config file  */
 	config_filename = shm_malloc( strlen(configFileName)+1 );
@@ -185,21 +206,6 @@ AAAReturnCode AAAOpen(char *configFileName)
 		goto error_config;
 	}
 	strcpy( config_filename, configFileName);
-
-	/* init the random number geberator */
-	init_random_generator();
-
-	printf("after config read: debug=%d, log_stderr=%d\n", debug, log_stderr);
-	printf("identity=%.*s, fqdn=%.*s realm=%.*s\n",
-				aaa_identity.len, aaa_identity.s,
-				aaa_fqdn.len, aaa_fqdn.s,
-				aaa_realm.len, aaa_realm.s
-			);
-	
-	if ((aaa_identity.s==0)||(aaa_fqdn.s==0)||(aaa_realm.s==0)){
-		LOG(L_CRIT, "critical config parameters missing --exiting\n");
-		goto error_config;
-	}
 
 	/* init the hash_table */
 	if ( (hash_table=build_htable())==0)
@@ -250,7 +256,8 @@ mem_error:
 	AAAClose();
 	return AAA_ERR_NOMEM;
 error_config:
-		return  AAA_ERR_CONFIG;
+	LOG(L_ERR,"ERROR:AAAOpen: failed to read configuration from file!\n");
+	return  AAA_ERR_CONFIG;
 }
 
 

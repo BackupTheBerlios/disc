@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.10 2003/03/13 18:46:37 bogdan Exp $
+ * $Id: message.c,v 1.11 2003/03/14 14:11:14 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -674,8 +674,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	if (!msg)
 		goto error;
 
-	if (msg->commandCode==271 || msg->commandCode==257 ||
-	msg->commandCode==280 || msg->commandCode==282) {
+	if (msg->commandCode==257||msg->commandCode==280||msg->commandCode==282) {
 		LOG(L_ERR,"ERROR:AAASendMessage: you are not ALLOWED to send this"
 			" type of message (%d) -> read the draft!!!\n",msg->commandCode);
 		goto error;
@@ -852,11 +851,11 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 	ptr += APPLICATION_ID_SIZE;
 
 	/* Hop-by-Hop-Id */
-	msg->hopbyhopID = *((unsigned int*)ptr);//get_4bytes( ptr );
+	msg->hopbyhopID = *((unsigned int*)ptr);
 	ptr += HOP_BY_HOP_IDENTIFIER_SIZE;
 
 	/* End-to-End-Id */
-	msg->endtoendID = *((unsigned int*)ptr);//get_4bytes( ptr );
+	msg->endtoendID = *((unsigned int*)ptr);
 	ptr += END_TO_END_IDENTIFIER_SIZE;
 
 	/* start decoding the AVPS */
@@ -902,15 +901,15 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 			goto error;
 		}
 
-		ptr += avp_data_len + ((avp_data_len&3)?4-(avp_data_len&3):0);
+		ptr += to_32x_len( avp_data_len );
 		/* link the avp into aaa message to the end */
 		AAAAddAVPToList( &(msg->avpList), avp,
 			(msg->avpList)?(msg->avpList->tail):0);
 	}
 
 	/* link the buffer to the message */
-	//msg->orig_buf.s = source;
-	//msg->orig_buf.len = msg_len;
+	msg->buf.s = source;
+	msg->buf.len = msg_len;
 
 	print_aaa_message( msg );
 	return  msg;

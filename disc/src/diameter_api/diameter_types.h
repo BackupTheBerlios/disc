@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.4 2003/03/13 18:46:16 bogdan Exp $
+ * $Id: diameter_types.h,v 1.5 2003/03/14 14:11:14 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -230,6 +230,7 @@ typedef struct _message_t {
 	void                *appHandle;
 	/* added */
 	void                *trans;
+	str                 buf;
 } AAAMessage;
 
 
