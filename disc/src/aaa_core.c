@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.16 2003/04/16 17:11:19 andrei Exp $
+ * $Id: aaa_core.c,v 1.17 2003/04/22 12:35:48 andrei Exp $
  */
 /* History:
  * --------
@@ -43,7 +43,7 @@
 #define CFG_FILE "aaa.cfg"
 
 
-static char id[]="$Id: aaa_core.c,v 1.16 2003/04/16 17:11:19 andrei Exp $";
+static char id[]="$Id: aaa_core.c,v 1.17 2003/04/22 12:35:48 andrei Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
@@ -133,7 +133,7 @@ int memlog=L_DBG;
 int debug=0;
 
 /* use std error for loging - default value */
-int log_stderr=1;
+int log_stderr=0;
 
 int dont_fork = 0;
 char* chroot_dir = 0;
