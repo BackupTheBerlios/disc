@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.15 2003/04/15 18:23:04 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.16 2003/04/15 18:38:20 bogdan Exp $
  *
  *  History:
  *  --------
@@ -34,7 +34,8 @@
 inline static int do_read( struct peer *p)
 {
 	unsigned char  *ptr;
-	unsigned int   wanted_len, n, len;
+	unsigned int   wanted_len, len;
+	int n;
 	str s;
 
 	if (p->buf==0) {
