@@ -1,5 +1,5 @@
 /*
- * $Id: globals.h,v 1.3 2003/03/17 19:10:55 bogdan Exp $
+ * $Id: globals.h,v 1.4 2003/04/08 12:08:19 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -33,12 +33,7 @@ extern str product_name;
 /* vendor-id */
 extern unsigned int vendor_id;
 
-/* */
-extern unsigned int supported_auth_app_id;
-
-/**/
-unsigned int supported_acc_app_id;
-
+extern unsigned int do_relay;
 
 #endif
 

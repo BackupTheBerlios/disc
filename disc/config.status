@@ -465,17 +465,17 @@ s,@INSTALL_DATA@,${INSTALL} -m 644,;t t
 s,@CYGPATH_W@,echo,;t t
 s,@PACKAGE@,aaa_client,;t t
 s,@VERSION@,0.0.1,;t t
-s,@ACLOCAL@,${SHELL} /home/andrei/andrei_mobile55/aaa_server/missing --run aclocal-1.7,;t t
-s,@AUTOCONF@,${SHELL} /home/andrei/andrei_mobile55/aaa_server/missing --run autoconf,;t t
-s,@AUTOMAKE@,${SHELL} /home/andrei/andrei_mobile55/aaa_server/missing --run automake-1.7,;t t
-s,@AUTOHEADER@,${SHELL} /home/andrei/andrei_mobile55/aaa_server/missing --run autoheader,;t t
-s,@MAKEINFO@,${SHELL} /home/andrei/andrei_mobile55/aaa_server/missing --run makeinfo,;t t
-s,@AMTAR@,${SHELL} /home/andrei/andrei_mobile55/aaa_server/missing --run tar,;t t
-s,@install_sh@,/home/andrei/andrei_mobile55/aaa_server/install-sh,;t t
+s,@ACLOCAL@,${SHELL} /home/bia/work/aaa/aaa_server/missing --run aclocal-1.7,;t t
+s,@AUTOCONF@,${SHELL} /home/bia/work/aaa/aaa_server/missing --run autoconf,;t t
+s,@AUTOMAKE@,${SHELL} /home/bia/work/aaa/aaa_server/missing --run automake-1.7,;t t
+s,@AUTOHEADER@,${SHELL} /home/bia/work/aaa/aaa_server/missing --run autoheader,;t t
+s,@MAKEINFO@,${SHELL} /home/bia/work/aaa/aaa_server/missing --run makeinfo,;t t
+s,@AMTAR@,${SHELL} /home/bia/work/aaa/aaa_server/missing --run tar,;t t
+s,@install_sh@,/home/bia/work/aaa/aaa_server/install-sh,;t t
 s,@STRIP@,strip,;t t
 s,@ac_ct_STRIP@,,;t t
 s,@INSTALL_STRIP_PROGRAM@,${SHELL} $(install_sh) -c -s,;t t
-s,@AWK@,gawk,;t t
+s,@AWK@,mawk,;t t
 s,@SET_MAKE@,,;t t
 s,@build@,i686-pc-linux-gnu,;t t
 s,@build_cpu@,i686,;t t

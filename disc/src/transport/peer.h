@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.12 2003/04/07 15:17:51 bogdan Exp $
+ * $Id: peer.h,v 1.13 2003/04/08 12:08:20 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -10,7 +10,7 @@
 
 #include "../str.h"
 #include "../locking.h"
-#include "../counter.h"
+//#include "../counter.h"
 #include "../timer.h"
 #include "../list.h"
 #include "../hash_table.h"
@@ -53,7 +53,7 @@ struct peer {
 	/* mutex */
 	gen_lock_t *mutex;
 	/* ref counter*/
-	atomic_cnt ref_cnt;
+	//atomic_cnt ref_cnt;
 	/* timer */
 	struct timer_link tl;
 	/* flags */
@@ -68,13 +68,13 @@ struct peer {
 	unsigned int  first_4bytes;
 	unsigned int  buf_len;
 	unsigned char *buf;
-	/* what kind of app the other peer supports */
-	unsigned int supp_acc_app_id;
-	unsigned int supp_auth_app_id;
+	/* what kind of app the peer supports */
+	unsigned int *supp_auth_app_ids;
+	unsigned int *supp_acct_app_ids;
 	/* inactivity time list linker */
 	struct list_head lh;
 	unsigned int last_activ_time;
-	/* counter rhat tells how many time this peer was connected */
+	/* counter that tells how many time this peer was connected */
 	unsigned int conn_cnt;
 };
 #include "trans.h"
@@ -134,25 +134,12 @@ enum AAA_PEER_STATE {
 };
 
 
-/* List with FLAGS coresponding to all known application identifiers */
-typedef enum {
-	AAA_APP_RELAY                = 0,
-	AAA_APP_DIAMETER_COMMON_MSG  = 1,
-	AAA_APP_NASREQ               = 2,
-	AAA_APP_MOBILE_IP            = 3,
-	AAA_APP_DIAMETER_BASE_ACC    = 4,
-	AAA_APP_MAX_ID
-}AAA_APP_IDS;
-
-
 
 /* peer table */
 extern struct p_table *peer_table;
-/* List with all known application identifiers */
-extern unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ];
 
 
-
+/* peer flags */
 #define PEER_TO_DESTROY    1<<0
 #define PEER_CONN_IN_PROG  1<<1
 
@@ -183,6 +170,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *info);
 
 void dispatch_message( struct peer *p, str *buf);
 
+#if 0
 /* increments the ref_counter of the peer */
 void static inline ref_peer(struct peer *p)
 {
@@ -195,6 +183,7 @@ void static inline unref_peer(struct peer *p)
 {
 	atomic_dec(&(p->ref_cnt));
 }
+#endif
 
 
 /* search into the peer table for the peer having the given aaa identity */

@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.5 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: print.c,v 1.6 2003/04/08 12:08:20 bogdan Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -26,7 +26,8 @@ static int mod_tout(int event, AAASessionId* sId, void *context);
 
 struct module_exports exports = {
 	"print",
-	0,
+	2,
+	DOES_AUTH|DOES_ACCT,
 	
 	mod_init,
 	mod_destroy,

@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.6 2003/04/07 15:17:51 bogdan Exp $
+ * $Id: trans.c,v 1.7 2003/04/08 12:08:20 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -87,10 +87,6 @@ void destroy_transaction( struct trans *tr )
 		LOG(L_ERR,"ERROR:destroy_transaction: null parameter received!\n");
 		return;
 	}
-
-	/* unref the peers */
-	if (tr->peer)
-		atomic_dec( &(tr->peer->ref_cnt) );
 
 	/* timer */
 	if (tr->timeout.timer_list)

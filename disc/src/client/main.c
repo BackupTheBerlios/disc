@@ -24,6 +24,8 @@
 #include "dest.h"
 
 
+#define CLIENT_CFG_FILE "aaa_client.cfg"
+
 
 /* shared mem. size*/
 unsigned int shm_mem_size=SHM_MEM_SIZE*1024*1024;
@@ -58,14 +60,8 @@ unsigned int vendor_id = VENDOR_ID;
 /* listening port */
 unsigned int listen_port = DEFAULT_LISTENING_PORT;
 
-/* supported auth. applications */
-unsigned int supported_auth_app_id =
-	(1<<AAA_APP_RELAY) | (1<<AAA_APP_MOBILE_IP);
-
-/* supported acc. applications */
-unsigned int supported_acc_app_id = 
-	(1<<AAA_APP_RELAY) ;
-
+/**/
+unsigned int do_relay = 1;
 
 
 void close_aaa_client();
@@ -111,23 +107,15 @@ void init_random_generator()
 
 
 
-#define CLIENT_CFG_FILE "aaa_client.cfg"
 int init_aaa_client()
 {
 	str aaa_id;
 	str host;
 
-	/* read config file */
-	
-	/*
-	aaa_identity.s = "aaa://fesarius.fokus.gmd.de:1812;transport=tcp";
-	aaa_identity.len = strlen(aaa_identity.s);
-	aaa_realm.s = "fokus.gmd.de";
-	aaa_realm.len = strlen(aaa_realm.s);
-	*/
-
 	/* init modules loading */
 	init_module_loading();
+
+	/* read config file */
 	if (read_config_file(CLIENT_CFG_FILE)!=0){
 		fprintf(stderr, "bad config %s\n", CLIENT_CFG_FILE);
 		goto error;

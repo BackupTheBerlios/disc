@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.7 2003/04/07 21:27:52 andrei Exp $
+ * $Id: aaa_module.c,v 1.8 2003/04/08 12:08:19 bogdan Exp $
  */
 /*
  * History:
@@ -85,6 +85,24 @@ int load_module(char* name)
 		ret=-1;
 		goto error;
 	}
+	/* sanity checks */
+	if (e->app_id==AAA_APP_RELAY) {
+		LOG(L_CRIT, "ERROR: load_module: module \"%s\" advertises "
+			"an app_id that's reserved %x (relay)\n",e->name, e->app_id);
+		ret=-1;
+		goto error;
+	}
+	if (e->app_type==0) {
+		LOG(L_CRIT, "ERROR: load_module: module \"%s\" does not support "
+			"authentication or accounting for app_id %d\n",e->name, e->app_id);
+		ret=-1;
+		goto error;
+	}
+	if (e->mod_msg==0 ) {
+		LOG(L_CRIT, "ERROR: load_module: module \"%s\" exports a NULL "
+			"function for mod_msg\n",e->name);
+		ret=-1;
+	}
 	/* link it in the module list - TODO*/
 	mod=shm_malloc(sizeof(struct aaa_module));
 	if (mod==0){
@@ -109,10 +127,10 @@ int load_module(char* name)
 			ret=-3;
 			goto error;
 		}
-		if ((*m)->exports->appid==e->appid){
+		if ((*m)->exports->app_id==e->app_id){
 			LOG(L_CRIT, "ERROR: load_module: 2 modules with the same "
-					"appid(%u): %s, %s\n",
-					e->appid, (*m)->exports->name, e->name);
+					"app_id(%u): %s, %s\n",
+					e->app_id, (*m)->exports->name, e->name);
 			ret=-4;
 			goto error;
 		}
@@ -160,11 +178,11 @@ void destroy_modules()
 
 
 /* finds a module, given an appid */
-struct aaa_module* find_module(unsigned int appid)
+struct aaa_module* find_module(unsigned int app_id)
 {
 	struct aaa_module* a;
 	
 	for (a=modules; a; a=a->next)
-		if ((a->exports)&&(a->exports->appid==appid)) return a;
+		if ((a->exports)&&(a->exports->app_id==app_id)) return a;
 	return 0;
 }

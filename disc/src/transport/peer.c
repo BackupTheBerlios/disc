@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.18 2003/04/07 15:17:51 bogdan Exp $
+ * $Id: peer.c,v 1.19 2003/04/08 12:08:20 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -21,6 +21,7 @@
 #include "../globals.h"
 #include "../timer.h"
 #include "../msg_queue.h"
+#include "../aaa_module.h"
 #include "../diameter_api/diameter_api.h"
 #include "ip_addr.h"
 #include "resolve.h"
@@ -34,10 +35,8 @@
 #define WAIT_CER_TIMEOUT 5
 #define SEND_DWR_TIMEOUT 35
 
+#define MAX_APPID_PER_PEER 256
 
-#define cheack_app_ids( _peer_ ) \
-	( (((_peer_)->supp_acc_app_id)&(supported_acc_app_id)) || \
-	(((_peer_)->supp_auth_app_id)&(supported_auth_app_id))  )
 
 #define list_add_tail_safe( _lh_ , _list_ ) \
 	do{ \
@@ -60,20 +59,10 @@
 
 
 
-/* List with all known application identifiers */
-static unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ] = {
-	0xffffffff,   /* AAA_APP_RELAY */
-	0x00000000,   /* AAA_APP_DIAMETER_COMMON_MSG */
-	0x00000001,   /* AAA_APP_NASREQ */
-	0x00000002,   /* AAA_APP_MOBILE_IP */
-	0x00000003    /* AAA_APP_DIAMETER_BASE_ACC */
-};
 
-
-
-
-int build_msg_buffers(struct p_table *peer_table);
+void destroy_peer( struct peer *p);
 void peer_timer_handler(unsigned int ticks, void* param);
+int build_msg_buffers(struct p_table *table);
 
 struct p_table      *peer_table = 0;
 static struct timer *del_timer = 0;
@@ -178,8 +167,7 @@ void destroy_peer_manager(struct p_table *peer_table)
 			/* free the peer */
 			list_del( lh );
 			p = list_entry( lh, struct peer, all_peer_lh);
-			destroy_htable( p->trans_table );
-			shm_free( p );
+			destroy_peer( p );
 		}
 		/* destroy the mutex */
 		if (peer_table->mutex)
@@ -229,10 +217,10 @@ void destroy_peer_manager(struct p_table *peer_table)
 
 int build_msg_buffers(struct p_table *table)
 {
+	struct aaa_module *mod;
 	int  nr_auth_app;
-	int  nr_acc_app;
+	int  nr_acct_app;
 	char *ptr;
-	int  i;
 
 	/* standard request */
 	table->std_req.len = AAA_MSG_HDR_SIZE +            /* header */
@@ -299,20 +287,26 @@ int build_msg_buffers(struct p_table *table)
 
 
 	/* CE avps IPv4 */
-	nr_auth_app = nr_acc_app = 0;
-	for(i=0;i<AAA_APP_MAX_ID;i++) {
-		if ((1<<i)&supported_auth_app_id)
+	/* coutn the auth_app_ids and acct_app_ids */
+	nr_auth_app = nr_acct_app = 0;
+	for(mod=modules;mod;mod=mod->next) {
+		if ( mod->exports->app_type&DOES_AUTH )
 			nr_auth_app++;
-		if ((1<<i)&supported_acc_app_id)
-			nr_acc_app++;
+		if ( mod->exports->app_type&DOES_ACCT )
+			nr_acct_app++;
 	}
+	if (do_relay) {
+		nr_auth_app++;
+		nr_acct_app++;
+	}
+
 	/* build the avps */
 	table->ce_avp_ipv4.len =
 		AVP_HDR_SIZE + 4 +                             /* host-ip-address  */
 		AVP_HDR_SIZE + 4 +                             /* vendor-id  */
 		AVP_HDR_SIZE + to_32x_len(product_name.len) +  /* product-name */
 		nr_auth_app*(AVP_HDR_SIZE + 4) +               /* auth-app-id */
-		nr_acc_app*(AVP_HDR_SIZE + 4);                 /* acc-app-id */
+		nr_acct_app*(AVP_HDR_SIZE + 4);                /* acc-app-id */
 	table->ce_avp_ipv4.s = shm_malloc( table->ce_avp_ipv4.len );
 	if (!table->ce_avp_ipv4.s)
 		goto error;
@@ -337,25 +331,41 @@ int build_msg_buffers(struct p_table *table)
 	memcpy( ptr, product_name.s, product_name.len);
 	ptr += to_32x_len(product_name.len);
 	/* auth-app-id AVP */
-	for(i=0;i<AAA_APP_MAX_ID;i++)
-		if ((1<<i)&supported_auth_app_id) {
+	for(mod=modules;mod;mod=mod->next)
+		if ( mod->exports->app_type&DOES_AUTH ) {
 			((unsigned int*)ptr)[0] = htonl(258);
 			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
 			ptr[4] = 1<<6;
 			ptr += AVP_HDR_SIZE;
-			((unsigned int*)ptr)[0] = htonl( AAA_APP_ID[i] );
+			((unsigned int*)ptr)[0] = htonl( mod->exports->app_id );
 			ptr += 4;
 		}
+	if (do_relay) {
+		((unsigned int*)ptr)[0] = htonl(258);
+		((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+		ptr[4] = 1<<6;
+		ptr += AVP_HDR_SIZE;
+		((unsigned int*)ptr)[0] = htonl( AAA_APP_RELAY );
+		ptr += 4;
+	}
 	/* acc-app-id AVP */
-	for(i=0;i<AAA_APP_MAX_ID;i++)
-		if ((1<<i)&supported_acc_app_id) {
+	for(mod=modules;mod;mod=mod->next)
+		if ( mod->exports->app_type&DOES_ACCT ) {
 			((unsigned int*)ptr)[0] = htonl(259);
 			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
 			ptr[4] = 1<<6;
 			ptr += AVP_HDR_SIZE;
-			((unsigned int*)ptr)[0] = htonl( AAA_APP_ID[i] );
+			((unsigned int*)ptr)[0] = htonl( mod->exports->app_id );
 			ptr += 4;
 		}
+	if (do_relay) {
+		((unsigned int*)ptr)[0] = htonl(259);
+		((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+		ptr[4] = 1<<6;
+		ptr += AVP_HDR_SIZE;
+		((unsigned int*)ptr)[0] = htonl( AAA_APP_RELAY );
+		ptr += 4;
+	}
 
 
 	/* CE avps IPv6 */
@@ -484,7 +494,20 @@ error:
 
 void destroy_peer( struct peer *p)
 {
-	/* unimplemented */
+	if (p) {
+		/* destroy transaction hash table */
+		if (p->trans_table)
+			destroy_htable( p->trans_table );
+		/* free the supported application ids */
+		if (p->supp_acct_app_ids)
+			shm_free( p->supp_acct_app_ids );
+		if (p->supp_auth_app_ids)
+			shm_free( p->supp_auth_app_ids );
+		/* free the lock */
+		if (p->mutex)
+			destroy_locks( p->mutex, 1 );
+		shm_free( p );
+	}
 }
 
 
@@ -691,25 +714,36 @@ error:
 
 
 
-int process_ce( struct peer *p, str *buf , int is_req)
+/* if buf containes a request, the response code that has to be sent back as
+ * answer will be returned;
+ * if it's an answer, the contained respponse code will be returned.
+ */
+unsigned int process_ce( struct peer *p, str *buf , int is_req)
 {
 	static unsigned int rpl_pattern = 0x0000003f;
 	static unsigned int req_pattern = 0x0000003e;
-	unsigned int mask = 0;
-	unsigned int n;
+	unsigned int auth_app_ids[ MAX_APPID_PER_PEER ];
+	unsigned int acct_app_ids[ MAX_APPID_PER_PEER ];
+	unsigned int nr_auth_app_ids;
+	unsigned int nr_acct_app_ids;
+	struct aaa_module *mod;
+	unsigned int mask;
+	unsigned int code;
 	char *ptr;
 	char *foo;
-	int  i;
+
+	mask = 0;
+	code = AAA_NO_COMMON_APPLICATION;
+	nr_auth_app_ids = 0;
+	nr_acct_app_ids = 0;
 
 	for_all_AVPS_do_switch( buf , foo , ptr ) {
 		case 268: /* result_code */
 			set_bit_in_mask( mask, 0);
-			n = ntohl( ((unsigned int *)ptr)[2] );
-			if (n!=AAA_SUCCESS) {
-				LOG(L_ERR,"ERROR:process_ce: CEA has a non-success "
-					"code : %d\n",n);
-				goto error;
-			}
+			code = ntohl( ((unsigned int *)ptr)[2] );
+			DBG("DEBUG:process_ce: CEA has code %d\n", code);
+			if (code!=AAA_SUCCESS)
+				return code;
 			break;
 		case 264: /* orig host */
 			set_bit_in_mask( mask, 1);
@@ -727,34 +761,74 @@ int process_ce( struct peer *p, str *buf , int is_req)
 			set_bit_in_mask( mask, 5);
 			break;
 		case 259: /*acc app id*/
-			n = ntohl( ((unsigned int *)ptr)[2] );
-			for(i=0;i<AAA_APP_MAX_ID;i++)
-				if (n==AAA_APP_ID[i]) {
-					p->supp_acc_app_id |= (1<<i);
-					break;
-				}
-			LOG(L_WARN,"WARNING:process_ce: unknown acc-app-id %d\n",n);
+			if (nr_acct_app_ids==MAX_APPID_PER_PEER) {
+				LOG(L_ERR,"ERROR:process_ce: remote peer advertise more "
+					"than %d acct app ids! IGNORING\n",MAX_APPID_PER_PEER);
+				break;
+			}
+			acct_app_ids[nr_acct_app_ids++] = ntohl(((unsigned int*)ptr)[2]);
+			if ( acct_app_ids[nr_acct_app_ids-1]==AAA_APP_RELAY ||
+			((mod=find_module( acct_app_ids[nr_acct_app_ids-1]))!=0
+			&& mod->exports->app_type&DOES_ACCT) )
+				code = AAA_SUCCESS;
 			break;
 		case 258: /*auth app id*/
-			n = ntohl( ((unsigned int *)ptr)[2] );
-			for(i=0;i<AAA_APP_MAX_ID;i++)
-				if (n==AAA_APP_ID[i]) {
-					p->supp_auth_app_id |= (1<<i);
-					break;
-				}
-			LOG(L_WARN,"WARNING:process_ce: unknown auth_app-id %d\n",n);
+			if (nr_auth_app_ids==MAX_APPID_PER_PEER) {
+				LOG(L_ERR,"ERROR:process_ce: remote peer advertise more "
+					"than %d auth app ids! IGNORING\n",MAX_APPID_PER_PEER);
+				break;
+			}
+			auth_app_ids[nr_auth_app_ids++] = ntohl(((unsigned int*)ptr)[2]);
+			if ( auth_app_ids[nr_auth_app_ids-1]==AAA_APP_RELAY ||
+			((mod=find_module( auth_app_ids[nr_auth_app_ids-1]))!=0
+			&& mod->exports->app_type&DOES_AUTH) )
+				code = AAA_SUCCESS;
 			break;
 	}
 
 	if ( mask!=(is_req?req_pattern:rpl_pattern) ) {
 		LOG(L_ERR,"ERROR:process_ce: ce(a|r) has missing avps(%x<>%x)!!\n",
 			(is_req?req_pattern:rpl_pattern),mask);
-		goto error;
+		code = AAA_MISSING_AVP;
 	}
 
-	return 1;
-error:
-	return -1;
+	if (code==AAA_SUCCESS) {
+		/* copy the auth_app_ids into peer structure */
+		if (p->supp_auth_app_ids)
+			shm_free( p->supp_auth_app_ids );
+		p->supp_auth_app_ids = 0;
+		if (nr_auth_app_ids) {
+			p->supp_auth_app_ids = (unsigned int*)shm_malloc
+				((nr_auth_app_ids+1)*sizeof(unsigned int));
+			if (!p->supp_auth_app_ids) {
+				LOG(L_ERR,"ERROR:process_ce: cannot allocate memory -> unable "
+					"to save auth_app_ids\n");
+			} else {
+				memcpy( p->supp_auth_app_ids, auth_app_ids,
+					nr_auth_app_ids*sizeof(unsigned int));
+			}
+		}
+		/* copy the acct_app_ids into peer structure */
+		if (p->supp_acct_app_ids)
+			shm_free( p->supp_acct_app_ids );
+		p->supp_acct_app_ids = 0;
+		if (nr_acct_app_ids) {
+			p->supp_acct_app_ids = (unsigned int*)shm_malloc
+				((nr_acct_app_ids+1)*sizeof(unsigned int));
+			if (!p->supp_acct_app_ids) {
+				LOG(L_ERR,"ERROR:process_ce: cannot allocate memory -> unable "
+					"to save acct_app_ids\n");
+			} else {
+				memcpy( p->supp_acct_app_ids, acct_app_ids,
+					nr_acct_app_ids*sizeof(unsigned int));
+			}
+		}
+	}
+
+	if (code==AAA_NO_COMMON_APPLICATION)
+		LOG(L_ERR,"ERROR:process_ce: no commoun applications with peer!\n");
+
+	return code;
 }
 
 
@@ -1055,8 +1129,13 @@ inline void reset_peer( struct peer *p)
 	p->buf = 0;
 
 	/* reset the supported application ids */
-	p->supp_acc_app_id  = 0;
-	p->supp_auth_app_id = 0;
+	if (p->supp_acct_app_ids)
+		shm_free( p->supp_acct_app_ids );
+	p->supp_acct_app_ids = 0;
+	if (p->supp_auth_app_ids)
+		shm_free( p->supp_auth_app_ids );
+	p->supp_auth_app_ids = 0;
+
 }
 
 
@@ -1241,7 +1320,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			switch (p->state) {
 				case PEER_WAIT_CEA:
 					DBG("DEBUG:peer_state_machine: CEA received\n");
-					if ( process_ce( p, (str*)ptr, 0 )==-1 ) {
+					if ( process_ce( p, (str*)ptr, 0 )!=AAA_SUCCESS ) {
 						tcp_close( p );
 						reset_peer( p );
 						p->state = PEER_UNCONN;
@@ -1267,21 +1346,16 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 				case PEER_WAIT_CEA:
 					DBG("DEBUG:peer_state_machine: CER received -> "
 						"sending CEA\n");
-					res = AAA_SUCCESS;
-					if (process_ce( p, ((struct trans*)ptr)->req, 1 )==-1)
-						res = AAA_MISSING_AVP;
-					else if ( !cheack_app_ids(p) ) {
-						LOG(L_ERR,"ERROR:peer_state_machine: no common app\n");
-						res = AAA_NO_COMMON_APPLICATION;
-					}
+					res = process_ce( p, ((struct trans*)ptr)->req, 1 );
 					/* send the response */
 					if(send_cea((struct trans*)ptr,res)==-1||res!=AAA_SUCCESS){
 						tcp_close( p );
 						reset_peer( p );
 						p->state = PEER_UNCONN;
+					} else {
+						list_add_tail_safe( &p->lh, &activ_peers );
+						p->state = PEER_CONN;
 					}
-					list_add_tail_safe( &p->lh, &activ_peers );
-					p->state = PEER_CONN;
 					lock_release( p->mutex );
 					break;
 				default:
@@ -1444,6 +1518,7 @@ void peer_timer_handler(unsigned int ticks, void* param)
 	struct list_head  *foo;
 	struct peer *p;
 
+#if 0
 	/* DELETE TIMER LIST */
 	/* get the expired peers */
 	tl = get_expired_from_timer_list( del_timer, ticks);
@@ -1459,6 +1534,7 @@ void peer_timer_handler(unsigned int ticks, void* param)
 			add_to_timer_list( &p->tl, del_timer, ticks+DELETE_TIMEOUT );
 		}
 	}
+#endif
 
 	/* RECONN TIME LIST */
 	tl = get_expired_from_timer_list( reconn_timer, ticks);

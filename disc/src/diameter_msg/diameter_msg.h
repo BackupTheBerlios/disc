@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_msg.h,v 1.1 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: diameter_msg.h,v 1.2 2003/04/08 12:08:20 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -115,6 +115,15 @@ typedef enum {
 	AAA_AVP_FLAG_END_TO_END_ENCRYPT = 0x20,
 } AAA_AVPFlag;
 
+
+/* List with all known application identifiers */
+typedef enum {
+	AAA_APP_DIAMETER_COMMON_MSG  = 0,
+	AAA_APP_NASREQ               = 1,
+	AAA_APP_MOBILE_IP            = 2,
+	AAA_APP_DIAMETER_BASE_ACC    = 3,
+	AAA_APP_RELAY                = 0xffffffff,
+}AAA_APP_IDS;
 
 
 /* The following are the result codes returned from remote servers as
