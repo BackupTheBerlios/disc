@@ -1,5 +1,5 @@
 /*
- * $Id: globals.h,v 1.4 2003/04/08 12:08:19 bogdan Exp $
+ * $Id: globals.h,v 1.5 2003/04/08 18:59:52 andrei Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -18,6 +18,7 @@ extern unsigned int shm_mem_size;
 /* listening port for aaa connections */
 extern unsigned int listen_port;
 
+
 /* aaa_identity string */
 extern str aaa_identity;
 
@@ -34,6 +35,7 @@ extern str product_name;
 extern unsigned int vendor_id;
 
 extern unsigned int do_relay;
+
 
 #endif
 

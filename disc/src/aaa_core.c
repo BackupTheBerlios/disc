@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.2 2003/04/08 15:44:32 bogdan Exp $
+ * $Id: aaa_core.c,v 1.3 2003/04/08 18:59:52 andrei Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -171,9 +171,12 @@ void destroy_aaa_core()
 
 int init_aaa_core(char *cfg_file)
 {
+	/*
 	str aaa_id;
 	str host;
+	*/
 	void* shm_mempool;
+	struct cfg_peer_list* pl;
 
 	/* init mallocs */
 	shm_mempool=malloc(shm_mem_size);
@@ -224,12 +227,25 @@ int init_aaa_core(char *cfg_file)
 	}
 
 	/* add the peers from config file */
-	//..................
+	if (pl==0){
+		fprintf(stderr, "ERROR: empty peer list\n");
+		goto error;
+	}
+	for (pl=cfg_peer_lst; pl; pl=pl->next){
+		if (add_peer(&pl->full_uri, &pl->uri.host, pl->uri.port_no)<0){
+			fprintf(stderr, "ERROR: failed to add peer <%.*s>\n",
+					pl->full_uri.len, pl->full_uri.s);
+			goto error;
+		}
+	}
+	
+	/*..................
 	host.s   = "ugluk.mobis.fokus.gmd.de";
 	host.len = strlen(host.s);
 	aaa_id.s   = "aaa://ugluk.mobis.fokus.gmd.de:1812;transport=tcp";
 	aaa_id.len = strlen( aaa_id.s );
 	add_peer( &aaa_id, &host, 1812);
+	*/
 
 	/* init the message queue between transport layer and session one */
 	if (init_msg_queue()==-1) {
@@ -238,7 +254,7 @@ int init_aaa_core(char *cfg_file)
 
 	return 1;
 error:
-	printf("ERROR: cannot init the core\n");
+	fprintf(stderr, "ERROR: cannot init the core\n");
 	destroy_aaa_core();
 	return -1;
 }

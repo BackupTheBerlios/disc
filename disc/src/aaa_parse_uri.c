@@ -1,22 +1,18 @@
 
-#include <stdio.h>
 #include <string.h>
 #include "str.h"
+#include "dprint.h"
+#include "aaa_parse_uri.h"
 
+#if 0
+#include <stdio.h>
 #define DBG printf
 #define LOG(lev, fmt, args...) printf(fmt, ## args)
-
-struct aaa_uri {
-	str host;      /* Host name */
-	str port;      /* Port number */
-	str params;    /* Parameters, all of them */
-	str transport; /* shortcut to transport */
-	str protocol;  /* shortcut to protocol */
-	unsigned short port_no;
-};
+#endif
 
 
 
+/* returns 0 in success and -1 on error */
 int aaa_parse_uri(char* buf, int len, struct aaa_uri* uri)
 {
 	enum states  {	URI_INIT, URI_HOST, URI_PORT,
@@ -43,6 +39,8 @@ int aaa_parse_uri(char* buf, int len, struct aaa_uri* uri)
 	end=buf+len;
 	p=buf+6; /* skip over "aaa://" */
 	state=URI_INIT;
+	s=t=0;
+	param=0;
 	port_no=0;
 	memset(uri, 0, sizeof(struct aaa_uri)); /* zero it all, just to be sure*/
 	/*look for sip:*/
@@ -222,7 +220,7 @@ error_bug:
 	return -1;
 }
 
-
+#if 0
 
 int main (int argc, char** argv)
 {
@@ -242,3 +240,5 @@ int main (int argc, char** argv)
 	}
 	return 0;
 }
+
+#endif
