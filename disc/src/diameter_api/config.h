@@ -1,5 +1,5 @@
 /*
- * $Id: config.h,v 1.1 2003/03/12 18:51:58 andrei Exp $
+ * $Id: config.h,v 1.2 2003/03/13 18:23:24 andrei Exp $
  */
 /* History:
  * --------
@@ -11,6 +11,8 @@
 
 
 #define SHM_MEM_SIZE 1 /* in MB */
+
+#define AAA_LIB_CFG "aaa_lib.cfg" /* config file name */
 
 #endif
 

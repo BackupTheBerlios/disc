@@ -1,8 +1,9 @@
 /*
- * $Id: init_conf.c,v 1.8 2003/03/12 18:58:55 bogdan Exp $
+ * $Id: init_conf.c,v 1.9 2003/03/13 18:23:24 andrei Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
+ * 2003-03-13  added config suport (cfg_parse_stream(), cfg_ids) (andrei)
  *
  */
 
@@ -29,6 +30,7 @@
 #include "message.h"
 
 #include "mem/shm_mem.h"
+#include "cfg_parser.h"
 #include "config.h"
 
 
@@ -41,13 +43,13 @@ static char config_filename[512];
 /* external vars */
 unsigned int shm_mem_size=SHM_MEM_SIZE*1024*1024; /* shared mem. size*/
 int memlog=L_DBG;                     /* shm_mallocs log level */
-int debug;                           /* debuging level */
-int log_stderr;                      /* use std error fro loging? */
+int debug=9;                           /* debuging level */
+int log_stderr=1;                      /* use std error fro loging? */
 struct h_table *hash_table;          /* hash table for sessions and trans */
 struct p_table *peer_table;          /* table with peers */
-str aaa_identity;                    /* aaa identity */
-str aaa_realm;                       /* realm */
-str aaa_fqdn;
+str aaa_identity= {0, 0};             /* aaa identity */
+str aaa_realm= {0, 0};                /* realm */
+str aaa_fqdn= {0, 0 };
 str product_name = {"AAA FFS",7};    /* product name */
 unsigned int vendor_id = 12345;      /* vendor id */
 unsigned int supported_auth_app_id =
@@ -55,6 +57,16 @@ unsigned int supported_auth_app_id =
 unsigned int supported_acc_app_id = 
 	(1<<AAA_APP_RELAY);
 
+/* config info */
+
+struct cfg_def cfg_ids[]={
+	{"debug",        INT_VAL,   &debug        },
+	{"log_stderr",   INT_VAL,   &log_stderr   },
+	{"aaa_identity", STR_VAL,   &aaa_identity },
+	{"aaa_realm",    STR_VAL,   &aaa_realm    },
+	{"aaa_fqdn",     STR_VAL,   &aaa_fqdn     },
+	{0,0,0}
+};
 
 
 
@@ -127,6 +139,7 @@ AAAReturnCode AAAOpen(char *configFileName)
 {
 	str peer;
 	void* shm_mempool;
+	FILE* cfg_file;
 
 	/* check if the lib is already init */
 	if (is_lib_init) {
@@ -146,12 +159,23 @@ AAAReturnCode AAAOpen(char *configFileName)
 	};
 
 	/* read the config file */
-	if (0) {
-		return  AAA_ERR_CONFIG;
+	if ((cfg_file=fopen(AAA_LIB_CFG, "r"))==0){
+		LOG(L_CRIT, "ERROR: reading config file: %s\n", strerror(errno));
+		goto error_config;
 	}
+	if (cfg_parse_stream(cfg_file)!=0){
+		fclose(cfg_file);
+		LOG(L_CRIT, "ERROR: reading config file(%s)\n", AAA_LIB_CFG);
+		goto error_config;
+	}
+	fclose(cfg_file);
+
+		
+	/* ????? */
 	strncpy( config_filename, configFileName, sizeof(config_filename)-1);
 	config_filename[511] = 0;
 
+#if 0
 	/**/
 	aaa_identity.s = "aaa://fesarius.fokus.gmd.de:1812;transport=tcp";
 	aaa_identity.len = strlen(aaa_identity.s);
@@ -159,13 +183,27 @@ AAAReturnCode AAAOpen(char *configFileName)
 	aaa_fqdn.len = 21;
 	aaa_realm.s = aaa_identity.s + 15;
 	aaa_realm.len = 12 ;
+#endif
 
 	/* init the random number geberator */
 	init_random_generator();
 
 	/* init the log system */
+#if 0
 	debug = 9;
 	log_stderr = 1;
+#endif 
+	printf("after config read: debug=%d, log_stderr=%d\n", debug, log_stderr);
+	printf("identity=%.*s, fqdn=%.*s realm=%.*s\n",
+				aaa_identity.len, aaa_identity.s,
+				aaa_fqdn.len, aaa_fqdn.s,
+				aaa_realm.len, aaa_realm.s
+			);
+	
+	if ((aaa_identity.s==0)||(aaa_fqdn.s==0)||(aaa_realm.s==0)){
+		LOG(L_CRIT, "critical config parameters missing --exiting\n");
+		goto error_config;
+	}
 
 	/* init the hash_table */
 	if ( (hash_table=build_htable())==0)
@@ -215,6 +253,8 @@ mem_error:
 	LOG(L_ERR,"ERROR:AAAOpen: AAA library initialization failed!\n");
 	AAAClose();
 	return AAA_ERR_NOMEM;
+error_config:
+		return  AAA_ERR_CONFIG;
 }
 
 
