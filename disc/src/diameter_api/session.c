@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.7 2003/03/18 18:09:44 bogdan Exp $
+ * $Id: session.c,v 1.8 2003/03/25 12:54:02 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -473,6 +473,9 @@ AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 	*(p++) = '.';
 	p += int2hexstr( session->linker.label, p, 8);
 	session->sID.len = p - session->sID.s;
+
+	/* link info into the session */
+	session->abort_callback = abortCallback;
 
 	/* return the session-ID */
 	*sessionId = &(session->sID);
