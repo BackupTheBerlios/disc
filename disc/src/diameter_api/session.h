@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.8 2003/03/28 10:25:03 bogdan Exp $
+ * $Id: session.h,v 1.9 2003/03/28 14:20:43 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -26,18 +26,19 @@ enum {
 
 /* possible identities for AAA parties */
 enum AAA_ENTITY {
-	AAA_CLIENT,
-	AAA_SERVER,
-	AAA_SERVER_STATEFULL,
-	AAA_SERVER_STATELESS
+	AAA_CLIENT = 1,
+	AAA_SERVER = 2,
+	AAA_SERVER_STATELESS = 2,
+	AAA_SERVER_STATEFULL = 3,
 };
 
 /* all possible events for the session state machines */
 enum AAA_EVENTS {
 	AAA_AA_RECEIVED,
 	AAA_AR_RECEIVED,
-	AAA_AR_SENT,
-	AAA_AA_SENT,
+	AAA_SEND_AR,
+	AAA_SEND_AA,
+
 	AAA_SESSION_TIMEOUT,
 	AAA_ASR_RECEIVED,
 	AAA_ASA_RECEIVED,
@@ -75,6 +76,8 @@ struct session_manager {
 struct session {
 	/* linker into hash table; MUST be the first */
 	struct h_link  linker;
+	/* mutex */
+	gen_lock_t *mutex;
 	/* AAA info */
 	unsigned short peer_identity;        /* is it a client, server ....? */
 	str sID;                             /* session-ID as string */

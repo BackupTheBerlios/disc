@@ -1,5 +1,5 @@
 /*
- * $Id: message.h,v 1.9 2003/03/18 17:29:40 bogdan Exp $
+ * $Id: message.h,v 1.10 2003/03/28 14:20:43 bogdan Exp $
  *
  * 2003-02-07 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -36,14 +36,14 @@ void destroy_msg_manager();
 
 void print_aaa_message( AAAMessage *msg);
 
-struct trans *send_aaa_request( str *buf, struct session *ses, struct peer *p);
+int send_request( AAAMessage *msg );
 
-int send_aaa_response( str *buf, struct trans *tr);
+int send_response( str *buf, struct trans *tr);
 
-AAAMessage* build_rpl_from_req(AAAMessage *req, unsigned int result_code,
-														str *err_msg);
+//AAAMessage* build_rpl_from_req(AAAMessage *req, unsigned int result_code,
+//														str *err_msg);
 
-int process_msg( unsigned char *, unsigned int, struct peer*);
+//int process_msg( unsigned char *, unsigned int, struct peer*);
 
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.8 2003/03/27 20:11:04 bogdan Exp $
+ * $Id: peer.h,v 1.9 2003/03/28 14:20:43 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -98,6 +98,12 @@ struct p_table {
 };
 
 
+struct peer_chaine {
+	struct peer_chaine *next;
+	struct peer        *peer;
+};
+
+
 enum AAA_PEER_EVENT {
 	TCP_ACCEPT,         /*  0 */
 	TCP_CONNECTED,      /*  1 */
@@ -168,6 +174,8 @@ void destroy_peer_manager();
 int add_peer( str *aaa_identity, str *host, unsigned int port);
 
 void init_all_peers();
+
+int send_req_to_peers(struct trans *tr , struct peer_chaine *pc);
 
 int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *info);
 

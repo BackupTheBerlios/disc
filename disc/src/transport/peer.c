@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.9 2003/03/27 20:11:04 bogdan Exp $
+ * $Id: peer.c,v 1.10 2003/03/28 14:20:43 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -476,15 +476,43 @@ void destroy_peer( struct peer *p)
 
 
 
+int send_req_to_peers( struct trans *tr , struct peer_chaine *pc)
+{
+	for( ; pc ; pc=pc->next ) {
+		lock_get( pc->peer->mutex );
+		if ( pc->peer->state!=PEER_CONN ) {
+			lock_release( pc->peer->mutex);
+			continue;
+		}
+		/* peer available for sending */
+		add_cell_to_htable( pc->peer->trans_table, &(tr->linker) );
+		tr->peer = pc->peer;
+		/* the hash label is used as hop-by-hop ID */
+		((unsigned int*)tr->req.s)[3] = tr->linker.label;
+		if (write( pc->peer->sock, tr->req.s, tr->req.len)!=-1) {
+			/* success */
+			return 1;
+		} else {
+			/* write failed*/
+			remove_cell_from_htable( pc->peer->trans_table, &(tr->linker) );
+			lock_release( pc->peer->mutex);
+		}
+	}
+
+	return -1;
+}
+
+
+
 /*  sends out a buffer*/
-struct trans *internal_send_aaa_request( str *buf, struct peer *p)
+struct trans *internal_send_request( str *buf, struct peer *p)
 {
 	struct trans *tr;
 	str s;
 
 	/* build a new transaction for this request */
 	if ((tr=create_transaction( buf, 0, p))==0) {
-		LOG(L_ERR,"ERROR:internal_send_aaa_request: cannot create a new"
+		LOG(L_ERR,"ERROR:internal_send_request: cannot create a new"
 			" transaction!\n");
 		goto error;
 	}
@@ -504,7 +532,7 @@ struct trans *internal_send_aaa_request( str *buf, struct peer *p)
 
 	/* send the request */
 	if ( tcp_send_unsafe( p, buf->s, buf->len)==-1 ) {
-		LOG(L_ERR,"ERROR:internal_send_aaa_request: tcp_send_unsafe returned"
+		LOG(L_ERR,"ERROR:internal_send_request: tcp_send_unsafe returned"
 			" error!\n");
 		goto error;
 	}
@@ -523,13 +551,13 @@ error:
 
 
 
-int internal_send_aaa_response( str *buf, struct trans *tr)
+int internal_send_response( str *buf, struct trans *tr)
 {
 	int ret;
 
 	/* send the message */
 	if ( (ret=tcp_send_unsafe( tr->peer, buf->s, buf->len))==-1 ) {
-		LOG(L_ERR,"ERROR:internal_send_aaa_response: tcp_send_unsafe "
+		LOG(L_ERR,"ERROR:internal_send_response: tcp_send_unsafe "
 			"returned error!\n");
 	}
 
@@ -565,7 +593,7 @@ int send_cer( struct peer *dst_peer)
 	memcpy( ptr + AVP_HDR_SIZE, &dst_peer->local_ip, sizeof(struct ip_addr) );
 
 	/* send the buffer */
-	if ( (tr=internal_send_aaa_request( &cer, dst_peer))==0 )
+	if ( (tr=internal_send_request( &cer, dst_peer))==0 )
 		goto error;
 	tr->info = dst_peer->conn_cnt;
 
@@ -602,7 +630,7 @@ int send_cea( struct trans *tr, unsigned int result_code)
 
 
 	/* send the buffer */
-	return internal_send_aaa_response( &cea, tr);
+	return internal_send_response( &cea, tr);
 
 	return 1;
 error:
@@ -698,7 +726,7 @@ int send_dwr( struct peer *dst_peer)
 	((unsigned int*)ptr)[1] |= DW_MSG_CODE;
 
 	/* send the buffer */
-	if ( (tr=internal_send_aaa_request( &dwr, dst_peer))==0 )
+	if ( (tr=internal_send_request( &dwr, dst_peer))==0 )
 		goto error;
 	tr->info = dst_peer->conn_cnt;
 
@@ -729,7 +757,7 @@ int send_dwa( struct trans *tr, unsigned int result_code)
 		htonl( result_code );
 
 	/* send the buffer */
-	return internal_send_aaa_response( &dwa, tr);
+	return internal_send_response( &dwa, tr);
 
 	return 1;
 error:
@@ -802,7 +830,7 @@ int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 	((unsigned int*)ptr)[ AVP_HDR_SIZE>>2 ] |= htonl( disc_cause );
 
 	/* send the buffer */
-	if ( (tr=internal_send_aaa_request( &dpr, dst_peer))==0 )
+	if ( (tr=internal_send_request( &dpr, dst_peer))==0 )
 		goto error;
 	tr->info = dst_peer->conn_cnt;
 
@@ -833,7 +861,7 @@ int send_dpa( struct trans *tr, unsigned int result_code)
 		htonl( result_code );
 
 	/* send the buffer */
-	return internal_send_aaa_response( &dpa, tr);
+	return internal_send_response( &dpa, tr);
 
 	return 1;
 error:

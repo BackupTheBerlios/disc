@@ -12,7 +12,7 @@
 #include "../mem/shm_mem.h"
 #include "../sh_mutex.h"
 #include "../timer.h"
-#include "../script.h"$
+#include "../script.h"
 #include "../transport/peer.h"
 #include "../transport/tcp_shell.h"
 

@@ -66,8 +66,6 @@ void tcp_connect(struct peer *p);
 
 void tcp_close( struct peer *p);
 
-int tcp_send( struct peer *p, unsigned char *buf, unsigned int len);
-
 inline int static write_command(unsigned int fd_pipe, unsigned int code,
 							unsigned int fd, struct peer *peer, void *attrs)
 {

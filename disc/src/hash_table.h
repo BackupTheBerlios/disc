@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.h,v 1.4 2003/03/17 19:10:55 bogdan Exp $
+ * $Id: hash_table.h,v 1.5 2003/03/28 14:20:43 bogdan Exp $
  *
  * 2003-01-29 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -27,7 +27,7 @@
 struct h_link {
 	struct list_head lh;
 	unsigned int     label;
-	unsigned int      hash_code;
+	unsigned int     hash_code;
 };
 
 

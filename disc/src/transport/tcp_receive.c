@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.4 2003/03/17 19:10:55 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.5 2003/03/28 14:20:43 bogdan Exp $
  *
  *  History:
  *  --------
@@ -218,21 +218,6 @@ void tcp_close( struct peer *p)
 	close(p->sock);
 	FD_CLR( p->sock, &p->tinfo->rd_set);
 	FD_CLR( p->sock, &p->tinfo->wr_set);
-}
-
-
-
-
-int tcp_send( struct peer *p, unsigned char *buf, unsigned int len)
-{
-	int ret=-1;
-
-	lock_get( p->mutex );
-	if (p->state==PEER_CONN)
-		ret = write( p->sock, buf, len);
-	lock_release( p->mutex);
-
-	return ret;
 }
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.18 2003/03/28 10:25:03 bogdan Exp $
+ * $Id: message.c,v 1.19 2003/03/28 14:20:43 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -105,8 +105,8 @@ void destroy_msg_manager()
 }
 
 
-#if 0
-inline static AAAMsgIdentifier generate_endtoendID()
+
+inline static unsigned int generate_endtoendID()
 {
 	unsigned int id;
 	lock_get( msg_mgr->end_to_end_lock );
@@ -114,7 +114,7 @@ inline static AAAMsgIdentifier generate_endtoendID()
 	lock_release( msg_mgr->end_to_end_lock );
 	return id;
 }
-#endif
+
 
 
 
@@ -325,34 +325,34 @@ error:
 
 /* from a AAAMessage structure, a buffer to be send is build
  */
-int build_buf_from_msg( AAAMessage *msg, str *buf)
+int build_buf_from_msg( AAAMessage *msg )
 {
 	unsigned char *p;
 	unsigned int  k;
 	AAA_AVP       *avp;
 
 	/* first let's comput the length of the buffer */
-	buf->len = AAA_MSG_HDR_SIZE; /* AAA message header size */
+	msg->buf.len = AAA_MSG_HDR_SIZE; /* AAA message header size */
 	/* count and add the avps */
 	for(avp=msg->avpList.head;avp;avp=avp->next) {
-		buf->len+=AVP_HDR_SIZE+(AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0))
+		msg->buf.len+=AVP_HDR_SIZE+(AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0))
 			+ to_32x_len( avp->data.len ) /*data*/;
 	}
 
-	DBG("xxxx len=%d\n",buf->len);
+	DBG("xxxx len=%d\n",msg->buf.len);
 	/* allocate some memory */
-	buf->s = (unsigned char*)shm_malloc( buf->len );
-	if (!buf->s) {
+	msg->buf.s = (unsigned char*)shm_malloc( msg->buf.len );
+	if (!msg->buf.s) {
 		LOG(L_ERR,"ERROR:build_buf_from_msg: no more free memory!\n");
 		goto error;
 	}
-	memset(buf->s, 0, buf->len);
+	memset(msg->buf.s, 0, msg->buf.len);
 
 	/* fill in the buffer */
-	p = buf->s;
+	p = msg->buf.s;
 	/* DIAMETER HEADER */
 	/* message length */
-	((unsigned int*)p)[0] =htonl(buf->len);
+	((unsigned int*)p)[0] =htonl(msg->buf.len);
 	/* Diameter Version */
 	*p = 1;
 	p += VER_SIZE + MESSAGE_LENGTH_SIZE;
@@ -394,9 +394,11 @@ int build_buf_from_msg( AAAMessage *msg, str *buf)
 		p += to_32x_len( avp->data.len );
 	}
 
-	if ((char*)p-buf->s!=buf->len) {
+	if ((char*)p-msg->buf.s!=msg->buf.len) {
 		LOG(L_ERR,"BUG: build_buf_from_msg: mismatch between len and buf!\n");
-		shm_free( buf->s );
+		shm_free( msg->buf.s );
+		msg->buf.s = 0;
+		msg->buf.len = 0;
 		goto error;
 	}
 
@@ -408,22 +410,24 @@ error:
 
 
 
-/*  sends out a aaa message, within or not a session
+/*  sends out a aaa message
  */
-struct trans *send_aaa_request( str *buf, struct session *ses, struct peer *p)
+int send_request( AAAMessage *msg)
 {
+	struct peer_chaine *pc;
 	unsigned int ete;
 	struct trans *tr;
-	int ret;
 	str s;
 
-	/* find the destination peer */
-	if (!p) {
-		/* try find the destination-host avp */
-	}
+	tr = 0;
+
+	/* generate the buf from the message */
+	if ( build_buf_from_msg( msg )==-1 )
+		goto error;
 
 	/* build a new transaction for this request */
-	if ((tr=create_transaction( buf, ses, p))==0) {
+	if (( tr = create_transaction( &(msg->buf),
+	(struct session*)msg->intern/*ses*/, 0/*no peeer yest*/))==0 ) {
 		LOG(L_ERR,"ERROR:send_aaa_request: cannot create a new"
 			" transaction!\n");
 		goto error;
@@ -431,26 +435,19 @@ struct trans *send_aaa_request( str *buf, struct session *ses, struct peer *p)
 
 	/* generate a new end-to-end id */
 	ete = generate_endtoendID();
-	((unsigned int *)buf->s)[4] = ete;
+	((unsigned int *)msg->buf.s)[4] = ete;
+
+	pc = (struct peer_chaine*)msg->peers;
 
 	/* link the transaction into the hash table ; use end-to-end-ID for
 	 * calculating the hash_code */
 	s.s = (char*)&ete;
 	s.len = END_TO_END_IDENTIFIER_SIZE;
-	//tr->linker.hash_code = hash( &s );
-	//tr->linker.type = TRANSACTION_CELL_TYPE;
-	//add_cell_to_htable( hash_table, (struct h_link*)tr ); ??????????
-	/* the hash label is used as hop-by-hop ID */
-	((unsigned int*)buf->s)[3] = tr->linker.label;
+	tr->linker.hash_code = hash( &s , pc->peer->trans_table->hash_size );
 
 	/* send the request */
-	if (!ses)
-		ret = tcp_send_unsafe( p, buf->s, buf->len);
-	else
-		ret = tcp_send( p, buf->s, buf->len);
-	/* what's the score?? */
-	if (ret==-1) {
-		LOG(L_ERR,"ERROR:send_aaa_request: tcp_send returned error!\n");
+	if (send_req_to_peers(tr, (struct peer_chaine*)msg->peers)==-1) {
+		LOG(L_ERR,"ERROR:send_aaa_request: send returned error!\n");
 		goto error;
 	}
 
@@ -458,12 +455,16 @@ struct trans *send_aaa_request( str *buf, struct session *ses, struct peer *p)
 	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
 		get_ticks()+TR_TIMEOUT_TIMEOUT );
 
-	return tr;
+	return 1;
 error:
-	shm_free( buf->s );
-	if (tr)
+	if (tr) {
 		destroy_transaction(tr);
-	return 0;
+	} else if (msg->buf.s) {
+		shm_free( msg->buf.s );
+		msg->buf.s = 0;
+		msg->buf.len = 0;
+	}
+	return -1;
 }
 
 
@@ -473,10 +474,7 @@ int send_aaa_response( str *buf, struct trans *tr)
 	int ret;
 
 	/* send the message */
-	if (!tr->ses)
-		ret = tcp_send_unsafe( tr->peer, buf->s, buf->len);
-	else
-		ret = tcp_send( tr->peer, buf->s, buf->len);
+	ret = tcp_send( tr->peer, buf->s, buf->len);
 	/* what's the score?? */
 	if (ret==-1) {
 		LOG(L_ERR,"ERROR:send_aaa_response: tcp_send returned error!\n");
@@ -663,18 +661,13 @@ AAAResultCode  AAASetMessageResultCode(
 AAAReturnCode  AAASendMessage(AAAMessage *msg)
 {
 	struct peer_chaine *pc;
-	struct session *ses;
-	struct trans   *tr;
-	AAA_AVP        *avp;
-	unsigned int   event;
-	str            buf;
-	int            ret;
+	struct session     *ses;
+	struct trans       *tr;
+	unsigned int       event;
+	int                ret;
 
 	ses = 0;
-	avp = 0;
 	tr  = 0;
-	buf.s =0;
-	buf.len = 0;
 
 	/* some checks */
 	if (!msg)
@@ -703,7 +696,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 				event = AAA_RAA_SENT;
 				break;
 			default:
-				event = AAA_AA_SENT;
+				event = AAA_SEND_AA;
 		}
 		//if (session_state_machine( ses, event)!=1)
 		//	goto error;
@@ -716,9 +709,6 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	} else {
 		/* it's a request -> get its session */
 		ses = (struct session*)msg->intern;
-		/* generate the buf from the message */
-		if ( build_buf_from_msg( msg, &buf)==-1 )
-			goto error;
 		/* where should I send this request? */
 		pc = 0;
 		ret = do_routing( msg, &pc );
@@ -740,28 +730,15 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 				event = AAA_RAR_SENT;
 				break;
 			default:
-				event = AAA_AR_SENT;
+				event = AAA_SEND_AR;
 		}
 		if (session_state_machine( ses, event, msg)!=1)
 			goto error;
-		/* send the response */
-		//if ( (tr=send_aaa_request( &buf, ses, 0/*dst_peer*/))==0 )
-		//	goto error;
-		//msg->intern = tr;
 	}
 
 	AAAFreeMessage( &msg );
 	return AAA_ERR_SUCCESS;
 error:
-	if (is_req(msg)) {
-		if (tr)
-			destroy_transaction(tr);
-		else
-			shm_free( buf.s );
-	} else {
-		destroy_transaction(tr);
-		shm_free( buf.s );
-	}
 	AAAFreeMessage( &msg );
 	return AAA_ERR_FAILURE;
 }

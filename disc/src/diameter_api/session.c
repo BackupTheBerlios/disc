@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.10 2003/03/28 10:25:03 bogdan Exp $
+ * $Id: session.c,v 1.11 2003/03/28 14:20:43 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -10,21 +10,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "../mem/shm_mem.h"
 #include "../dprint.h"
 #include "../str.h"
 #include "../globals.h"
 #include "../utils.h"
 #include "../aaa_lock.h"
 #include "../locking.h"
+#include "../sh_mutex.h"
 #include "../hash_table.h"
+#include "message.h"
 #include "session.h"
 
-#include "../mem/shm_mem.h"
 
 
-/* local vars */
-struct session_manager  ses_mgr;   /* session-IDs manager */
-
+/* session-ID manager */
+struct session_manager  ses_mgr;
 
 
 /* extra functions */
@@ -246,6 +247,9 @@ struct session* create_session( unsigned short peer_id)
 	}
 	memset( ses, 0, sizeof(struct session));
 
+	/* get a shared mutex for it */
+	ses->mutex = get_shared_mutex();
+
 	/* init the session */
 	ses->peer_identity = peer_id;
 	ses->state = AAA_IDLE_STATE;
@@ -275,7 +279,8 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 		"no error"
 		"event - state mismatch",
 		"unknown type event",
-		"unknown peer_identity type"
+		"unknown peer_identity type",
+		"internal error",
 	};
 	int error_code=0;
 
@@ -286,19 +291,25 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 		case AAA_CLIENT:
 			/* I am server, I am all the time statefull ;-) */
 			break;
-		case AAA_SERVER:
 		case AAA_SERVER_STATELESS:
 			/* I am client to a stateless server */
 			switch( event ) {
-				case AAA_AR_SENT:
-					/* an auth request was sent */
+				case AAA_SEND_AR:
+					/* an auth request has to be sent */
+					lock_get( ses->mutex );
 					switch(ses->state) {
 						case AAA_IDLE_STATE:
-							/* store all the needed information from AR */
-							//TO DO
+							/* send out the message */
+							if (send_request(msg)==-1) {
+								lock_release( ses->mutex );
+								error_code = 4;
+								goto error;
+							}
 							ses->state = AAA_PENDING_STATE;
+							lock_release( ses->mutex );
 							break;
 						default:
+							lock_release( ses->mutex );
 							error_code = 1;
 							goto error;
 					}
@@ -339,7 +350,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 		case AAA_SERVER_STATEFULL:
 			/* I am client to a statefull server */
 			switch( event ) {
-				case AAA_AR_SENT:
+				case AAA_SEND_AR:
 					/* an re-auth request was sent */
 					switch(ses->state) {
 						case AAA_OPEN_STATE:
