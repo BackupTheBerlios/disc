@@ -1,5 +1,5 @@
 /*
- * $Id: global.h,v 1.2 2003/03/11 18:06:29 bogdan Exp $
+ * $Id: globals.h,v 1.1 2003/03/12 18:12:22 andrei Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -13,10 +13,13 @@
 #include "hash_table.h"
 #include "peer.h"
 
+/* mallocs*/
+extern unsigned int shm_mem_size;
 
 /* for logging */
 extern int debug;
 extern int log_stderr;
+extern int memlog;
 
 /* hash_table */
 extern struct h_table *hash_table;

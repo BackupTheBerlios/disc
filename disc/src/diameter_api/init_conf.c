@@ -1,7 +1,8 @@
 /*
- * $Id: init_conf.c,v 1.6 2003/03/11 23:02:03 bogdan Exp $
+ * $Id: init_conf.c,v 1.7 2003/03/12 18:12:22 andrei Exp $
  *
- * 2003-02-03 created by bogdan
+ * 2003-02-03  created by bogdan
+ * 2003-03-12  converted to shm_malloc, from ser (andrei)
  *
  */
 
@@ -14,10 +15,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "utils/str.h"
-#include "global.h"
+#include "globals.h"
 #include "init_conf.h"
 #include "diameter_types.h"
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "tcp_shell/common.h"
 #include "hash_table.h"
 #include "timer.h"
@@ -27,13 +28,19 @@
 #include "session.h"
 #include "message.h"
 
+#include "mem/shm_mem.h"
+#include "config.h"
+
 
 
 /* local vars */
 static int is_lib_init = 0;
 static char config_filename[512];
 
+
 /* external vars */
+unsigned int shm_mem_size=SHM_MEM_SIZE*1024*1024; /* shared mem. size*/
+int memlog=L_DBG;                     /* shm_mallocs log level */
 int debug;                           /* debuging level */
 int log_stderr;                      /* use std error fro loging? */
 struct h_table *hash_table;          /* hash table for sessions and trans */
@@ -119,12 +126,24 @@ AAAReturnCode AAAClose()
 AAAReturnCode AAAOpen(char *configFileName)
 {
 	str peer;
+	void* shm_mempool;
 
 	/* check if the lib is already init */
 	if (is_lib_init) {
 		LOG(L_ERR,"ERROR: AAAOpen: library already initialized!!\n");
 		return AAA_ERR_ALREADY_INIT;
 	}
+
+	/* init mallocs */
+	shm_mempool=malloc(shm_mem_size);
+	if (shm_mempool==0){
+		LOG(L_CRIT, "ERROR: AAAOpen: intial malloc failed\n");
+		return AAA_ERR_NOMEM;
+	};
+	if (shm_mem_init_mallocs(shm_mempool, shm_mem_size)<0){
+		LOG(L_CRIT, "ERROR: AAAOpen: could not intialize shm. mallocs\n");
+		return AAA_ERR_NOMEM;
+	};
 
 	/* read the config file */
 	if (0) {

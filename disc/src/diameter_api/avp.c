@@ -1,15 +1,18 @@
 /*
- * $Id: avp.c,v 1.3 2003/03/11 18:06:29 bogdan Exp $
+ * $Id: avp.c,v 1.4 2003/03/12 18:12:22 andrei Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
+ * 2003-03-12 converted to shm_malloc/free (andrei)
  *
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "diameter_types.h"
+
+#include "mem/shm_mem.h"
 
 
 
@@ -81,7 +84,7 @@ AAAReturnCode  create_avp(
 {
 	/* allocated a new AVP struct */
 	(*avp) = 0;
-	(*avp) = (AAA_AVP*)malloc(sizeof(AAA_AVP));
+	(*avp) = (AAA_AVP*)shm_malloc(sizeof(AAA_AVP));
 	if (!(*avp))
 		goto error;
 	memset( *avp, 0, sizeof(AAA_AVP) );
@@ -101,8 +104,8 @@ AAAReturnCode  create_avp(
 	return AAA_ERR_SUCCESS;
 error:
 	LOG(L_ERR,"ERROR:create_avp: no more free memory!\n");
-	if (*avp) free(*avp);
-	if (data && free_it) free(data);
+	if (*avp) shm_free(*avp);
+	if (data && free_it) shm_free(data);
 	return AAA_ERR_NOMEM;
 }
 
@@ -129,7 +132,7 @@ AAAReturnCode  AAACreateAVP(
 	}
 
 	/* make a duplicate for data */
-	p = (void*)malloc(length);
+	p = (void*)shm_malloc(length);
 	if(!p) {
 		LOG(L_ERR,"ERROR:AAACreateAVP: no more free memory!\n");
 		goto error;
@@ -194,7 +197,7 @@ AAAReturnCode  AAAAddAVPToList(
 
 	/* do we have to create a new list? */
 	if (*avpList==0) {
-		*avpList = (AAA_AVP_LIST*)malloc(sizeof(AAA_AVP_LIST));
+		*avpList = (AAA_AVP_LIST*)shm_malloc(sizeof(AAA_AVP_LIST));
 		if (*avpList==0) {
 			LOG(L_ERR,"ERROR: AAACreateAVP: no more free memory!\n");
 			return AAA_ERR_NOMEM;
@@ -367,8 +370,8 @@ AAAReturnCode  AAAFreeAVP(AAA_AVP **avp)
 
 	/* free all the mem */
 	if ( (*avp)->free_it && (*avp)->data.s )
-		free((*avp)->data.s);
-	free( *avp );
+		shm_free((*avp)->data.s);
+	shm_free( *avp );
 	avp = 0;
 
 	return AAA_ERR_SUCCESS;
@@ -484,7 +487,7 @@ AAA_AVP* clone_avp( AAA_AVP *avp , unsigned int clone_data)
 		goto error;
 
 	/* clone the avp structure */
-	n_avp = (AAA_AVP*)malloc( sizeof(AAA_AVP) );
+	n_avp = (AAA_AVP*)shm_malloc( sizeof(AAA_AVP) );
 	if (!n_avp) {
 		LOG(L_ERR,"ERROR:clone_avp: cannot get free memory!!\n");
 		goto error;
@@ -494,10 +497,10 @@ AAA_AVP* clone_avp( AAA_AVP *avp , unsigned int clone_data)
 
 	if (clone_data) {
 		/* clone the avp data */
-		n_avp->data.s = (char*)malloc( avp->data.len );
+		n_avp->data.s = (char*)shm_malloc( avp->data.len );
 		if (!(n_avp->data.s)) {
 			LOG(L_ERR,"ERROR:clone_avp: cannot get free memory!!\n");
-			free( n_avp );
+			shm_free( n_avp );
 			goto error;
 		}
 		memcpy( n_avp->data.s, avp->data.s, avp->data.len);

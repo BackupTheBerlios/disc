@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.3 2003/03/11 18:06:29 bogdan Exp $
+ * $Id: trans.h,v 1.4 2003/03/12 18:12:22 andrei Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -9,7 +9,7 @@
 #define _AAA_DIAMETER_TRANS_H
 
 #include "utils/str.h"
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "hash_table.h"
 #include "timer.h"
 #include "diameter_types.h"

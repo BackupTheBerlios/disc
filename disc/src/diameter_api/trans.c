@@ -1,18 +1,21 @@
 /*
- * $Id: trans.c,v 1.5 2003/03/11 18:00:29 bogdan Exp $
+ * $Id: trans.c,v 1.6 2003/03/12 18:12:22 andrei Exp $
  *
- * 2003-02-11 created by bogdan
+ * 2003-02-11  created by bogdan
+ * 2003-03-12  converted to shm_malloc/shm_free (andrei)
  *
  */
 
 #include <stdlib.h>
 #include <string.h>
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "utils/counter.h"
 #include "trans.h"
 #include "hash_table.h"
-#include "global.h"
+#include "globals.h"
 #include "diameter_api.h"
+
+#include "mem/shm_mem.h"
 
 
 struct timer *tr_timeout_timer=0;
@@ -61,7 +64,7 @@ struct trans* create_transaction(str *buf, struct session *ses, struct peer *p)
 {
 	struct trans *t;
 
-	t = (struct trans*)malloc(sizeof(struct trans));
+	t = (struct trans*)shm_malloc(sizeof(struct trans));
 	if (!t) {
 		LOG(L_ERR,"ERROR:create_transaction: no more free memory!\n");
 		goto error;
@@ -104,13 +107,13 @@ void destroy_transaction( void *vp)
 
 	/* free the messages */
 	if (t->req.s)
-		free( t->req.s );
+		shm_free( t->req.s );
 	/* timer */
 	if (t->timeout.timer_list)
 		rmv_from_timer_list( &(t->timeout) );
 
 	/* free the structure */
-	free(t);
+	shm_free(t);
 }
 
 

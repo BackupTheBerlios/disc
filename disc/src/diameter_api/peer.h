@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.11 2003/03/11 23:02:03 bogdan Exp $
+ * $Id: peer.h,v 1.12 2003/03/12 18:12:22 andrei Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -13,7 +13,7 @@
 #include "utils/counter.h"
 #include "utils/ip_addr.h"
 #include "utils/list.h"
-#include "global.h"
+#include "globals.h"
 #include "diameter_types.h"
 #include "trans.h"
 #include "timer.h"

@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.h,v 1.2 2003/03/11 18:06:29 bogdan Exp $
+ * $Id: hash_table.h,v 1.3 2003/03/12 18:12:22 andrei Exp $
  *
  * 2003-01-29 created by bogdan
  *
@@ -12,7 +12,7 @@
 
 
 #include "utils/aaa_lock.h"
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "utils/str.h"
 
 

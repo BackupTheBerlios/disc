@@ -1,20 +1,23 @@
 /*
- * $Id: hash_table.c,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: hash_table.c,v 1.2 2003/03/12 18:12:22 andrei Exp $
  *
- * 2003-01-29 created by bogdan
+ * 2003-01-29  created by bogdan
+ * 2003-03-12  converted to use shm_malloc (andrei)
  *
  */
 
 #include <stdlib.h>
 #include <string.h>
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "utils/str.h"
 #include "hash_table.h"
+
+#include "mem/shm_mem.h"
 
 
 
 /* default function used for freeing unkown hash cell type */
-static void default_cell_destroyer( void *link ) { free(link); }
+static void default_cell_destroyer( void *link ) { shm_free(link); }
 
 
 
@@ -31,7 +34,7 @@ struct h_table* build_htable( )
 	table = 0;
 
 	/* allocates the hash table */
-	table = (struct h_table*)malloc( sizeof(struct h_table));
+	table = (struct h_table*)shm_malloc( sizeof(struct h_table));
 	if (!table) {
 		LOG(L_ERR,"ERROR:build_htable: cannot get free memory!\n");
 		goto error;
@@ -39,7 +42,8 @@ struct h_table* build_htable( )
 	memset( table, 0, sizeof(struct h_table));
 
 	/* allocates an array of hash entrys */
-	table->entrys = (struct h_entry*)malloc(HASH_SIZE*sizeof(struct h_entry));
+	table->entrys = (struct h_entry*)shm_malloc(HASH_SIZE*
+													sizeof(struct h_entry));
 	if (!table->entrys) {
 		LOG(L_ERR,"ERROR:build_htable: cannot get free memory!\n");
 		goto error;
@@ -94,10 +98,10 @@ void destroy_htable( struct h_table *table)
 			if (table->entrys[0].mutex)
 				destroy_locks( table->entrys[0].mutex , HASH_SIZE );
 			/* ... and free the entry's array */
-			free( table->entrys  );
+			shm_free( table->entrys  );
 		}
 		/* at last, free the table structure */
-		free( table);
+		shm_free( table);
 	}
 
 	LOG(L_INFO,"INFO:destroy_htable: table succesfuly destroyed\n");

@@ -1,8 +1,8 @@
 /*
- * $Id: message.c,v 1.6 2003/03/11 23:02:03 bogdan Exp $
+ * $Id: message.c,v 1.7 2003/03/12 18:12:22 andrei Exp $
  *
  * 2003-02-03 created by bogdan
- *
+ * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
  */
 
 #include <stdlib.h>
@@ -16,16 +16,18 @@
 #include <fcntl.h>
 
 #include "diameter_api.h"
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "utils/str.h"
 #include "utils/misc.h"
 #include "utils/aaa_lock.h"
-#include "global.h"
+#include "globals.h"
 #include "peer.h"
 #include "message.h"
 #include "avp.h"
 #include "session.h"
 #include "trans.h"
+
+#include "mem/shm_mem.h"
 
 
 /* local var */
@@ -57,7 +59,7 @@ int init_msg_manager()
 	aaa_lock *locks;
 
 	/* build a new msg_manager structure */
-	msg_mgr = (struct msg_manager*)malloc( sizeof(struct msg_manager) );
+	msg_mgr = (struct msg_manager*)shm_malloc( sizeof(struct msg_manager) );
 	if (!msg_mgr) {
 		LOG(L_ERR,"ERROR:init_msg_manager: no more free memory!\n");
 		goto error;
@@ -94,7 +96,7 @@ void destroy_msg_manager()
 		if (msg_mgr->end_to_end_lock)
 			destroy_locks( msg_mgr->end_to_end_lock , 2 );
 		/* free memory */
-		free( msg_mgr );
+		shm_free( msg_mgr );
 	}
 	LOG(L_INFO,"INFO:destroy_msg_manager: message manager stoped\n");
 }
@@ -348,7 +350,7 @@ unsigned char* build_buf_from_msg( AAAMessage *msg, unsigned int *length)
 
 	DBG("xxxx len=%d\n",len);
 	/* allocate some memory */
-	buf = (unsigned char*)malloc( len );
+	buf = (unsigned char*)shm_malloc( len );
 	if (!buf) {
 		LOG(L_ERR,"ERROR:build_buf_from_msg: no more free memory!\n");
 		goto error;
@@ -465,7 +467,7 @@ int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 
 	return 1;
 error:
-	free( buf->s );
+	shm_free( buf->s );
 	if (tr)
 		destroy_transaction(tr);
 	return -1;
@@ -489,7 +491,7 @@ int send_aaa_response( str *buf, struct trans *tr)
 
 	/* destroy everything */
 	destroy_transaction( tr );
-	free( buf->s );
+	shm_free( buf->s );
 
 	return ret;
 }
@@ -562,7 +564,7 @@ AAAMessage *AAANewMessage(
 	msg = 0;
 
 	/* allocated a new AAAMessage structure a set it to 0 */
-	msg = (AAAMessage*)malloc(sizeof(AAAMessage));
+	msg = (AAAMessage*)shm_malloc(sizeof(AAAMessage));
 	if (!msg) {
 		LOG(L_ERR,"ERROR:AAANewMessage: no more free memory!!\n");
 		goto error;
@@ -676,10 +678,10 @@ AAAReturnCode  AAAFreeMessage(AAAMessage **msg)
 
 	/* free the buffer if any */
 	if ( (*msg)->orig_buf.s )
-		free( (*msg)->orig_buf.s );
+		shm_free( (*msg)->orig_buf.s );
 
 	/* free the AAA msg */
-	free(*msg);
+	shm_free(*msg);
 	msg = 0;
 
 done:
@@ -834,7 +836,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 	ptr = source;
 
 	/* alloc a new message structure */
-	msg = (AAAMessage*)malloc(sizeof(AAAMessage));
+	msg = (AAAMessage*)shm_malloc(sizeof(AAAMessage));
 	if (!msg) {
 		LOG(L_ERR,"ERROR:AAATranslateMessage: no more free memory!!\n");
 		goto error;

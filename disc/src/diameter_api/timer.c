@@ -1,5 +1,8 @@
 /*
- * $Id: timer.c,v 1.2 2003/03/10 09:16:43 bogdan Exp $
+ * $Id: timer.c,v 1.3 2003/03/12 18:12:22 andrei Exp $
+ *
+ * 
+ *  2003-03-12  converted to shm_malloc/shm_free (andrei)
  *
  */
 
@@ -8,9 +11,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "utils/aaa_lock.h"
 #include "timer.h"
+
+#include "mem/shm_mem.h"
 
 
 #define is_in_timer_list(_tl) ( (_tl)->timer_list )
@@ -30,7 +35,7 @@ int register_timer(timer_function f, void* param, unsigned int interval)
 {
 	struct timer_handler* t;
 
-	t=malloc(sizeof(struct timer_handler));
+	t=shm_malloc(sizeof(struct timer_handler));
 	if (t==0){
 		LOG(L_ERR, "ERROR: register_timer: out of memory\n");
 		goto error;
@@ -82,7 +87,7 @@ int destroy_timer()
 	while (th) {
 		th_tmp = th;
 		th = th->next;
-		free( th_tmp );
+		shm_free( th_tmp );
 	}
 
 	LOG(L_INFO,"INFO:destroy_timer: timer thread stoped\n");
@@ -142,7 +147,7 @@ struct timer* new_timer_list()
 
 	new_timer = 0;
 
-	new_timer = (struct timer*)malloc( sizeof(struct timer) );
+	new_timer = (struct timer*)shm_malloc( sizeof(struct timer) );
 	if (!new_timer) {
 		LOG(L_ERR,"ERROR:new_timer_list: no more free memory!\n");
 		goto error;
@@ -163,7 +168,7 @@ struct timer* new_timer_list()
 	return new_timer;
 error:
 	if (new_timer)
-		free( new_timer);
+		shm_free( new_timer);
 	return 0;
 }
 
@@ -176,7 +181,7 @@ void destroy_timer_list( struct timer* timer_list )
 		if (timer_list->mutex)
 			destroy_locks( timer_list->mutex, 1);
 		/* free the memory */
-		free(timer_list);
+		shm_free(timer_list);
 	}
 }
 

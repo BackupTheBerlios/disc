@@ -1,15 +1,17 @@
 /*
- * $Id: peer.c,v 1.17 2003/03/11 23:42:32 bogdan Exp $
+ * $Id: peer.c,v 1.18 2003/03/12 18:12:22 andrei Exp $
  *
- * 2003-02-18 created by bogdan
+ * 2003-02-18  created by bogdan
+ * 2003-03-12  converted to shm_malloc/shm_free (andrei)
  *
  */
+
 
 
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "utils/str.h"
 #include "diameter_types.h"
 #include "diameter_api.h"
@@ -18,12 +20,14 @@
 #include "utils/ip_addr.h"
 #include "utils/resolve.h"
 #include "tcp_shell/common.h"
-#include "global.h"
+#include "globals.h"
 #include "timer.h"
 #include "sh_mutex.h"
 #include "peer.h"
 #include "message.h"
 #include "avp.h"
+
+#include "mem/shm_mem.h"
 
 
 #define PEER_TIMER_STEP  1
@@ -59,7 +63,7 @@ static struct timer *wait_cer_timer = 0;
 int init_peer_manager()
 {
 	/* allocate the peer vector */
-	peer_table = (struct p_table*)malloc( sizeof(struct p_table) );
+	peer_table = (struct p_table*)shm_malloc( sizeof(struct p_table) );
 	if (!peer_table) {
 		LOG(L_ERR,"ERROR:init_peer_manager: no more free memory!\n");
 		goto error;
@@ -132,24 +136,24 @@ void destroy_peer_manager()
 		list_for_each_safe( lh, foo, &(peer_table->peers)) {
 			/* free the peer */
 			list_del( lh );
-			free( list_entry( lh, struct peer, all_peer_lh) );
+			shm_free( list_entry( lh, struct peer, all_peer_lh) );
 		}
 		/* destroy the mutex */
 		if (peer_table->mutex)
 			destroy_locks( peer_table->mutex, 1);
 		/* free the buffers */
 		if (peer_table->std_req.s)
-			free(peer_table->std_req.s);
+			shm_free(peer_table->std_req.s);
 		if (peer_table->std_ans.s)
-			free(peer_table->std_ans.s);
+			shm_free(peer_table->std_ans.s);
 		if (peer_table->ce_avp_ipv4.s)
-			free(peer_table->ce_avp_ipv4.s);
+			shm_free(peer_table->ce_avp_ipv4.s);
 		if (peer_table->ce_avp_ipv6.s)
-			free(peer_table->ce_avp_ipv6.s);
+			shm_free(peer_table->ce_avp_ipv6.s);
 		if (peer_table->dpr_avp.s)
-			free(peer_table->dpr_avp.s);
+			shm_free(peer_table->dpr_avp.s);
 		/* destroy the table */
-		free( peer_table );
+		shm_free( peer_table );
 	}
 
 	if (del_timer) {
@@ -160,7 +164,7 @@ void destroy_peer_manager()
 			tl = tl->next_tl;
 			/* free the peer */
 			if (tl->payload)
-				free( tl->payload );
+				shm_free( tl->payload );
 		}
 		/* destroy the list */
 		destroy_timer_list( del_timer );
@@ -189,7 +193,7 @@ int build_msg_buffers(struct p_table *table)
 	table->std_req.len = AAA_MSG_HDR_SIZE +            /* header */
 		AVP_HDR_SIZE + to_32x_len(aaa_identity.len) +  /* origin-host  */
 		AVP_HDR_SIZE + to_32x_len(aaa_realm.len);      /* origin-realm */
-	table->std_req.s = malloc( table->std_req.len );
+	table->std_req.s = shm_malloc( table->std_req.len );
 	if (!table->std_req.s)
 		goto error;
 	ptr = table->std_req.s;
@@ -219,7 +223,7 @@ int build_msg_buffers(struct p_table *table)
 		AVP_HDR_SIZE + 4 +                             /* result-code  */
 		AVP_HDR_SIZE + to_32x_len(aaa_identity.len) +  /* origin-host  */
 		AVP_HDR_SIZE + to_32x_len(aaa_realm.len);      /* origin-realm */
-	table->std_ans.s = malloc( table->std_ans.len );
+	table->std_ans.s = shm_malloc( table->std_ans.len );
 	if (!table->std_ans.s)
 		goto error;
 	ptr = table->std_ans.s;
@@ -264,7 +268,7 @@ int build_msg_buffers(struct p_table *table)
 		AVP_HDR_SIZE + to_32x_len(product_name.len) +  /* product-name */
 		nr_auth_app*(AVP_HDR_SIZE + 4) +               /* auth-app-id */
 		nr_acc_app*(AVP_HDR_SIZE + 4);                 /* acc-app-id */
-	table->ce_avp_ipv4.s = malloc( table->ce_avp_ipv4.len );
+	table->ce_avp_ipv4.s = shm_malloc( table->ce_avp_ipv4.len );
 	if (!table->ce_avp_ipv4.s)
 		goto error;
 	ptr = table->ce_avp_ipv4.s;
@@ -311,7 +315,7 @@ int build_msg_buffers(struct p_table *table)
 
 	/* CE avps IPv6 */
 	table->ce_avp_ipv6.len = table->ce_avp_ipv4.len + 12;
-	table->ce_avp_ipv6.s = malloc( table->ce_avp_ipv6.len );
+	table->ce_avp_ipv6.s = shm_malloc( table->ce_avp_ipv6.len );
 	if (!table->ce_avp_ipv6.s)
 		goto error;
 	ptr = table->ce_avp_ipv6.s;
@@ -325,7 +329,7 @@ int build_msg_buffers(struct p_table *table)
 
 	/* DPR avp */
 	table->dpr_avp.len = AVP_HDR_SIZE + 4; /* disconnect cause  */
-	table->dpr_avp.s = malloc( table->dpr_avp.len );
+	table->dpr_avp.s = shm_malloc( table->dpr_avp.len );
 	if (!table->dpr_avp.s)
 		goto error;
 	ptr = table->dpr_avp.s;
@@ -362,7 +366,7 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 		goto error;
 	}
 
-	p = (struct peer*)malloc( sizeof(struct peer) + host->len + 1 );
+	p = (struct peer*)shm_malloc( sizeof(struct peer) + host->len + 1 );
 	if(!p) {
 		LOG(L_ERR,"ERROR:add_peer: no more free memory!\n");
 		goto error;
@@ -406,7 +410,7 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 
 	return 1;
 error:
-	if (p) free(p);
+	if (p) shm_free(p);
 	return -1;
 }
 
@@ -426,7 +430,7 @@ int send_cer( struct peer *dst_peer)
 	str cer;
 
 	cer.len = peer_table->std_req.len + peer_table->ce_avp_ipv4.len;
-	cer.s = malloc( cer.len );
+	cer.s = shm_malloc( cer.len );
 	if (!cer.s) {
 		LOG(L_ERR,"ERROR:send_cer: no more free memory\n");
 		goto error;
@@ -456,7 +460,7 @@ int send_cea( struct trans *tr, unsigned int result_code)
 	str cea;
 
 	cea.len = peer_table->std_ans.len + peer_table->ce_avp_ipv4.len;
-	cea.s = malloc( cea.len );
+	cea.s = shm_malloc( cea.len );
 	if (!cea.s) {
 		LOG(L_ERR,"ERROR:send_cer: no more free memory\n");
 		goto error;
@@ -545,10 +549,10 @@ int process_ce( struct peer *p, str *buf , int is_req)
 		goto error;
 	}
 
-	free( buf->s );
+	shm_free( buf->s );
 	return 1;
 error:
-	free( buf->s );
+	shm_free( buf->s );
 	return -1;
 }
 
@@ -560,7 +564,7 @@ int send_dwr( struct peer *dst_peer)
 	str dwr;
 
 	dwr.len = peer_table->std_req.len ;
-	dwr.s = malloc( dwr.len );
+	dwr.s = shm_malloc( dwr.len );
 	if (!dwr.s) {
 		LOG(L_ERR,"ERROR:send_dwr: no more free memory\n");
 		goto error;
@@ -585,7 +589,7 @@ int send_dwa( struct trans *tr, unsigned int result_code)
 	str dwa;
 
 	dwa.len = peer_table->std_ans.len;
-	dwa.s = malloc( dwa.len );
+	dwa.s = shm_malloc( dwa.len );
 	if (!dwa.s) {
 		LOG(L_ERR,"ERROR:send_dwa: no more free memory\n");
 		goto error;
@@ -644,11 +648,11 @@ int process_dw( struct peer *p, str *buf , int is_req)
 	}
 
 	if (!is_req)
-		free( buf->s );
+		shm_free( buf->s );
 	return 1;
 error:
 	if (!is_req)
-		free( buf->s );
+		shm_free( buf->s );
 	return -1;
 }
 
@@ -746,7 +750,7 @@ void dispatch_message( struct peer *p, str *buf)
 			/* it's a session message*/
 			LOG(L_ERR,"UNIMPLEMENTED: message for a session arrived ->"
 				" discard it!!\n");
-			free( buf->s );
+			shm_free( buf->s );
 			return;
 	}
 
@@ -758,7 +762,7 @@ void dispatch_message( struct peer *p, str *buf)
 			if (peer_state_machine( p, event, tr)==-1)
 				destroy_transaction( tr );
 		} else {
-			free( buf->s );
+			shm_free( buf->s );
 		}
 	} else {
 		/* response -> find its transaction and remove it from 
@@ -768,7 +772,7 @@ void dispatch_message( struct peer *p, str *buf)
 		if (!tr) {
 			LOG(L_ERR,"ERROR:dispatch_message: respons received, but no"
 				" transaction found!\n");
-			free( buf->s );
+			shm_free( buf->s );
 		} else {
 			/* destroy the transaction along with the originator request */
 			destroy_transaction( tr );
@@ -797,7 +801,7 @@ inline void reset_peer( struct peer *p)
 	p->first_4bytes = 0;
 	p->buf_len = 0;
 	if (p->buf)
-		free(p->buf);
+		shm_free(p->buf);
 	p->buf = 0;
 	/**/
 	p->supp_acc_app_id  = 0;

@@ -1,11 +1,11 @@
 /*
- * $Id: sh_mutex.c,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: sh_mutex.c,v 1.2 2003/03/12 18:12:22 andrei Exp $
  *
  * 2003-02-26 created by bogdan
  *
  */
 
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "utils/aaa_lock.h"
 #include "utils/counter.h"
 

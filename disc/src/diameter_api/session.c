@@ -1,7 +1,8 @@
 /*
- * $Id: session.c,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: session.c,v 1.2 2003/03/12 18:12:22 andrei Exp $
  *
- * 2003-01-28 created by bogdan
+ * 2003-01-28  created by bogdan
+ * 2003-03-12  converted to shm_malloc/shm_free (andrei)
  *
  */
 
@@ -9,13 +10,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "utils/dprint.h"
+#include "dprint.h"
 #include "utils/str.h"
-#include "global.h"
+#include "globals.h"
 #include "utils/misc.h"
 #include "utils/aaa_lock.h"
 #include "hash_table.h"
 #include "session.h"
+
+#include "mem/shm_mem.h"
 
 
 /* local vars */
@@ -36,7 +39,8 @@ void destroy_session( void *ses);
 int init_session_manager()
 {
 	/* allocate a new sessionID_gen variable */
-	sID_gen = (struct session_ID_gen*)malloc( sizeof(struct session_ID_gen) );
+	sID_gen = (struct session_ID_gen*)
+					shm_malloc( sizeof(struct session_ID_gen) );
 	if (!sID_gen) {
 		LOG(L_ERR,"ERROR:generate_sessionID: no more free memory!\n");
 		goto error;
@@ -75,7 +79,7 @@ void shutdown_session_manager()
 		if (sID_gen->mutex)
 			destroy_locks( sID_gen->mutex, 1);
 		/* free the memory */
-		free( sID_gen );
+		shm_free( sID_gen );
 	}
 	LOG(L_INFO,"INFO:shutdown_session_manager: session manager stoped\n");
 
@@ -118,7 +122,7 @@ int generate_sessionID( AAASessionId* sID, unsigned int end_pad_len)
 		end_pad_len;
 
 	/* get some memory for it */
-	sID->s = (char*)malloc( sID->len );
+	sID->s = (char*)shm_malloc( sID->len );
 	if (sID->s==0) {
 		LOG(L_ERR,"ERROR:generate_sessionID: no more free memory!\n");
 		goto error;
@@ -240,7 +244,7 @@ struct session* create_session( unsigned short peer_id)
 	struct session *ses;
 
 	/* allocates a new struct session and zero it! */
-	ses = (struct session*)malloc(sizeof(struct session));
+	ses = (struct session*)shm_malloc(sizeof(struct session));
 	if (!ses) {
 		LOG(L_ERR,"ERROR:create_session: not more free memeory!\n");
 		goto error;
@@ -265,8 +269,8 @@ void destroy_session( void *ses)
 	if (!ses)
 		return;
 	if (((struct session*)ses)->sID.s)
-		free( ((struct session*)ses)->sID.s );
-	free(ses);
+		shm_free( ((struct session*)ses)->sID.s );
+	shm_free(ses);
 }
 
 
