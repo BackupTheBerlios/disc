@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.22 2003/04/10 21:40:03 bogdan Exp $
+ * $Id: peer.c,v 1.23 2003/04/12 20:53:50 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -290,9 +290,9 @@ int build_msg_buffers(struct p_table *table)
 	/* coutn the auth_app_ids and acct_app_ids */
 	nr_auth_app = nr_acct_app = 0;
 	for(mod=modules;mod;mod=mod->next) {
-		if ( mod->exports->app_type&DOES_AUTH )
+		if ( mod->exports->flags&DOES_AUTH )
 			nr_auth_app++;
-		if ( mod->exports->app_type&DOES_ACCT )
+		if ( mod->exports->flags&DOES_ACCT )
 			nr_acct_app++;
 	}
 	if (do_relay) {
@@ -331,7 +331,7 @@ int build_msg_buffers(struct p_table *table)
 	ptr += to_32x_len(product_name.len);
 	/* auth-app-id AVP */
 	for(mod=modules;mod;mod=mod->next)
-		if ( mod->exports->app_type&DOES_AUTH ) {
+		if ( mod->exports->flags&DOES_AUTH ) {
 			((unsigned int*)ptr)[0] = htonl(258);
 			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 			ptr[4] = 1<<6;
@@ -349,7 +349,7 @@ int build_msg_buffers(struct p_table *table)
 	}
 	/* acc-app-id AVP */
 	for(mod=modules;mod;mod=mod->next)
-		if ( mod->exports->app_type&DOES_ACCT ) {
+		if ( mod->exports->flags&DOES_ACCT ) {
 			((unsigned int*)ptr)[0] = htonl(259);
 			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 			ptr[4] = 1<<6;
@@ -438,8 +438,6 @@ struct peer* add_peer( str *aaa_identity, str *host, unsigned int port )
 	}
 
 	/* fill the peer structure */
-	p->pc.next = 0;
-	p->pc.p = p;
 	p->tl.payload = p;
 	p->aaa_identity.s = (char*)p + sizeof(struct peer);
 	p->aaa_identity.len = aaa_identity->len;
@@ -551,6 +549,10 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 	if (write( p->sock, tr->req->s, tr->req->len)!=-1) {
 		lock_release( p->mutex);
 		tr->out_peer = p;
+		tr->req = 0;
+		/* start the timeout timer */
+		add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
+			get_ticks()+TR_TIMEOUT_TIMEOUT );
 		/* success */
 		return 1;
 	}
@@ -608,7 +610,7 @@ inline int internal_send_request( str *buf, struct peer *p)
 	((unsigned int*)buf->s)[3] = tr->linker.label;
 
 	/* send the request */
-	if ( tcp_send_unsafe( p, buf->s, buf->len)==-1 ) {
+	if ( write( p->sock, buf->s, buf->len)==-1 ) {
 		LOG(L_ERR,"ERROR:internal_send_request: tcp_send_unsafe returned"
 			" error!\n");
 		goto error;
@@ -644,7 +646,7 @@ inline int internal_send_response( str *res, str *req, unsigned int res_code,
 	((unsigned int*)res->s)[4] = ((unsigned int*)req->s)[4];
 
 	/* send the message */
-	if ( tcp_send_unsafe( p, res->s, res->len)==-1 ) {
+	if ( write( p->sock, res->s, res->len)==-1 ) {
 		LOG(L_ERR,"ERROR:internal_send_response: tcp_send_unsafe "
 			"returned error!\n");
 		return -1;
@@ -793,7 +795,7 @@ unsigned int process_ce( struct peer *p, str *buf , int is_req)
 			acct_app_ids[nr_acct_app_ids++] = ntohl(((unsigned int*)ptr)[2]);
 			if ( do_relay || acct_app_ids[nr_acct_app_ids-1]==AAA_APP_RELAY ||
 			((mod=find_module( acct_app_ids[nr_acct_app_ids-1]))!=0
-			&& mod->exports->app_type&DOES_ACCT) )
+			&& mod->exports->flags&DOES_ACCT) )
 				code = AAA_SUCCESS;
 			break;
 		case 258: /*auth app id*/
@@ -805,7 +807,7 @@ unsigned int process_ce( struct peer *p, str *buf , int is_req)
 			auth_app_ids[nr_auth_app_ids++] = ntohl(((unsigned int*)ptr)[2]);
 			if ( do_relay || auth_app_ids[nr_auth_app_ids-1]==AAA_APP_RELAY ||
 			((mod=find_module( auth_app_ids[nr_auth_app_ids-1]))!=0
-			&& mod->exports->app_type&DOES_AUTH) )
+			&& mod->exports->flags&DOES_AUTH) )
 				code = AAA_SUCCESS;
 			break;
 	}

@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_shell.h,v 1.4 2003/04/06 01:18:13 bogdan Exp $
+ * $Id: tcp_shell.h,v 1.5 2003/04/12 20:53:50 bogdan Exp $
  *
  *  History:
  *  --------
@@ -55,9 +55,6 @@ enum COMMAND_CODES {
 
 
 #define COMMAND_SIZE (sizeof(struct command))
-
-#define tcp_send_unsafe( _peer_,  _buf_, _len_) \
-	(write( (_peer_)->sock, (_buf_), (_len_)))
 
 
 

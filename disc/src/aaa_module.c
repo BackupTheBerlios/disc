@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.11 2003/04/09 18:12:44 andrei Exp $
+ * $Id: aaa_module.c,v 1.12 2003/04/12 20:53:50 bogdan Exp $
  */
 /*
  * History:
@@ -13,6 +13,7 @@
 #include "config.h"
 #include "dprint.h"
 #include "mem/shm_mem.h"
+#include "globals.h"
 #include "aaa_module.h"
 
 
@@ -86,13 +87,25 @@ int load_module(char* name)
 		goto error;
 	}
 	/* sanity checks */
+	if (e->mod_type!=AAA_CLIENT && e->mod_type!=AAA_SERVER) {
+		LOG(L_CRIT, "ERROR: load_module: module \"%s\" has an unknown "
+			"type (%d) - try AAA_SERVER or AAA_CLIENT\n",e->name, e->mod_type);
+		ret=-1;
+		goto error;
+	}
+	if (e->mod_type!=my_aaa_status) {
+		LOG(L_CRIT, "ERROR: load_module: module \"%s\" has a different "
+			"type (%d) then the core (%d)\n",e->name,e->app_id,my_aaa_status);
+		ret=-1;
+		goto error;
+	}
 	if (e->app_id==AAA_APP_RELAY) {
 		LOG(L_CRIT, "ERROR: load_module: module \"%s\" advertises "
 			"an app_id that's reserved %x (relay)\n",e->name, e->app_id);
 		ret=-1;
 		goto error;
 	}
-	if (e->app_type==0) {
+	if ((e->flags|DOES_AUTH|DOES_AUTH)==0) {
 		LOG(L_CRIT, "ERROR: load_module: module \"%s\" does not support "
 			"authentication or accounting for app_id %d\n",e->name, e->app_id);
 		ret=-1;

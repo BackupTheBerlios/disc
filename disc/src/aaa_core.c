@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.10 2003/04/11 17:48:02 bogdan Exp $
+ * $Id: aaa_core.c,v 1.11 2003/04/12 20:53:50 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -34,7 +34,7 @@
 #define CFG_FILE "aaa.cfg"
 
 
-static char id[]="$Id: aaa_core.c,v 1.10 2003/04/11 17:48:02 bogdan Exp $";
+static char id[]="$Id: aaa_core.c,v 1.11 2003/04/12 20:53:50 bogdan Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
@@ -154,7 +154,7 @@ unsigned int my_aaa_status = AAA_UNDEFINED;
 static pthread_t *worker_id = 0;
 static int nr_worker_threads = 0;
 
-int (*get_dest_peers)(AAAMessage*,struct peer_chain **);
+int (*send_local_request)(AAAMessage*,struct trans*);
 
 
 /* 0 on success, -1 on error */
@@ -344,7 +344,7 @@ void destroy_aaa_core()
 
 	/* destroy destination peers resolver */
 	if (my_aaa_status==AAA_CLIENT) {
-		destroy_all_peers_list();
+		/* something here? */
 	} else {
 		/* something for server ???? */
 	}
@@ -477,12 +477,10 @@ int init_aaa_core(char *cfg_file)
 
 	/* init the destestination peers resolver */
 	if (my_aaa_status==AAA_CLIENT) {
-		if ( init_all_peers_list()==-1 )
-			goto error;
-		get_dest_peers = get_all_peers;
+		send_local_request = client_send_local_req;
 	} else {
 		/* something for server ???? */
-		get_dest_peers = get_all_peers;
+		send_local_request = server_send_local_req;
 	}
 
 	return 1;

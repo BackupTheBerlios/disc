@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.6 2003/04/11 17:48:02 bogdan Exp $
+ * $Id: sender.c,v 1.7 2003/04/12 20:53:50 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -29,7 +29,7 @@
 #include "session.h"
 
 
-extern int (*get_dest_peers)(AAAMessage*,struct peer_chain **);
+extern int (*send_local_request)(AAAMessage*, struct trans*);
 
 
 /****************************** API FUNCTIONS ********************************/
@@ -39,7 +39,6 @@ extern int (*get_dest_peers)(AAAMessage*,struct peer_chain **);
  * message by AAASetServer() */
 AAAReturnCode  AAASendMessage(AAAMessage *msg)
 {
-	struct peer_chain *pc;
 	struct session    *ses;
 	struct trans      *tr;
 	unsigned int      event;
@@ -94,31 +93,12 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		/* it's a request */
 		if (my_aaa_status!=AAA_CLIENT) {
 			LOG(L_ERR,"ERROR:AAASendMessage: AAA stateless server does not "
-				"send answers!! -> read the draft!!!\n");
+				"send request!! -> read the draft!!!\n");
 			goto error;
 		}
 
 		/* -> get its session */
 		ses = sId2session( msg->sId );
-
-		/* where should I send this request? */
-		pc = 0;
-		ret = get_dest_peers( msg, &pc );
-		if (ret!=1 || pc==0) {
-			LOG(L_ERR,"ERROR:AAASendMessage: no outgoing peer found for msg!"
-				" do_routing returned %d, pc=%p.\n",ret,pc);
-			goto error;
-		}
-
-		/* update the session state */
-		switch (msg->commandCode) {
-			case 274: /*ASR*/ event = AAA_SENDING_ASR; break;
-			case 275: /*STR*/ event = AAA_SENDING_STR; break;
-			case 258: /*RAR*/ event = AAA_SENDING_RAR; break;
-			default:  /*AR */ event = AAA_SENDING_AR;  break;
-		}
-		if (session_state_machine( ses, event, 0)!=1)
-			goto error;
 
 		/* generate the buf from the message */
 		if ( AAABuildMsgBuffer( msg )==-1 )
@@ -132,16 +112,18 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		}
 		tr->ses = ses;
 
-		/* send the request */
-		for( ; pc ; pc=pc->next ) {
-			if ( (ret=send_req_to_peer( tr, pc->p))!=-1) {
-				/* start the timeout timer */
-				add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
-					get_ticks()+TR_TIMEOUT_TIMEOUT );
-				break;
-			}
+		/* update the session state */
+		switch (msg->commandCode) {
+			case 274: /*ASR*/ event = AAA_SENDING_ASR; break;
+			case 275: /*STR*/ event = AAA_SENDING_STR; break;
+			case 258: /*RAR*/ event = AAA_SENDING_RAR; break;
+			default:  /*AR */ event = AAA_SENDING_AR;  break;
 		}
-		tr->req = 0;
+		if (session_state_machine( ses, event, 0)!=1)
+			goto error;
+
+		/* route and send the message */
+		ret = send_local_request( msg, tr );
 		if (ret==-1) {
 			LOG(L_ERR,"ERROR:AAASendMessage: I wasn't able to send request\n");
 			session_state_machine( ses, AAA_SEND_FAILED, 0);

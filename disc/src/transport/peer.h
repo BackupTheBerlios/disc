@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.16 2003/04/10 23:54:02 bogdan Exp $
+ * $Id: peer.h,v 1.17 2003/04/12 20:53:50 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -28,12 +28,6 @@ struct tcp_info {
 struct safe_list_head {
 	struct list_head lh;
 	gen_lock_t         *mutex;
-};
-
-
-struct peer_chain {
-	struct peer_chain *next;
-	struct peer       *p;
 };
 
 
@@ -81,8 +75,6 @@ struct peer {
 	unsigned int last_activ_time;
 	/* counter that tells how many time this peer was connected */
 	unsigned int conn_cnt;
-	/* is is a peer_chain that conatines only this peer */
-	struct peer_chain  pc;
 };
 
 
