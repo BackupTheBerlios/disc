@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.30 2003/04/15 17:43:57 bogdan Exp $
+ * $Id: peer.c,v 1.31 2003/04/15 18:23:04 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -1292,8 +1292,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			break;
 		case TCP_CONN_CLOSE:
 			lock_get( p->mutex );
-			DBG("DEBUG:peer_state_machine: TCP connection was closed ->"
-					"closing peer\n");
+			DBG("DEBUG:peer_state_machine: closing TCP connection and peer\n");
 			tcp_close( p );
 			reset_peer( p );
 			/* new state */

@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.14 2003/04/15 17:43:57 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.15 2003/04/15 18:23:04 bogdan Exp $
  *
  *  History:
  *  --------
@@ -91,7 +91,11 @@ inline static int do_read( struct peer *p)
 	}
 
 	//DBG(">>>>>>>>>> n=%d, errno=%d \n",n,errno);
-	if (n==0 || (n==-1 && errno!=EINTR && errno!=EAGAIN) ) {
+	if (n==0) {
+		LOG(L_INFO,"INFO:do_read: FIN received\n");
+		goto error;
+	}
+	if ( n==-1 && errno!=EINTR && errno!=EAGAIN ) {
 		LOG(L_ERR,"ERROR:do_read: n=%d , errno=%d\n",n,errno);
 		goto error;
 	}
@@ -371,20 +375,9 @@ void *do_receive(void *arg)
 
 			if ( FD_ISSET( p->sock, &ret_rd_set) ) {
 				nready--;
-				//option = -1;
-				//ioctl( p->sock, FIONREAD, &option);
-				//if (option==0) {
-				//	/* FIN received */
-				//	LOG(L_INFO,"INFO:do_receive: FIN received for socket"
-				//		" %d.\n",p->sock);
-				//	peer_state_machine( p, TCP_CONN_CLOSE, 0);
-				//} else {
-					/* data received */
-					if (do_read( p )==-1) {
-						LOG(L_ERR,"ERROR:do_receive: error reading-> close\n");
-						peer_state_machine( p, TCP_CONN_CLOSE, 0);
-					}
-				//}
+				/* data received */
+				if (do_read( p )==-1)
+					peer_state_machine( p, TCP_CONN_CLOSE, 0);
 				continue;
 			}
 
