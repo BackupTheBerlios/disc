@@ -1,5 +1,5 @@
 /*
- * $Id: dictionary.h,v 1.1 2003/03/19 17:18:51 ilk Exp $
+ * $Id: dictionary.h,v 1.2 2003/03/24 19:17:54 ilk Exp $
  *
  * 2003-03-03 created by Illya
  *
@@ -14,7 +14,7 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
                                        AAA_AVPCode avpCode,
                                        AAAValue value,
                                        AAADictionaryEntry *entry);
-int findEntry( char** entry);
+int findEntry( char** entry,int sizeOfEntry);
 int findWord( char* word);
 int readWord(char* buf,int size);
 int vendorNameFromId(AAAVendorId vendorId, char* vendorAttr);

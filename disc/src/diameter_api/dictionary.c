@@ -1,6 +1,6 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- * $Id: dictionary.c,v 1.9 2003/03/21 17:15:52 ilk Exp $
+ * $Id: dictionary.c,v 1.10 2003/03/24 19:17:54 ilk Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,8 +15,8 @@ FILE* file;
 AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
 						                                AAAVendorId vendorId,
 							                              AAADictionaryEntry *entry){
-                                                     
-   return AAAFindDictionaryEntry(vendorId,NULL,avpCode,0,entry);                                                   
+                                                
+   return AAAFindDictionaryEntry(vendorId,NULL,avpCode,0,entry);                                                
 }
 
 AAAValue AAAValueFromName(char *avpName,
@@ -63,7 +63,7 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
       if(vendorNameFromId(vendorId,vendorAttr))
          return AAA_ERR_FAILURE; //wrong vendorId
    }
-   entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
+   //entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
    if(entry==NULL)
       return AAA_ERR_FAILURE;
    charEntry[0]=vendorAttr;
@@ -75,10 +75,12 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
       sprintf(charEntry[2],"%i",avpCode);
    }
    charEntry[3]=NULL;
-   if(!findEntry(charEntry))
+   
+   if(!findEntry(charEntry,4))
       return AAA_ERR_FAILURE;
    entry->vendorId=vendorId;
-   strcpy(entry->avpName,charEntry[1]);   
+   entry->avpName=(char*)malloc(strlen(charEntry[1]+1));
+   strcpy(entry->avpName,charEntry[1]);
    entry->avpCode=atoi(charEntry[2]);
    //entry->avpType=
       return AAA_ERR_SUCCESS;
@@ -86,9 +88,8 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
 
    
 }
-int findEntry( char** entry){
-   FILE* file;
-	file=fopen("dictionary","r");
+int findEntry( char** entry, int sizeOfEntry){
+   file=fopen("dictionary","r");
 	if(file==NULL){
       //LOG(L_ERR,"ERROR:no dictionary found!\n");
       return 0;
@@ -97,8 +98,9 @@ int findEntry( char** entry){
    while(!match && findWord(entry[0])){
       int i;
       int size=MAXWORDLEN;
-      char* buf=(char*)malloc(sizeof(char));
-      for(i=1; i<sizeof(entry); i++){
+      char* buf=(char*)malloc(size);
+      for(i=1; i < sizeOfEntry; i++){
+         size=MAXWORDLEN;
          if((size=readWord(buf,size))){
             if(entry[i]==NULL){
                entry[i]=(char*)malloc(size);
@@ -106,11 +108,11 @@ int findEntry( char** entry){
                match=1;
             }
             else
-               if(strcmp(entry[i],buf)){
+            	if(strcmp(entry[i],buf)){
                   match=0;
                   break;
-               }
-         }
+               }   
+			}
       }
    }
    return match;
@@ -118,46 +120,46 @@ int findEntry( char** entry){
 int findWord( char* word){
    char num=0;
    int match = 0;
-   while(!match ||(num=fgetc(file))!=EOF){
+   while((!match) && (num=fgetc(file))!=EOF){
       if(num == '#')
-         while ((num=fgetc(file))!='\n' || num!=EOF);
+         while ((num=fgetc(file))!='\n' && num!=EOF);
       else{
          if(num == word[0]){
-            char buf[strlen(word)];
+				char buf[strlen(word)+1];
             buf[0]=num;
             int i;
-            match = 1;
+            match = 1; 
             for(i=1; i<strlen(word); i++){
                if((buf[i]=fgetc(file))=='\n' || buf[i]==EOF){
                   match = 0;
                   break;
                }
-               match = 1;
-            }
-            buf[strlen(word)]=0;
-         }
-     }
-   }
+					match = 1;
+            }  
+            buf[strlen(word)]=0; 
+				} 
+		}
+	}
    return match;
 }
 
 int readWord(char* buf,int size){
-   char num;
+   char num=0;
    int i = 0;
-   buf=NULL;
    while ((num=fgetc(file))==' ' || num=='\t' )
       if(num =='\n' || num==EOF)
          return 0;
-   while ((num=fgetc(file))!=' ' || num!='\t' || num!='\n' || num!=EOF ){
+	buf[i++]=num;
+   while ((num=fgetc(file))!=' ' && num!='\t' && num!='\n' && num!=EOF && i<size ){
       buf[i++]=num;
    }
+   buf[i]=0;
    return strlen(buf);
 
 }
 
 int vendorNameFromId(AAAVendorId vendorId, char* vendorAttr){
-   FILE* file;
-	file=fopen("vendors","r");
+   file=fopen("vendors","r");
 	if(file==NULL){
       //LOG(L_ERR,"ERROR:no vendors file found!\n");
       return 0;
