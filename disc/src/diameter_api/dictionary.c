@@ -1,6 +1,6 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- * $Id: dictionary.c,v 1.12 2003/04/16 16:32:25 ilk Exp $
+ * $Id: dictionary.c,v 1.13 2003/04/17 16:33:24 ilk Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,7 +60,12 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
    char* vendorAttr=vendorName;
    char* charEntry[4];
    int i;
-      
+	char* dataTypes[]={"Grouped"} ;
+	char* octetStrings[]={"OctetString","UTF8String","DiameterIdentity"} ;
+	char* addressTypes[]={"IPAddress","DiameterURI","IPFilterRule"} ;
+	char* integer32Types[]={"Interger32","Unsigned32","Enumerated"} ;
+	char* integer64Types[]={"Interger32","Unsigned32"} ;
+	char* timeTypes[]={"Time"} ;        
    if(vendorId != 0){
       if(vendorNameFromId(vendorId,vendorAttr))
          return AAA_ERR_FAILURE; //wrong vendorId
@@ -84,27 +89,21 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
    entry->avpName=(char*)malloc(strlen(charEntry[1]+1));
    strcpy(entry->avpName,charEntry[1]);
    entry->avpCode=atoi(charEntry[2]);
-	char* dataTypes[]={"Grouped"} ;
    for(i=0;i<sizeof(dataTypes)/sizeof(char*);i++)
    	if(!strcasecmp(charEntry[4],dataTypes[i]))
 			entry->avpType=AAA_AVP_DATA_TYPE;
-   char* octetStrings[]={"OctetString","UTF8String","DiameterIdentity"} ;  
    for(i=0;i<sizeof(octetStrings)/sizeof(char*);i++)
    	if(!strcasecmp(charEntry[4],octetStrings[i]))
 			entry->avpType=AAA_AVP_STRING_TYPE;
-	char* addressTypes[]={"IPAddress","DiameterURI","IPFilterRule"} ;
    for(i=0;i<sizeof(addressTypes)/sizeof(char*);i++)
    	if(!strcasecmp(charEntry[4],addressTypes[i]))
 			entry->avpType=AAA_AVP_ADDRESS_TYPE;
-	char* integer32Types[]={"Interger32","Unsigned32","Enumerated"} ;
    for(i=0;i<sizeof(integer32Types)/sizeof(char*);i++)
    	if(!strcasecmp(charEntry[4],integer32Types[i]))
 			entry->avpType=AAA_AVP_INTEGER32_TYPE;
-	char* integer64Types[]={"Interger64","Unsigned64"} ;
    for(i=0;i<sizeof(integer64Types)/sizeof(char*);i++)
    	if(!strcasecmp(charEntry[4],integer64Types[i]))
 			entry->avpType=AAA_AVP_INTEGER64_TYPE;
-	char* timeTypes[]={"Time"} ;
    for(i=0;i<sizeof(timeTypes)/sizeof(char*);i++)
    	if(!strcasecmp(charEntry[4],timeTypes[i]))
 			entry->avpType=AAA_AVP_TIME_TYPE;
@@ -116,15 +115,17 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
 int findEntry( char** extEntry, int sizeOfEntry){
 	int match=0;
    char *entry[sizeOfEntry];
+   int i;
+   int size;
+   char* buf;
    file=fopen("dictionary","r");
 	if(file==NULL){
       //LOG(L_ERR,"ERROR:no dictionary found!\n");
       return 0;
    }
    while(!match && findWord(extEntry[0])){
-      int i;
-      int size=MAXWORDLEN;
-      char* buf=(char*)malloc(size);
+      size=MAXWORDLEN;
+      buf=(char*)malloc(size);
       for(i=1; i < sizeOfEntry; i++){
          size=MAXWORDLEN;
          if((size=readWord(buf,size))){
@@ -162,14 +163,15 @@ int findEntry( char** extEntry, int sizeOfEntry){
 int findWord( char* word){
    char num=0;
    int match = 0;
+   int i;
+   char* buff;
    while((!match) && (num=fgetc(file))!=EOF){
       if(num == '#')
          while ((num=fgetc(file))!='\n' && num!=EOF);
       else{
          if(num == word[0]){
-				char buff[strlen(word)+1];
+				buff=malloc(strlen(word)+1);
             buff[0]=num;
-            int i;
             match = 1; 
             for(i=1; i<strlen(word); i++){
                if((buff[i]=fgetc(file))=='\n' || buff[i]==EOF || buff[i]!= word[i]){
@@ -201,15 +203,15 @@ int readWord(char* buf,int size){
 }
 
 int vendorNameFromId(AAAVendorId vendorId, char* vendorAttr){
+	char num;
+   char* vendorValue=NULL;
+   char* vendorName=NULL;
+   int vid;
    file=fopen("vendors","r");
 	if(file==NULL){
       //LOG(L_ERR,"ERROR:no vendors file found!\n");
       return 0;
    }
-   char num;
-   char* vendorValue=NULL;
-   char* vendorName=NULL;
-   int vid;
    while((num=fgetc(file))!=EOF){
       if(num == '#')
          while ((num=fgetc(file))!='\n' || num!=EOF);
