@@ -1,6 +1,6 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- * $Id: dictionary.c,v 1.16 2003/04/28 13:58:18 ilk Exp $
+ * $Id: dictionary.c,v 1.17 2003/04/28 14:29:14 ilk Exp $
  *
  * Copyright (C) 2002-2003 Fhg Fokus
  *
@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "dictionary.h"
+#include "../mem/shm_mem.h"
 
 #define MAXWORDLEN 1024;
 FILE* file;
@@ -63,20 +64,20 @@ AAAValue AAAValueFromAVPCode(AAA_AVPCode avpCode,
    AAAValue value=0;
    AAADictionaryEntry *entry;
    AAAReturnCode ret;
-   entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
+   entry=(AAADictionaryEntry*)shm_malloc(sizeof(AAADictionaryEntry));
    if (AAADictionaryEntryFromAVPCode(avpCode,vendorId,entry)==AAA_ERR_SUCCESS){
 		ret=AAAFindValue( NULL,entry->avpName,&valueName,&value);
-      free(entry);
-		if(ret== AAA_ERR_SUCCESS)         
+      shm_free(entry);
+		if(ret== AAA_ERR_SUCCESS)
 			return value;
 		else
 			return AAA_ERR_NOT_FOUND;
 	}
 	else{
-		free(entry);
+		shm_free(entry);
 		return AAA_ERR_NOT_FOUND;
 	}
-  
+
 }
 
 const char *AAALookupValueNameUsingValue(AAA_AVPCode avpCode,
@@ -85,17 +86,17 @@ const char *AAALookupValueNameUsingValue(AAA_AVPCode avpCode,
    char* valueName=NULL;
    AAADictionaryEntry *entry;
    AAAReturnCode ret;
-   entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
+   entry=(AAADictionaryEntry*)shm_malloc(sizeof(AAADictionaryEntry));
    if (AAADictionaryEntryFromAVPCode(avpCode,vendorId,entry)==AAA_ERR_SUCCESS){
 		ret=AAAFindValue( NULL,entry->avpName,&valueName,&value);
-		free(entry);
+		shm_free(entry);
 		if(ret==AAA_ERR_SUCCESS)
 			return valueName;
 		else
 			return NULL;
 	}
 	else{
-		free(entry);
+		shm_free(entry);
 		return NULL;
 	}
 }
@@ -120,12 +121,12 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
 	char* addressTypes[]={"IPAddress","DiameterURI","IPFilterRule"} ;
 	char* integer32Types[]={"Interger32","Unsigned32","Enumerated"} ;
 	char* integer64Types[]={"Interger32","Unsigned32"} ;
-	char* timeTypes[]={"Time"} ;        
+	char* timeTypes[]={"Time"} ;
    if(vendorId != 0){
       if(vendorNameFromId(vendorId,vendorAttr))
          return AAA_ERR_FAILURE; //wrong vendorId
    }
-   //entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
+   //entry=(AAADictionaryEntry*)shm_malloc(sizeof(AAADictionaryEntry));
    if(entry==NULL)
       return AAA_ERR_FAILURE;
    charEntry[0]=vendorAttr;
@@ -133,18 +134,18 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
    if(avpCode==0)
       charEntry[2]=NULL;
    else{
-      charEntry[2]=(char*)malloc(10);
+      charEntry[2]=(char*)shm_malloc(10);
       sprintf(charEntry[2],"%i",avpCode);
    }
    charEntry[3]=NULL;
-   
+
    if(!findEntry(charEntry,4))
       return AAA_ERR_FAILURE;
    entry->vendorId=vendorId;
-   entry->avpName=(char*)malloc(strlen(charEntry[1]+1));
+   entry->avpName=(char*)shm_malloc(strlen(charEntry[1]+1));
    strcpy(entry->avpName,charEntry[1]);
    entry->avpCode=atoi(charEntry[2]);
-   free(charEntry[2]);
+   shm_free(charEntry[2]);
    for(i=0;i<sizeof(dataTypes)/sizeof(char*);i++)
    	if(!strcasecmp(charEntry[3],dataTypes[i]))
 			entry->avpType=AAA_AVP_DATA_TYPE;
@@ -164,9 +165,9 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
    	if(!strcasecmp(charEntry[3],timeTypes[i]))
 			entry->avpType=AAA_AVP_TIME_TYPE;
       return AAA_ERR_SUCCESS;
-   
 
-   
+
+
 }
 AAAReturnCode AAAFindValue(  char* vendorName,
 										char* avpName,
@@ -180,15 +181,15 @@ AAAReturnCode AAAFindValue(  char* vendorName,
    if(*value==0)
    	charEntry[3]=NULL;
    else{
-		charEntry[3]=(char*)malloc(10);
+		charEntry[3]=(char*)shm_malloc(10);
       sprintf(charEntry[3],"%i",*value);
    }
 	if(!findEntry(charEntry,4))
       return AAA_ERR_NOT_FOUND;
-   *valueName=(char*)malloc(strlen(charEntry[2])+1);
+   *valueName=(char*)shm_malloc(strlen(charEntry[2])+1);
    strcpy(*valueName,charEntry[2]);
 	*value=atoi(charEntry[3]);
-	free(charEntry[3]);
+	shm_free(charEntry[3]);
    return AAA_ERR_SUCCESS;
 }
 
@@ -205,12 +206,12 @@ int findEntry( char** extEntry, int sizeOfEntry){
    }
    while(!match && findWord(extEntry[0])){
       size=MAXWORDLEN;
-      buf=(char*)malloc(size);
+      buf=(char*)shm_malloc(size);
       for(i=1; i < sizeOfEntry; i++){
          size=MAXWORDLEN;
          if((size=readWord(buf,size))){
             if(extEntry[i]==NULL){
-               entry[i]=(char*)malloc(size+1);
+               entry[i]=(char*)shm_malloc(size+1);
                strcpy(entry[i],buf);
                match=1;
                //printf("%s\n",buf);
@@ -221,22 +222,22 @@ int findEntry( char** extEntry, int sizeOfEntry){
                   break;
                }
                else{
-               	entry[i]=(char*)malloc(size+1);
+               	entry[i]=(char*)shm_malloc(size+1);
                	strcpy(entry[i],buf);
                 	//printf("%s\n",buf);
-					}    
+					}
 			}
       }
-		free(buf);
+		shm_free(buf);
    }
    fclose(file);
    if(match==1){
 		int i;
    	for(i=0;i<sizeOfEntry;i++)
 			if(extEntry[i]==NULL){
-				extEntry[i]=(char*)malloc(strlen(entry[i])+1);
+				extEntry[i]=(char*)shm_malloc(strlen(entry[i])+1);
 				strcpy(extEntry[i],entry[i]);
-				free(entry[i]);
+				shm_free(entry[i]);
 			}
 	}
    return match;
@@ -245,7 +246,6 @@ int findWord( char* word){
    char num=0;
    int match = 0;
    int i;
-   char* buff;
    while((!match) && (num=fgetc(file))!=EOF){
       if(num == '#')
          while ((num=fgetc(file))!='\n' && num!=EOF);
