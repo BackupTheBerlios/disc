@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 2003/03/14 18:06:43 bogdan Exp $
+# $Id: Makefile,v 1.6 2003/03/14 18:29:11 bogdan Exp $
 #
 #
 # 2003-03-12  added SHM_MEM & other defines from ser;
@@ -115,7 +115,7 @@ LD= $(CC)
 MKDEP=$(CC) -MM
 
 #sources
-sources=$(filter-out $(auto_gen), $(wildcard *.c) $(wildcard dameter_api/*.c) \
+sources=$(filter-out $(auto_gen), $(wildcard *.c) $(wildcard diameter_api/*.c) \
 		$(wildcard transport/*.c) $(wildcard mem/*.c) $(wildcard client/*.c)  ) \
 		$(auto_gen)
 objs=$(sources:.c=.o)

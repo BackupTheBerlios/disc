@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.5 2003/03/13 18:46:16 bogdan Exp $
+ * $Id: avp.c,v 1.6 2003/03/14 18:29:11 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  * 2003-03-12 converted to shm_malloc/free (andrei)
@@ -9,10 +9,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "dprint.h"
+#include "../dprint.h"
 #include "diameter_types.h"
 
-#include "mem/shm_mem.h"
+#include "../mem/shm_mem.h"
 
 
 

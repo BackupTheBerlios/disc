@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.h,v 1.1 2003/03/13 18:23:24 andrei Exp $
+ * $Id: cfg_parser.h,v 1.2 2003/03/14 18:29:25 bogdan Exp $
  */
 /*
  * History:
@@ -11,7 +11,7 @@
 #define cfg_parser_h
 
 #include <stdio.h>
-#include "utils/str.h"
+#include "../str.h"
 
 #define CFG_EMPTY   0
 #define CFG_COMMENT 1

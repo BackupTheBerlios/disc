@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.14 2003/03/14 14:11:14 bogdan Exp $
+ * $Id: init_conf.c,v 1.15 2003/03/14 18:29:41 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -16,23 +16,23 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
-#include "utils/str.h"
-#include "globals.h"
+#include "../str.h"
+#include "../globals.h"
 #include "init_conf.h"
 #include "diameter_types.h"
-#include "dprint.h"
-#include "tcp_shell/common.h"
-#include "hash_table.h"
-#include "timer.h"
-#include "sh_mutex.h"
-#include "trans.h"
-#include "peer.h"
+#include "../dprint.h"
+#include "../transport/common.h"
+#include "../hash_table.h"
+#include "../timer.h"
+#include "../sh_mutex.h"
+#include "../transport/trans.h"
+#include "../transport/peer.h"
 #include "session.h"
 #include "message.h"
 
-#include "mem/shm_mem.h"
+#include "../mem/shm_mem.h"
 #include "cfg_parser.h"
-#include "config.h"
+//#include "config.h"
 
 
 
@@ -40,6 +40,9 @@
 static int  is_lib_init = 0;
 static char *config_filename = 0;
 
+#define VENDOR_ID  0x0000caca
+#define DEFAULT_LISTENING_PORT 1812
+#define SHM_MEM_SIZE 1
 
 /* external vars */
 unsigned int shm_mem_size=SHM_MEM_SIZE*1024*1024; /* shared mem. size*/
@@ -100,7 +103,7 @@ void init_random_generator()
 
 
 
-int read_config_file()
+int read_config_file( char *configFileName)
 {
 	FILE* cfg_file;
 
@@ -119,7 +122,7 @@ int read_config_file()
 	/* check the params */
 	if ((aaa_identity.s==0)||(aaa_fqdn.s==0)||(aaa_realm.s==0)){
 		LOG(L_CRIT, "critical config parameters missing --exiting\n");
-		goto error_config;
+		goto error;
 	}
 
 	return 1;

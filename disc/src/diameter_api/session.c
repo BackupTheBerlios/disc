@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.3 2003/03/13 13:07:55 andrei Exp $
+ * $Id: session.c,v 1.4 2003/03/14 18:30:00 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -10,16 +10,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "dprint.h"
-#include "utils/str.h"
-#include "globals.h"
-#include "utils/misc.h"
-#include "utils/aaa_lock.h"
-#include "locking.h"
-#include "hash_table.h"
+#include "../dprint.h"
+#include "../str.h"
+#include "../globals.h"
+#include "../utils.h"
+#include "../aaa_lock.h"
+#include "../locking.h"
+#include "../hash_table.h"
 #include "session.h"
 
-#include "mem/shm_mem.h"
+#include "../mem/shm_mem.h"
 
 
 /* local vars */
@@ -57,9 +57,6 @@ int init_session_manager()
 		LOG(L_ERR,"ERROR:init_session_manager: cannot create lock!\n");
 		goto error;
 	}
-
-	/* register a destroy function for sessions */
-	register_destroy_func( hash_table, SESSION_CELL_TYPE, destroy_session);
 
 	LOG(L_INFO,"INFO:init_session_manager: session manager started\n");
 	return 1;
@@ -253,7 +250,7 @@ struct session* create_session( unsigned short peer_id)
 	memset( ses, 0, sizeof(struct session));
 
 	/* set the type */
-	ses->linker.type = SESSION_CELL_TYPE;
+	//ses->linker.type = SESSION_CELL_TYPE;
 	/* init the session */
 	ses->peer_identity = peer_id;
 	ses->state = AAA_IDLE_STATE;
@@ -465,7 +462,7 @@ AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 	session->linker.hash_code = hash( &(session->sID) );
 
 	/* insert the session into the hash table */
-	add_cell_to_htable( hash_table, (struct h_link*)session);
+	//add_cell_to_htable( hash_table, (struct h_link*)session);
 
 	/* now we have both the hash_code and the label of the session -> append
 	 * them to the and of session ID */

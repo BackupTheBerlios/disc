@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.c,v 1.1 2003/03/13 18:23:24 andrei Exp $
+ * $Id: cfg_parser.c,v 1.2 2003/03/14 18:29:11 bogdan Exp $
  *
  * configuration parser
  *
@@ -19,9 +19,9 @@
 #include <stdlib.h>
 
 #include "cfg_parser.h"
-#include "dprint.h"
+#include "../dprint.h"
 #include "parser_f.h"
-#include "mem/shm_mem.h"
+#include "../mem/shm_mem.h"
 
 
 

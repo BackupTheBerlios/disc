@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.11 2003/03/14 14:11:14 bogdan Exp $
+ * $Id: message.c,v 1.12 2003/03/14 18:29:42 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -18,18 +18,18 @@
 #include <time.h>
 
 #include "diameter_api.h"
-#include "dprint.h"
-#include "utils/str.h"
-#include "utils/misc.h"
-#include "locking.h"
-#include "globals.h"
-#include "peer.h"
+#include "../dprint.h"
+#include "../str.h"
+#include "../utils.h"
+#include "../locking.h"
+#include "../globals.h"
+#include "../transport/peer.h"
 #include "message.h"
 #include "avp.h"
 #include "session.h"
-#include "trans.h"
+#include "../transport/trans.h"
 
-#include "mem/shm_mem.h"
+#include "../mem/shm_mem.h"
 
 
 /* local var */
@@ -441,8 +441,8 @@ struct trans *send_aaa_request( str *buf, struct session *ses, struct peer *p)
 	s.s = (char*)&ete;
 	s.len = END_TO_END_IDENTIFIER_SIZE;
 	tr->linker.hash_code = hash( &s );
-	tr->linker.type = TRANSACTION_CELL_TYPE;
-	add_cell_to_htable( hash_table, (struct h_link*)tr );
+	//tr->linker.type = TRANSACTION_CELL_TYPE;
+	//add_cell_to_htable( hash_table, (struct h_link*)tr ); ??????????
 	/* the hash label is used as hop-by-hop ID */
 	((unsigned int*)buf->s)[3] = tr->linker.label;
 
@@ -717,11 +717,11 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 			goto error;
 		}
 		/* search the session the msg belong to by the session-ID string */
-		if ( (ses=session_lookup( hash_table, &(avp->data)))==0 ) {
-			LOG(L_ERR,"ERROR:AAASendMessage: you attempt to send a mesage "
-				"that doesn't belong to any session!!\n");
-			goto error;
-		}
+	//	if ( (ses=session_lookup( hash_table, &(avp->data)))==0 ) {
+	//		LOG(L_ERR,"ERROR:AAASendMessage: you attempt to send a mesage "
+	//			"that doesn't belong to any session!!\n");
+	//		goto error;
+	//	}
 		/* update the session state */
 		switch (msg->commandCode) {
 			case 274: /*ASR*/
