@@ -1,5 +1,5 @@
 /*
- * $Id: globals.h,v 1.5 2003/04/08 18:59:52 andrei Exp $
+ * $Id: globals.h,v 1.6 2003/04/09 16:34:44 andrei Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -18,6 +18,8 @@ extern unsigned int shm_mem_size;
 /* listening port for aaa connections */
 extern unsigned int listen_port;
 
+/* if 1 disable ipv6 */
+extern int disable_ipv6;
 
 /* aaa_identity string */
 extern str aaa_identity;

@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_init.c,v 1.4 2003/04/08 22:06:24 andrei Exp $
+ * $Id: cfg_init.c,v 1.5 2003/04/09 16:34:44 andrei Exp $
  *
  * History:
  * --------
@@ -60,13 +60,15 @@ int read_config_file( char *cfg)
 	/* read the parameters from confg file */
 	if ((cfg_file=fopen(cfg, "r"))==0){
 		LOG(L_CRIT,"ERROR:read_config_file: reading config "
-					"file: %s\n",strerror(errno));
+					"file %s: %s\n", cfg, strerror(errno));
 		goto error;
 	}
 	if (cfg_parse_stream(cfg_file)!=0){
 		fclose(cfg_file);
+		/*
 		LOG(L_CRIT,"ERROR:read_config_file : reading "
 					"config file(%s)\n", cfg);
+		*/
 		goto error;
 	}
 	fclose(cfg_file);
@@ -75,10 +77,6 @@ int read_config_file( char *cfg)
 error:
 	return -1;
 }
-	/* read the config file */
-	/*if ( read_config_file(configFileName)!=1)
-	 *	goto error_config;
-	 */
 
 
 

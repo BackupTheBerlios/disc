@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.5 2003/04/08 22:30:18 bogdan Exp $
+ * $Id: aaa_core.c,v 1.6 2003/04/09 16:34:44 andrei Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -35,7 +35,7 @@ unsigned int shm_mem_size=SHM_MEM_SIZE*1024*1024;
 int memlog=L_DBG;
 
 /* default debuging level */
-int debug=9;
+int debug=0;
 
 /* use std error for loging - default value */
 int log_stderr=1;
@@ -57,6 +57,9 @@ unsigned int vendor_id = VENDOR_ID;
 
 /* listening port */
 unsigned int listen_port = DEFAULT_LISTENING_PORT;
+
+/* if 1 do not use ipv6 */
+int disable_ipv6=0;
 
 /**/
 unsigned int do_relay = 0;
@@ -194,9 +197,11 @@ int init_aaa_core(char *cfg_file)
 
 	/* read config file */
 	if (read_config_file( cfg_file )!=0){
-		fprintf(stderr, "bad config %s\n", cfg_file);
+		/*fprintf(stderr, "bad config %s\n", cfg_file);*/
 		goto error;
 	}
+	/* fix config stuff */
+	if (listen_port==0) listen_port=DEFAULT_LISTENING_PORT;
 
 	/* build the aaa_identity based on FQDN and port */
 	if ( generate_aaaIdentity()==-1 ) {

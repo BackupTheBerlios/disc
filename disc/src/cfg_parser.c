@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.c,v 1.2 2003/04/07 21:27:52 andrei Exp $
+ * $Id: cfg_parser.c,v 1.3 2003/04/09 16:34:44 andrei Exp $
  *
  * configuration parser
  *
@@ -117,8 +117,7 @@ int cfg_parse_stream(FILE* stream)
 			switch (cl.type){
 				case CFG_DEF:
 					if ((ret=cfg_run_def(&cl))!=0){
-						LOG(L_CRIT, "ERROR: on line %d\n", line);
-						LOG(L_CRIT, " ----: cfg_run_def returned %d\n", ret);
+						LOG(L_CRIT, "ERROR (%d): on line %d\n", ret, line);
 						goto error;
 					}
 					break;
