@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.12 2003/04/15 11:44:35 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.13 2003/04/15 12:04:44 bogdan Exp $
  *
  *  History:
  *  --------
@@ -46,7 +46,8 @@ inline static int do_read( struct peer *p)
 	}
 
 	while( (n=recv( p->sock, ptr, wanted_len, MSG_DONTWAIT ))>0 ) {
-		//DBG(">>>>>> read -> n=%d (expected=%d)\n",n,wanted_len);
+		DBG("DEBUG:do_read (sock=%d)  -> n=%d (expected=%d)\n",
+			p->sock,n,wanted_len);
 		p->buf_len += n;
 		if (n<wanted_len) {
 			//DBG("only %d bytes read from %d expected\n",n,wanted_len);
@@ -57,8 +58,8 @@ inline static int do_read( struct peer *p)
 				/* I just finished reading the the first 4 bytes from msg */
 				len = ntohl(p->first_4bytes)&0x00ffffff;
 				if (len<AAA_MSG_HDR_SIZE || len>MAX_AAA_MSG_SIZE) {
-					LOG(L_ERR,"ERROR:do_read: invalid message length read %u\n"
-						,len);
+					LOG(L_ERR,"ERROR:do_read (sock=%d): invalid message "
+						"length read %u (%x)\n",p->sock,len,p->first_4bytes);
 					goto error;
 				}
 				//DBG("message length = %d(%x)\n",len,len);
@@ -74,8 +75,8 @@ inline static int do_read( struct peer *p)
 				wanted_len = p->first_4bytes - p->buf_len;
 			} else {
 				/* I finished reading the whole message */
-				DBG("DEBUG:do_read: whole message read (len=%d)!\n",
-					p->first_4bytes);
+				DBG("DEBUG:do_read (sock=%d): whole message read (len=%d)!\n",
+					p->sock,p->first_4bytes);
 				s.s   = p->buf;
 				s.len = p->buf_len;
 				/* reset the read buffer */
