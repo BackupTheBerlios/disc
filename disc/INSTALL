@@ -1,4 +1,4 @@
-#$Id: INSTALL,v 1.4 2003/04/22 18:07:45 andrei Exp $
+#$Id: INSTALL,v 1.5 2003/04/22 21:32:00 cco Exp $
 
 Dependecies
 -----------
@@ -36,11 +36,12 @@ you should run first ./bootstrap but you need decently recent versions of
 autoconf, automake & libtool)
 
 
-2. From tar.gz
+2. From tar.gz (distribution)
 --------------
 
 tar zxvf disc-0.1.0.tar.gz
 ./configure (or ./configure --with-mipv6_modules)
+(if you want mipv6 DO IT with ./configure --with-mipv6_modules!) 
 make
 make install (or make DESTDIR=/tmp/foo install)
 
