@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.c,v 1.2 2003/03/14 18:29:11 bogdan Exp $
+ * $Id: cfg_parser.c,v 1.1 2003/04/07 18:23:46 andrei Exp $
  *
  * configuration parser
  *
@@ -11,6 +11,7 @@
  * History:
  * --------
  *  2003-03-13  created by andrei
+ *  2003-04-07  added multiple token support and callbacks (andrei)
  */
 
 
@@ -19,9 +20,9 @@
 #include <stdlib.h>
 
 #include "cfg_parser.h"
-#include "../dprint.h"
+#include "dprint.h"
 #include "parser_f.h"
-#include "../mem/shm_mem.h"
+#include "mem/shm_mem.h"
 
 
 
@@ -34,12 +35,13 @@ int cfg_parse_line(char* line, struct cfg_line* cl)
 	/* format:
 		line = expr | comment
 		comment = SP* '#'.*
-		expr = SP* id SP* '=' SP* value comment?
+		expr = SP* id SP* '=' SP* value ... comment?
 	*/
 		
 	char* tmp;
 	char* end;
 	char* t;
+	int r;
 	
 	end=line+strlen(line);
 	tmp=eat_space_end(line, end);
@@ -58,29 +60,36 @@ int cfg_parse_line(char* line, struct cfg_line* cl)
 	tmp=eat_space_end(tmp,end);
 	if (tmp==end) goto error;
 	if (*tmp!='=') goto error;
-	*t=0;
+	*t=0; /* zero terminate*/
 	tmp++;
-	tmp=eat_space_end(tmp,end);
-	if (tmp==end) goto error;
-	cl->value=tmp;
-	tmp=eat_token_end(cl->value, end);
-	if (tmp<end) {
-		*tmp=0;
-		if (tmp+1<end){
-			if (!is_empty_end(tmp+1,end)){
-				/* check if comment */
-				tmp=eat_space_end(tmp+1, end);
-				if (*tmp!='#'){
+	
+	for (r=0; r<CFG_TOKENS; r++){
+		tmp=eat_space_end(tmp,end);
+		if (tmp==end) goto error;
+		if (*tmp=='#') goto end;
+		t=tmp;
+		tmp=eat_token_end(t, end);
+		if (tmp<end) *tmp=0; /* zero terminate*/
+		cl->value[r]=t;
+		cl->token_no++;
+	}
+	if (tmp+1<end){
+		if (!is_empty_end(tmp+1,end)){
+			/* check if comment */
+			tmp=eat_space_end(tmp+1, end);
+			if (*tmp!='#'){
 					/* extra chars at the end of line */
-					goto error;
-				}
+					goto error_extra_tokens;
 			}
 		}
 	}
 	
+end:	
 	cl->type=CFG_DEF;
 skip:
 	return 0;
+error_extra_tokens:
+	LOG(L_CRIT, "ERROR: too many  tokens");
 error:
 	cl->type=CFG_ERROR;
 	return -1;
@@ -185,10 +194,26 @@ int cfg_run_def(struct cfg_line *cl)
 		if (strcasecmp(cl->id, def->name)==0){
 			switch(def->type){
 				case INT_VAL:
-					return cfg_getint(cl->value, def->value);
+					if (cl->token_no>1){
+						LOG(L_CRIT, "single int value expected -- "
+								"too many tokens\n");
+						return -2;
+					}
+					if (def->c) return def->c(cl, def->value);
+					else return cfg_getint(cl->value[1], def->value);
 					break;
 				case STR_VAL:
-					return cfg_getstr(cl->value, def->value);
+					if (cl->token_no>1){
+						LOG(L_CRIT, "single string value expected -- "
+								"too many tokens\n");
+						return -2;
+					}
+					if (def->c) return def->c(cl, def->value);
+					else return cfg_getstr(cl->value[1], def->value);
+					break;
+				case GEN_VAL:
+					if (def->c) return def->c(cl, def->value);
+					else return 0; /* ignore the line */
 					break;
 				default:
 					LOG(L_CRIT, "BUG: cfg_run_def: unknown type %d\n",

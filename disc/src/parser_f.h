@@ -1,5 +1,5 @@
 /* 
- * $Id: parser_f.h,v 1.1 2003/03/13 18:23:24 andrei Exp $
+ * $Id: parser_f.h,v 1.1 2003/04/07 18:23:46 andrei Exp $
  *
  * Copyright (C) 2001-2003 Fhg Fokus
  *
@@ -29,6 +29,7 @@
  * 2003-02-28  scratchpad compatibility abandoned (jiri)
  * 2003-03-13  imported into aaa_server from ser (andrei)
  *             changed eat_token2_end to stop also on whitespace (andrei)
+ * 2003-04-07  changed eat_token* to stop on '#' (comment) (andrei)
  */
 
 
@@ -63,7 +64,8 @@ inline static char* eat_lws_end(char* p, char* pend)
 
 inline static char* eat_token_end(char* p, char* pend)
 {
-	for (;(p<pend)&&(*p!=' ')&&(*p!='\t')&&(*p!='\n')&&(*p!='\r'); p++);
+	for (;(p<pend)&&(*p!=' ')&&(*p!='\t')&&(*p!='\n')&&(*p!='\r')&&(*p!='#');
+			p++);
 	return p;
 }
 
@@ -72,7 +74,7 @@ inline static char* eat_token_end(char* p, char* pend)
 inline static char* eat_token2_end(char* p, char* pend, char delim)
 {
 	for (;(p<pend)&&(*p!=(delim))&&(*p!=' ')&&(*p!='\t')&&(*p!='\n')
-			&&(*p!='\r'); p++);
+			&&(*p!='\r')&&(*p!='#'); p++);
 	return p;
 }
 
