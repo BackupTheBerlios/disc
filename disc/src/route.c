@@ -1,5 +1,5 @@
 /*
- * $Id: route.c,v 1.11 2003/04/14 14:56:00 bogdan Exp $
+ * $Id: route.c,v 1.12 2003/04/14 15:05:54 andrei Exp $
  */
 /*
  * History:
@@ -79,8 +79,8 @@ int add_route(str* realm, str* dst)
 {
 	struct route_entry* re;
 	struct peer_entry* pe;
-	struct peer_entry* new_pe;
-	struct peer_entry*  pi;
+	struct peer_entry_list* new_pe_lst;
+	struct peer_entry_list*  pi;
 	struct route_entry* ri;
 	int ret;
 	
@@ -101,12 +101,7 @@ int add_route(str* realm, str* dst)
 			break;
 	}
 	if (pe==0) goto error_no_peer;
-	new_pe=shm_malloc(sizeof(struct peer_entry));
-	if (new_pe==0) goto error_mem;
-	/* prepare the new peerlist entry */
-	*new_pe=*pe;
-	new_pe->next=0;
-	
+
 	/* see if route for realm already exists */
 	for (re=route_lst; re; re=re->next){
 		if ((re->realm.len==realm->len)&&
@@ -121,8 +116,18 @@ int add_route(str* realm, str* dst)
 		re->realm=*realm;
 	}
 	
+	/* create peer_entry_list */
+	new_pe_lst=shm_malloc(sizeof(struct peer_entry_list));
+	if (new_pe_lst==0){
+		shm_free(re);
+		goto error_mem;
+	}
+	/* prepare the new peerlist entry */
+	new_pe_lst->pe=pe;
+	new_pe_lst->next=0;
+	
 	/* append to the route_entry peer list */
-	LIST_APPEND(re->peer_l, new_pe, pi, next);
+	LIST_APPEND(re->peer_l, new_pe_lst, pi, next);
 	/* append the route entry to the main list */
 	LIST_APPEND(route_lst, re, ri, next);
 	/* we don't need dst.s anymore => free it */
@@ -150,7 +155,7 @@ error_client:
 
 /* returns the first match peer list or 0 on error */
 /* WARNING: all this must be null terminated */
-struct peer_entry* route_dest(str* dst_realm)
+struct peer_entry_list* route_dest(str* dst_realm)
 {
 	struct route_entry* re;
 	char realm [MAX_REALM_LEN+1]; /* needed for null termination*/
@@ -182,7 +187,7 @@ struct peer_entry* route_dest(str* dst_realm)
  * returns 0 on success, <0 on error */
 int do_route(AAAMessage *msg, struct peer *in_p)
 {
-	struct peer_entry* pl;
+	struct peer_entry_list* pl;
 	struct trans* tr;
 	
 	pl=route_dest(&msg->dest_realm->data);
@@ -194,15 +199,15 @@ int do_route(AAAMessage *msg, struct peer *in_p)
 	/* try to send it to the first peer in the route */
 	for(;pl;pl=pl->next){
 		DBG("do_route: pl=%p <%.*s>, peer=%p\n",
-				pl, pl->full_uri.len, pl->full_uri.s, pl->peer);
-		if (pl->peer){
-			if (send_req_to_peer(tr, pl->peer)<0){
+				pl, pl->pe->full_uri.len, pl->pe->full_uri.s, pl->pe->peer);
+		if (pl->pe->peer){
+			if (send_req_to_peer(tr, pl->pe->peer)<0){
 				LOG(L_WARN, "WARNING: do_route: unable to send to %.*s\n",
-						pl->full_uri.len, pl->full_uri.s);
+						pl->pe->full_uri.len, pl->pe->full_uri.s);
 				continue; /*try next peer*/
 			}else{
-				DBG("do_route: sending msg to %.*s\n", pl->full_uri.len,
-						pl->full_uri.s);
+				DBG("do_route: sending msg to %.*s\n", pl->pe->full_uri.len,
+						pl->pe->full_uri.s);
 				goto end;
 			}
 		}
@@ -251,8 +256,8 @@ void destroy_route_lst()
 	struct route_entry* p;
 	struct route_entry* r;
 	
-	struct peer_entry* pe;
-	struct peer_entry* re;
+	struct peer_entry_list* pe;
+	struct peer_entry_list* re;
 	
 	p=route_lst;
 	route_lst=0;

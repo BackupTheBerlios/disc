@@ -1,5 +1,5 @@
 /* 
- * $Id: route.h,v 1.5 2003/04/13 23:01:16 andrei Exp $
+ * $Id: route.h,v 1.6 2003/04/14 15:05:54 andrei Exp $
  */
 /*
  *
@@ -29,10 +29,14 @@ struct peer_entry{
 extern struct peer_entry* cfg_peer_lst;
 
 
+struct peer_entry_list{
+	struct peer_entry* pe;
+	struct peer_entry_list *next;
+};
 
 struct route_entry{
 	str realm;
-	struct peer_entry* peer_l; /* peer list */
+	struct peer_entry_list* peer_l; /* peer list */
 	struct route_entry* next;
 };
 
@@ -41,7 +45,7 @@ extern struct route_entry* route_lst;
 
 int add_cfg_peer(str* uri, str* alias);
 int add_route(str* realm, str* dst);
-struct peer_entry* route_dest(str* realm);
+struct peer_entry_list* route_dest(str* realm);
 int do_route(AAAMessage *msg, struct peer* in_peer);
 
 /* destroy functions, call them to free the memory */
