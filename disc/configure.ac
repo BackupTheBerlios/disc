@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.9 2003/04/08 17:22:01 bogdan Exp $
+dnl $Id: configure.ac,v 1.10 2003/04/08 20:45:07 cco Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -20,7 +20,7 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.9 2003/04/08 17:22:01 bogdan Exp $)
+AC_REVISION($Id: configure.ac,v 1.10 2003/04/08 20:45:07 cco Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 AC_CONFIG_SUBDIRS(libltdl)
@@ -140,6 +140,8 @@ AC_DEFINE_UNQUOTED([__OS_${os}])
 
 dnl Checks for programs
 AC_PROG_CC
+AC_PROG_CXX
+AC_PROG_CXXCPP
 AM_PROG_LEX
 #AC_DECL_YYTEXT
 AC_PROG_YACC
@@ -202,6 +204,9 @@ AC_SEARCH_LIBS([gethostbyname2], [nsl xnet])
 AC_SEARCH_LIBS([getipnodebyname], [nsl xnet])
 dnl ?libfast on Solaris??
 
+
+dnl Check for openssl
+AC_CHECK_LIB(ssl, main)
 
 dnl Checks for header files
 AC_HEADER_STDC
@@ -270,4 +275,5 @@ AC_OUTPUT(Makefile src/Makefile src/client/Makefile src/server/Makefile
 			src/mem/Makefile src/transport/Makefile
 			src/client/modules/Makefile
 			src/client/modules/print/Makefile
+			src/client/modules/mipv6/Makefile
 			)
