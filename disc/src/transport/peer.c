@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.24 2003/04/14 19:23:17 bogdan Exp $
+ * $Id: peer.c,v 1.25 2003/04/14 20:12:23 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -513,6 +513,22 @@ void destroy_peer( struct peer *p)
 }
 
 
+static inline int blocking_write(unsigned int fd, char *buf, unsigned int len)
+{
+	int n;
+
+	while( (n=write(fd,buf,len))!=-1 ) {
+		buf+=n;
+		len-=n;
+		if (len==0)
+			return 1;
+		usleep(20);
+	}
+
+	return -1;
+}
+
+
 
 
 int send_req_to_peer(struct trans *tr , struct peer *p)
@@ -547,7 +563,7 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 	/* the hash label is used as hop-by-hop ID */
 	((unsigned int*)tr->req->s)[3] = tr->linker.label;
 	/* send it */
-	if ((n=write( p->sock, tr->req->s, tr->req->len))==tr->req->len) {
+	if ((n=blocking_write( p->sock, tr->req->s, tr->req->len))==tr->req->len) {
 		lock_release( p->mutex);
 		tr->out_peer = p;
 		tr->req = 0;
@@ -571,7 +587,7 @@ int send_res_to_peer( str *buf, struct peer *p)
 {
 	lock_get( p->mutex );
 	if ( p->state==PEER_CONN ) {
-		if (write( p->sock, buf->s, buf->len)!=-1) {
+		if (blocking_write( p->sock, buf->s, buf->len)!=-1) {
 			lock_release( p->mutex);
 			return 1;
 		}
@@ -612,7 +628,7 @@ inline int internal_send_request( str *buf, struct peer *p)
 	((unsigned int*)buf->s)[3] = tr->linker.label;
 
 	/* send the request */
-	if ( write( p->sock, buf->s, buf->len)==-1 ) {
+	if ( blocking_write( p->sock, buf->s, buf->len)==-1 ) {
 		LOG(L_ERR,"ERROR:internal_send_request: tcp_send_unsafe returned"
 			" error!\n");
 		goto error;
@@ -648,7 +664,7 @@ inline int internal_send_response( str *res, str *req, unsigned int res_code,
 	((unsigned int*)res->s)[4] = ((unsigned int*)req->s)[4];
 
 	/* send the message */
-	if ( write( p->sock, res->s, res->len)==-1 ) {
+	if ( blocking_write( p->sock, res->s, res->len)==-1 ) {
 		LOG(L_ERR,"ERROR:internal_send_response: tcp_send_unsafe "
 			"returned error!\n");
 		return -1;
