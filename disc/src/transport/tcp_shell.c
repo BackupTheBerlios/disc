@@ -1,3 +1,12 @@
+/*
+ * $Id: tcp_shell.c,v 1.6 2003/04/06 22:19:49 bogdan Exp $
+ *
+ *  History:
+ *  --------
+ *  2003-03-07  created by bogdan
+ *  2003-03-12  converted to shm_malloc/shm_free (andrei)
+ */
+
 
 #include <unistd.h>
 #include <fcntl.h>

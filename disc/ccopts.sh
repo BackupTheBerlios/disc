@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#$Id: ccopts.sh,v 1.2 2003/03/26 17:59:28 andrei Exp $
+#$Id: ccopts.sh,v 1.3 2003/04/06 22:19:48 bogdan Exp $
 #
 # returns the CFLAGS for the given compiler (maximum optimizations)
 #
@@ -44,7 +44,7 @@ case $NAME
 in
 gcc) 
 		#common stuff
-		CFLAGS="-O9 -funroll-loops -Winline -Wall"
+		CFLAGS="-g -O9 -funroll-loops -Winline -Wall"
 		case $MAJOR_VER
 		in
 			3)

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.16 2003/04/02 19:08:53 bogdan Exp $
+ * $Id: peer.c,v 1.17 2003/04/06 22:19:49 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -360,9 +360,11 @@ int build_msg_buffers(struct p_table *table)
 		goto error;
 	ptr = table->ce_avp_ipv6.s;
 	memset( ptr, 0, table->ce_avp_ipv6.len);
-	/* copy */
-	memcpy( ptr, table->ce_avp_ipv4.s, AVP_HDR_SIZE + 4);
+	/* copy the host-ip avp */
+	memcpy( ptr, table->ce_avp_ipv4.s, AVP_HDR_SIZE );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 16 ); /* update len */
 	ptr += AVP_HDR_SIZE + 16;
+	/* copy the rest of the avps */
 	memcpy( ptr, table->ce_avp_ipv4.s+AVP_HDR_SIZE+4,
 		table->ce_avp_ipv4.len-AVP_HDR_SIZE-4);
 
@@ -583,6 +585,11 @@ int internal_send_response( str *buf, struct trans *tr)
 {
 	int ret;
 
+	/* set the same hop-by-hop and end-to-end Id as in request */
+	((unsigned int*)buf->s)[2] = ((unsigned int*)tr->req.s)[2];
+	((unsigned int*)buf->s)[3] = ((unsigned int*)tr->req.s)[3];
+	((unsigned int*)buf->s)[4] = ((unsigned int*)tr->req.s)[4];
+
 	/* send the message */
 	if ( (ret=tcp_send_unsafe( tr->peer, buf->s, buf->len))==-1 ) {
 		LOG(L_ERR,"ERROR:internal_send_response: tcp_send_unsafe "
@@ -618,12 +625,12 @@ int send_cer( struct peer *dst_peer)
 		goto error;
 	}
 	ptr = cer.s;
-	/**/
+	/* copy the ce specific AVPs */
 	memcpy( ptr, peer_table->std_req.s, peer_table->std_req.len );
 	((unsigned int*)ptr)[0] |= htonl( cer.len );
 	((unsigned int*)ptr)[1] |= CE_MSG_CODE;
 	ptr += peer_table->std_req.len;
-	/**/
+	/* set the correct address */
 	memcpy( ptr, ce_avp->s, ce_avp->len );
 	memcpy( ptr+AVP_HDR_SIZE,dst_peer->local_ip.u.addr,dst_peer->local_ip.len);
 
@@ -666,7 +673,7 @@ int send_cea( struct trans *tr, unsigned int result_code)
 	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
 		htonl( result_code );
 	ptr += peer_table->std_ans.len;
-	/**/
+	/* set the correct address */
 	memcpy( ptr, ce_avp->s, ce_avp->len );
 	memcpy( ptr+AVP_HDR_SIZE,tr->peer->local_ip.u.addr,tr->peer->local_ip.len);
 
@@ -1154,6 +1161,8 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			lock_get( p->mutex );
 			DBG("DEBUG:peer_state_machine: closing connection\n");
 			tcp_close( p );
+			/* remove the peer from activ peer list */
+			list_del_safe(  &p->lh , &activ_peers );
 			reset_peer( p );
 			/* new state */
 			p->state = PEER_UNCONN;

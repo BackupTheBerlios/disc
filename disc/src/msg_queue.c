@@ -1,5 +1,5 @@
 /*
- * $Id: msg_queue.c,v 1.1 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: msg_queue.c,v 1.2 2003/04/06 22:19:48 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -11,7 +11,7 @@
 #include "msg_queue.h"
 
 struct queue_unit {
-	str  *buf;
+	str  buf;
 	struct peer *p;
 };
 
@@ -43,8 +43,9 @@ int put_in_queue( str *buf, struct peer *p)
 {
 	struct queue_unit qu;
 
-	qu.buf = buf;
-	qu.p   = p;
+	qu.buf.s   = buf->s;
+	qu.buf.len = buf->len;
+	qu.p       = p;
 
 	if (write( msg_pipe[1], &qu, sizeof(qu) )!=sizeof(qu) ) {
 		LOG(L_ERR,"ERROR:put_in_queue: cannot write into pipe : %s\n",
@@ -66,8 +67,8 @@ int get_from_queue(str *buf, struct peer **p)
 			strerror(errno));
 		return -1;
 	}
-	buf->s = qu.buf->s;
-	buf->len = qu.buf->len;
+	buf->s = qu.buf.s;
+	buf->len = qu.buf.len;
 	*p = qu.p;
 	return 1;
 

@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.16 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: diameter_types.h,v 1.17 2003/04/06 22:19:49 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -35,7 +35,7 @@
 
 /* mesage codes
  */
-#if (__BYTE_ORDER==LITTLE_ENDIAN)
+#ifndef WORDS_BIGENDIAN
 	#define AS_MSG_CODE      0x12010000
 	#define AC_MSG_CODE      0x0f010000
 	#define CE_MSG_CODE      0x01010000
@@ -45,6 +45,7 @@
 	#define ST_MSG_CODE      0x13010000
 	#define MASK_MSG_CODE    0xffffff00
 #else
+	#error BIG endian detected!!
 	#define AS_MSG_CODE      0x00000112
 	#define AC_MSG_CODE      0x0000010f
 	#define CE_MSG_CODE      0x00000101

@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.14 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: session.c,v 1.15 2003/04/06 22:19:49 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -346,11 +346,11 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 															AAAMessage *msg)
 {
 	static char *err_msg[]= {
-		"no error"
+		"no error",
 		"event - state mismatch",
 		"unknown type event",
 		"unknown peer_identity type",
-		"internal error",
+		"internal error"
 	};
 	int error_code=0;
 
@@ -514,7 +514,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 	return 1;
 error:
 	LOG(L_ERR,"ERROR:session_state_machine: %s : session=%p, peer_identity=%d,"
-		"state=%d, event=%d\n",err_msg[error_code],
+		" state=%d, event=%d\n",err_msg[error_code],
 		ses,ses->peer_identity,ses->state,event);
 	return -1;
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.7 2003/04/06 01:18:13 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.8 2003/04/06 22:19:49 bogdan Exp $
  *
  *  History:
  *  --------
@@ -115,6 +115,7 @@ inline void tcp_accept(struct peer *p, unsigned int s)
 	}
 
 	su2ip_addr( &local_ip, &local );
+	//DBG("-----> accepted on [%s]\n",ip_addr2a( &local_ip));
 	info.sock  = s;
 	info.local = &local_ip;
 	/* call the peer state machine */
