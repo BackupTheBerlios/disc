@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.16 2003/03/11 23:02:03 bogdan Exp $
+ * $Id: peer.c,v 1.17 2003/03/11 23:42:32 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -643,10 +643,12 @@ int process_dw( struct peer *p, str *buf , int is_req)
 		goto error;
 	}
 
-	free( buf->s );
+	if (!is_req)
+		free( buf->s );
 	return 1;
 error:
-	free( buf->s );
+	if (!is_req)
+		free( buf->s );
 	return -1;
 }
 
