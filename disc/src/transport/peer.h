@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.5 2003/03/17 16:39:46 bogdan Exp $
+ * $Id: peer.h,v 1.6 2003/03/17 17:54:14 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -50,6 +50,8 @@ struct peer {
 	unsigned int state;
 	/* hash table with all the peer's transactions */
 	struct h_table *trans_table;
+	/* counter for generating end-to-end-IDs */
+	unsigned int endtoendID;
 	/* linking information */
 	struct list_head  all_peer_lh;
 	struct list_head  thd_peer_lh;
@@ -143,7 +145,7 @@ typedef enum {
 
 
 /* peer table */
-//extern struct p_table *peer_table;
+extern struct p_table *peer_table;
 /* List with all known application identifiers */
 extern unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ];
 
@@ -154,8 +156,7 @@ struct p_table *init_peer_manager( unsigned int trans_hash_size );
 
 void destroy_peer_manager();
 
-int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
-														unsigned int port);
+int add_peer( str *host, unsigned int realm_offset, unsigned int port);
 
 void init_all_peers();
 
@@ -180,8 +181,8 @@ void static inline unref_peer(struct peer *p)
 /* search into the peer table for the peer having the given host name */
 static inline struct peer* lookup_peer_by_host( str *host )
 {
-	struct list_head *lh;
-	struct peer *p;
+	//struct list_head *lh;
+	//struct peer *p;
 	struct peer *res=0;
 #if 0
 	lock_get( peer_table->mutex );
@@ -205,8 +206,8 @@ static inline struct peer* lookup_peer_by_host( str *host )
 /* search into the peer table for the peer searving the given realm */
 static inline struct peer* lookup_peer_by_realm( str *realm )
 {
-	struct list_head *lh;
-	struct peer *p;
+	//struct list_head *lh;
+	//struct peer *p;
 	struct peer *res=0;
 #if 0
 	lock_get( peer_table->mutex );
@@ -230,8 +231,8 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 /* search into the peer table for the peer having the given IP address */
 static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 {
-	struct list_head *lh;
-	struct peer *p;
+	//struct list_head *lh;
+	//struct peer *p;
 	struct peer *res=0;
 #if 0
 	lock_get( peer_table->mutex );

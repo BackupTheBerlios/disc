@@ -9,9 +9,10 @@
 #include <fcntl.h>
 #include "config.h"
 #include "../mem/shm_mem.h"
-#include "../diameter_api/diameter_api.h"
 #include "../sh_mutex.h"
 #include "../timer.h"
+#include "../transport/peer.h"
+#include "../transport/tcp_shell.h"
 
 
 
@@ -38,14 +39,16 @@ void close_client();
 
 static void sig_handler(int signo)
 {
-	printf(" ----------- SIGNAL RECEIVED (%d)(%d) -----------------\n",
+	printf(" -------------- SIGNAL RECEIVED (%d)(%d) -----------------\n",
 			(int)pthread_self(), getpid() );
 	if ( main_thread==pthread_self() ) {
 		close_client();
 		exit(0);
 	}
+	printf("------------- JUST A WORKER - NOTHING TO DO ---------------\n");
 	return;
 }
+
 
 
 
@@ -106,6 +109,14 @@ int init_client()
 		goto error;
 	}
 
+	/* init the peer manager */
+	if ( (peer_table=init_peer_manager(DEFAULT_TRANS_HASH_SIZE))==0) {
+		goto error;
+	}
+
+	/* starts the transport layer - tcp */
+	if (init_tcp_shell(DEFAULT_TCP_RECEIVE_THREADS))
+
 	//if( AAAOpen("aaa_lib.cfg")!=AAA_ERR_SUCCESS ) {
 	//	return -1;
 	//}
@@ -116,6 +127,7 @@ int init_client()
 	return 1;
 error:
 	printf("ERROR: cannot init the client\n");
+	close_client();
 	return -1;
 }
 
@@ -123,8 +135,14 @@ error:
 
 void close_client()
 {
-		/* stop the timer */
+	/* stop the timer */
 	destroy_timer();
+
+	/* stop the tcp layer */
+	terminate_tcp_shell();
+
+	/* destroy the peer manager */
+	destroy_peer_manager( peer_table );
 
 	/* destroy the shared mutexes */
 	destroy_shared_mutexes();
@@ -138,8 +156,21 @@ void close_client()
 
 int main(int argc, char *argv[])
 {
+	str peer;
+
 	if ( init_client()==-1 )
 		exit(-1);
+
+	/* add the peers from config file */
+	//..................
+	peer.s = "ugluk.mobis.fokus.gmd.de";
+	peer.len = strlen(peer.s);
+	add_peer( &peer, 7, 1812);
+
+	/* start the tcp shell */
+	start_tcp_accept();
+
+
 
 	for(;;)
 		sleep( 40 );

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.5 2003/03/17 16:39:46 bogdan Exp $
+ * $Id: peer.c,v 1.6 2003/03/17 17:54:14 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 #include "../mem/shm_mem.h"
 #include "../dprint.h"
 #include "../str.h"
@@ -69,6 +70,7 @@ static unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ] = {
 int build_msg_buffers(struct p_table *peer_table);
 void peer_timer_handler(unsigned int ticks, void* param);
 
+struct p_table      *peer_table = 0;
 static struct timer *del_timer = 0;
 static struct timer *reconn_timer = 0;
 static struct timer *wait_cer_timer = 0;
@@ -150,10 +152,10 @@ struct p_table *init_peer_manager( unsigned int trans_hash_size )
 	}
 
 	LOG(L_INFO,"INFO:init_peer_manager: peer manager started\n");
-	return 1;
+	return peer_table;
 error:
 	LOG(L_INFO,"INFO:init_peer_manager: FAILED to start peer manager\n");
-	return -1;
+	return 0;
 }
 
 
@@ -387,8 +389,7 @@ error:
 /* a new peer is created and added. The name of the peer host is given and the 
  * offset of the realm inside the host name. The host name and realm are copied
  * locally */
-int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
-															unsigned int port )
+int add_peer( str *host, unsigned int realm_offset, unsigned int port )
 {
 	static struct hostent* ht;
 	struct peer *p;
@@ -436,7 +437,12 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 	p->fd = get_new_receive_thread();
 
 	/* build the hash tbale for the transactions */
-	p->trans_table = build_htable(/*?????????????????/*/);
+	p->trans_table = build_htable( peer_table->trans_hash_size );
+
+	/* init the end-to-end-ID counter */
+	p->endtoendID  = ((unsigned int)time(0))<<20;
+	p->endtoendID |= ((unsigned int)rand( ))>>12;
+
 
 	/* insert the peer into the list */
 	lock_get( peer_table->mutex );
@@ -459,6 +465,71 @@ void destroy_peer( struct peer *p)
 {
 }
 
+
+
+
+/*  sends out a buffer*/
+struct trans *internal_send_aaa_request( str *buf, struct peer *p)
+{
+	struct trans *tr;
+	str s;
+
+	/* build a new transaction for this request */
+	if ((tr=create_transaction( buf, 0, p))==0) {
+		LOG(L_ERR,"ERROR:internal_send_aaa_request: cannot create a new"
+			" transaction!\n");
+		goto error;
+	}
+
+	/* generate a new end-to-end id */
+	((unsigned int *)buf->s)[4] = p->endtoendID++;
+
+	/* link the transaction into the hash table ; use end-to-end-ID for
+	 * calculating the hash_code */
+	s.s = buf->s+(4*4);
+	s.len = END_TO_END_IDENTIFIER_SIZE;
+	tr->linker.hash_code = hash( &s, peer_table->trans_hash_size );
+	add_cell_to_htable( p->trans_table, (struct h_link*)tr );
+	/* the hash label is used as hop-by-hop ID */
+	((unsigned int*)buf->s)[3] = tr->linker.label;
+
+	/* send the request */
+	if ( tcp_send_unsafe( p, buf->s, buf->len)==-1 ) {
+		LOG(L_ERR,"ERROR:internal_send_aaa_request: tcp_send_unsafe returned"
+			" error!\n");
+		goto error;
+	}
+
+	/* start the timeout timer */
+	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
+		get_ticks()+TR_TIMEOUT_TIMEOUT );
+
+	return tr;
+error:
+	shm_free( buf->s );
+	if (tr)
+		destroy_transaction(tr);
+	return 0;
+}
+
+
+
+int internal_send_aaa_response( str *buf, struct trans *tr)
+{
+	int ret;
+
+	/* send the message */
+	if ( (ret=tcp_send_unsafe( tr->peer, buf->s, buf->len))==-1 ) {
+		LOG(L_ERR,"ERROR:internal_send_aaa_response: tcp_send_unsafe "
+			"returned error!\n");
+	}
+
+	/* destroy everything */
+	destroy_transaction( tr );
+	shm_free( buf->s );
+
+	return ret;
+}
 
 
 
@@ -485,7 +556,7 @@ int send_cer( struct peer *dst_peer)
 	memcpy( ptr + AVP_HDR_SIZE, &dst_peer->local_ip, sizeof(struct ip_addr) );
 
 	/* send the buffer */
-	if ( (tr=send_aaa_request( &cer, 0, dst_peer))==0 )
+	if ( (tr=internal_send_aaa_request( &cer, dst_peer))==0 )
 		goto error;
 	tr->info = dst_peer->conn_cnt;
 
@@ -522,7 +593,7 @@ int send_cea( struct trans *tr, unsigned int result_code)
 
 
 	/* send the buffer */
-	return send_aaa_response( &cea, tr);
+	return internal_send_aaa_response( &cea, tr);
 
 	return 1;
 error:
@@ -618,7 +689,7 @@ int send_dwr( struct peer *dst_peer)
 	((unsigned int*)ptr)[1] |= DW_MSG_CODE;
 
 	/* send the buffer */
-	if ( (tr=send_aaa_request( &dwr, 0, dst_peer))==0 )
+	if ( (tr=internal_send_aaa_request( &dwr, dst_peer))==0 )
 		goto error;
 	tr->info = dst_peer->conn_cnt;
 
@@ -649,7 +720,7 @@ int send_dwa( struct trans *tr, unsigned int result_code)
 		htonl( result_code );
 
 	/* send the buffer */
-	return send_aaa_response( &dwa, tr);
+	return internal_send_aaa_response( &dwa, tr);
 
 	return 1;
 error:
@@ -722,7 +793,7 @@ int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 	((unsigned int*)ptr)[ AVP_HDR_SIZE>>2 ] |= htonl( disc_cause );
 
 	/* send the buffer */
-	if ( (tr=send_aaa_request( &dpr, 0, dst_peer))==0 )
+	if ( (tr=internal_send_aaa_request( &dpr, dst_peer))==0 )
 		goto error;
 	tr->info = dst_peer->conn_cnt;
 
@@ -753,7 +824,7 @@ int send_dpa( struct trans *tr, unsigned int result_code)
 		htonl( result_code );
 
 	/* send the buffer */
-	return send_aaa_response( &dpa, tr);
+	return internal_send_aaa_response( &dpa, tr);
 
 	return 1;
 error:
@@ -1330,6 +1401,5 @@ void peer_timer_handler(unsigned int ticks, void* param)
 		}
 		lock_release( activ_peers.mutex );
 	}
-
 }
 

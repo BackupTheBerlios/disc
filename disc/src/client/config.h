@@ -1,5 +1,5 @@
 /*
- * $Id: config.h,v 1.1 2003/03/14 16:54:07 bogdan Exp $
+ * $Id: config.h,v 1.2 2003/03/17 17:54:14 bogdan Exp $
  */
 /* History:
  * --------
@@ -9,9 +9,18 @@
 #ifndef _diameter_api_config_h
 #define _diameter_api_config_h
 
-
+/* size of the shared memory */
 #define SHM_MEM_SIZE 1 /* in MB */
+
+/* default listening port for tcp */
 #define DEFAULT_LISTENING_PORT   1812
+
+/* number of thash entries per table for the transaction hash_table */
+#define DEFAULT_TRANS_HASH_SIZE   256
+
+/* default number of receiving thread for tcp */
+#define DEFAULT_TCP_RECEIVE_THREADS 4
+
 #define VENDOR_ID   0x0000caca
 
 #endif
