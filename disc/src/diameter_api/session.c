@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.27 2003/08/25 14:52:02 bogdan Exp $
+ * $Id: session.c,v 1.28 2003/08/29 11:41:14 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -406,20 +406,15 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 					/* an accounting request has to be sent */
 					lock_get( ses->mutex );
 					switch(ses->state) {
-						case AAA_PENDING_STATE:
-							if (ses->prev_state==AAA_IDLE_STATE) {
-								lock_release( ses->mutex );
-								error_code = 1;
-								goto error;
-							}
-						case AAA_OPEN_STATE:
-							ses->pending_accts++;
-							lock_release( ses->mutex );
-							break;
-						default:
+						case AAA_DISCON_STATE:
+						case AAA_TO_DESTROY_STATE:
 							lock_release( ses->mutex );
 							error_code = 1;
 							goto error;
+						default:
+							ses->pending_accts++;
+							lock_release( ses->mutex );
+							break;
 					}
 					break;
 				case AAA_AuthA_RECEIVED:
