@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.20 2003/04/21 21:09:26 andrei Exp $
+## $Id: Makefile.am,v 1.21 2003/04/22 18:56:34 andrei Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -29,12 +29,18 @@ common =			aaa_lock.c dprint.c hash_table.c \
 disc_SOURCES = $(common)
 # hash.c only for tests
 				
-EXTRA_DIST=aaa_client.cfg aaa_server.cfg othrod_client.cfg
+EXTRA_DIST=othrod_client.cfg aaa_client.cfg aaa_server.cfg
 
 disc_LDADD =	 mem/libmem.la transport/libtransport.la \
 			diameter_api/libdiameter_api.la diameter_msg/libdiameter_msg.la \
 			@LIBLTDL@
 # @LIBADD_DL@ # not needed for newer libtool version (>=1.4)
 disc_LDFLAGS = -export-dynamic -pthread
+
+
+## install config
+
+sysconfdir = @sysconfdir@/@PACKAGE@
+sysconf_DATA = aaa_client.cfg aaa_server.cfg 
 
 
