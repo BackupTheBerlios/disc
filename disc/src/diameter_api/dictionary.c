@@ -3,10 +3,10 @@
  *
  */
 #include <stdio.h>
-#include "diameter_avp.h"
+#include "diameter_types.h"
 
 #define MAXWORDLEN 1024;
-
+#if 0
 FILE* file;
 
 AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
@@ -122,3 +122,4 @@ int readWord(char* buf,int size){
    return strlen(buf);
       
 }
+#endif

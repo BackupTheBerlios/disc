@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.7 2003/03/12 18:12:22 andrei Exp $
+ * $Id: init_conf.c,v 1.8 2003/03/12 18:58:55 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -153,7 +153,7 @@ AAAReturnCode AAAOpen(char *configFileName)
 	config_filename[511] = 0;
 
 	/**/
-	aaa_identity.s = "aaa://fesarius.fokus.gmd.de:1912;transport=tcp";
+	aaa_identity.s = "aaa://fesarius.fokus.gmd.de:1812;transport=tcp";
 	aaa_identity.len = strlen(aaa_identity.s);
 	aaa_fqdn.s = aaa_identity.s + 6;
 	aaa_fqdn.len = 21;

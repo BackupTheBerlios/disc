@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.12 2003/03/12 18:12:22 andrei Exp $
+ * $Id: peer.h,v 1.13 2003/03/12 18:58:55 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -25,27 +25,17 @@ struct peer;
 #define PEER_TO_DESTROY    1<<0
 #define PEER_CONN_IN_PROG  1<<1
 
-/* List with FLAGS coresponding to all known application identifiers */
-typedef enum {
-	AAA_APP_RELAY                = 0,
-	AAA_APP_DIAMETER_COMMON_MSG  = 1,
-	AAA_APP_NASREQ               = 2,
-	AAA_APP_MOBILE_IP            = 3,
-	AAA_APP_DIAMETER_BASE_ACC    = 4,
-	AAA_APP_MAX_ID
-}AAA_APP_IDS;
-
-/* List with all known application identifiers */
-extern unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ];
-
-
-/* peer table */
-extern struct p_table *peer_table;
 
 
 struct tcp_info {
 	struct ip_addr *local;
 	unsigned int   sock;
+};
+
+
+struct safe_list_head {
+	struct list_head lh;
+	aaa_lock         *mutex;
 };
 
 
@@ -83,6 +73,9 @@ struct peer {
 	/* what kind of app the other peer supports */
 	unsigned int supp_acc_app_id;
 	unsigned int supp_auth_app_id;
+	/* */
+	struct list_head lh;
+	unsigned int last_activ_time;
 };
 
 
@@ -114,10 +107,11 @@ enum AAA_PEER_EVENT {
 	DWA_RECEIVED,       /*  8 */
 	DPR_RECEIVED,       /*  9 */
 	DPA_RECEIVED,       /* 10 */
-	PEER_HANGUP,        /* 11 */
-	PEER_TR_TIMEOUT,    /* 12 */
-	PEER_CER_TIMEOUT,   /* 13 */
-	PEER_RECONN_TIMEOUT /* 14 */
+	PEER_IS_INACTIV,    /* 11 */
+	PEER_HANGUP,        /* 12 */
+	PEER_TR_TIMEOUT,    /* 13 */
+	PEER_CER_TIMEOUT,   /* 14 */
+	PEER_RECONN_TIMEOUT /* 15 */
 };
 
 
@@ -130,6 +124,23 @@ enum AAA_PEER_STATE {
 	PEER_WAIT_DPA
 };
 
+
+/* List with FLAGS coresponding to all known application identifiers */
+typedef enum {
+	AAA_APP_RELAY                = 0,
+	AAA_APP_DIAMETER_COMMON_MSG  = 1,
+	AAA_APP_NASREQ               = 2,
+	AAA_APP_MOBILE_IP            = 3,
+	AAA_APP_DIAMETER_BASE_ACC    = 4,
+	AAA_APP_MAX_ID
+}AAA_APP_IDS;
+
+
+
+/* peer table */
+extern struct p_table *peer_table;
+/* List with all known application identifiers */
+extern unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ];
 
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.7 2003/03/12 18:12:22 andrei Exp $
+ * $Id: message.c,v 1.8 2003/03/12 18:58:55 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -424,6 +424,7 @@ error:
  */
 int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 {
+	unsigned int ete;
 	struct trans *tr;
 	int ret;
 	str s;
@@ -440,9 +441,13 @@ int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 		goto error;
 	}
 
+	/* generate a new end-to-end id */
+	ete = generate_endtoendID();
+	((unsigned int *)buf->s)[4] = ete;
+
 	/* link the transaction into the hash table ; use end-to-end-ID for
 	 * calculating the hash_code */
-	s.s = buf->s + AAA_MSG_HDR_SIZE - END_TO_END_IDENTIFIER_SIZE ;
+	s.s = (char*)&ete;
 	s.len = END_TO_END_IDENTIFIER_SIZE;
 	tr->linker.hash_code = hash( &s );
 	tr->linker.type = TRANSACTION_CELL_TYPE;

@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.3 2003/03/12 18:12:22 andrei Exp $
+ * $Id: timer.c,v 1.4 2003/03/12 18:59:25 bogdan Exp $
  *
  * 
  *  2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -17,8 +17,6 @@
 
 #include "mem/shm_mem.h"
 
-
-#define is_in_timer_list(_tl) ( (_tl)->timer_list )
 
 
 static struct timer_handler* timer_handler_list=0;

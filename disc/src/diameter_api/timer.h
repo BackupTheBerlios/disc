@@ -1,5 +1,5 @@
 /*
- * $Id: timer.h,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: timer.h,v 1.2 2003/03/12 18:59:25 bogdan Exp $
  *
  */
 
@@ -10,7 +10,9 @@
 
 #include "utils/aaa_lock.h"
 
+
 #define TIMER_TICK 1
+#define is_in_timer_list(_tl) ( (_tl)->timer_list )
 
 
 typedef void (timer_function)(unsigned int ticks, void* param);
@@ -73,5 +75,6 @@ int add_to_timer_list( struct timer_link*, struct timer* ,unsigned int);
 int rmv_from_timer_list( struct timer_link* );
 
 struct timer_link* get_expired_from_timer_list( struct timer*, unsigned int );
+
 
 #endif

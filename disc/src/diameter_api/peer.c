@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.18 2003/03/12 18:12:22 andrei Exp $
+ * $Id: peer.c,v 1.19 2003/03/12 18:58:55 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -32,16 +32,33 @@
 
 #define PEER_TIMER_STEP  1
 #define DELETE_TIMEOUT   2
-#define RECONN_TIMEOUT   30
+#define RECONN_TIMEOUT   60
 #define WAIT_CER_TIMEOUT 5
+#define SEND_DWR_TIMEOUT 20
 
 
 #define cheack_app_ids( _peer_ ) \
-	( (((_peer_)->supp_acc_app_id)|(supported_acc_app_id)) || \
-	(((_peer_)->supp_auth_app_id)|(supported_auth_app_id))  )
+	( (((_peer_)->supp_acc_app_id)&(supported_acc_app_id)) || \
+	(((_peer_)->supp_auth_app_id)&(supported_auth_app_id))  )
+
+#define list_add_tail_safe( _lh_ , _list_ ) \
+	do{ \
+		lock( (_list_)->mutex );\
+		list_add_tail( (_lh_), &((_list_)->lh) );\
+		unlock( (_list_)->mutex );\
+	}while(0);
+
+#define list_del_safe( _lh_ , _list_ ) \
+	do{ \
+		lock( (_list_)->mutex );\
+		list_del( (_lh_) );\
+		unlock( (_list_)->mutex );\
+	}while(0);
 
 
-unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ] = {
+
+/* List with all known application identifiers */
+static unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ] = {
 	0xffffffff,   /* AAA_APP_RELAY */
 	0x00000000,   /* AAA_APP_DIAMETER_COMMON_MSG */
 	0x00000001,   /* AAA_APP_NASREQ */
@@ -50,11 +67,16 @@ unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ] = {
 };
 
 
+
+
 int build_msg_buffers(struct p_table *peer_table);
 void peer_timer_handler(unsigned int ticks, void* param);
+
 static struct timer *del_timer = 0;
 static struct timer *reconn_timer = 0;
 static struct timer *wait_cer_timer = 0;
+static struct safe_list_head activ_peers;
+
 
 
 
@@ -107,6 +129,15 @@ int init_peer_manager()
 	if (!wait_cer_timer) {
 		LOG(L_ERR,"ERROR:init_peer_manager: cannot create wait CER "
 			"timer list!!\n");
+		goto error;
+	}
+
+	/* create activ peers list */
+	INIT_LIST_HEAD( &(activ_peers.lh) );
+	activ_peers.mutex = create_locks( 1 );
+	if ( !activ_peers.mutex ) {
+		LOG(L_ERR,"ERROR:init_peer_manager: cannot create lock for activ"
+			" peers list!!\n");
 		goto error;
 	}
 
@@ -175,6 +206,8 @@ void destroy_peer_manager()
 
 	if (reconn_timer)
 		destroy_timer_list( reconn_timer );
+
+	destroy_locks( activ_peers.mutex, 1);
 
 	LOG(L_INFO,"INFO:destroy_peer_manager: peer manager stoped\n");
 }
@@ -549,10 +582,8 @@ int process_ce( struct peer *p, str *buf , int is_req)
 		goto error;
 	}
 
-	shm_free( buf->s );
 	return 1;
 error:
-	shm_free( buf->s );
 	return -1;
 }
 
@@ -602,8 +633,6 @@ int send_dwa( struct trans *tr, unsigned int result_code)
 	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
 		htonl( result_code );
 
-	ptr += peer_table->std_ans.len;
-
 	/* send the buffer */
 	return send_aaa_response( &dwa, tr);
 
@@ -647,83 +676,113 @@ int process_dw( struct peer *p, str *buf , int is_req)
 		goto error;
 	}
 
-	if (!is_req)
-		shm_free( buf->s );
 	return 1;
 error:
-	if (!is_req)
-		shm_free( buf->s );
 	return -1;
 }
 
 
 
 
-#if 0
 int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 {
-	AAAMessage *dpr_msg;
-	AAA_AVP    *avp;
+	char *ptr;
+	str dpr;
 
-	dpr_msg = 0;
-
-	if (!dst_peer)
+	dpr.len = peer_table->std_req.len + peer_table->dpr_avp.len;
+	dpr.s = malloc( dpr.len );
+	if (!dpr.s) {
+		LOG(L_ERR,"ERROR:send_dpr: no more free memory\n");
 		goto error;
+	}
+	ptr = dpr.s;
+	/* standar answer part */
+	memcpy( ptr, peer_table->std_req.s, peer_table->std_req.len );
+	((unsigned int*)ptr)[0] |= htonl( dpr.len );
+	((unsigned int*)ptr)[1] |= DP_MSG_CODE;
+	ptr += peer_table->std_req.len;
+	/* disconnect cause avp */
+	memcpy( ptr, peer_table->dpr_avp.s, peer_table->dpr_avp.len );
+	((unsigned int*)ptr)[ AVP_HDR_SIZE>>2 ] |= htonl( disc_cause );
 
-	/* build a DPR */
+	/* send the buffer */
+	return send_aaa_request( &dpr, 0, dst_peer);
+error:
+	return -1;
+}
 
-	/* create a new request template */
-	dpr_msg = AAANewMessage( 282, vendor_id, 0/*sessionId*/,
-			0/*extensionId*/, 0/*request*/);
-	if (!dpr_msg)
+
+
+int send_dpa( struct trans *tr, unsigned int result_code)
+{
+	char *ptr;
+	str dpa;
+
+	dpa.len = peer_table->std_ans.len;
+	dpa.s = malloc( dpa.len );
+	if (!dpa.s) {
+		LOG(L_ERR,"ERROR:send_dwa: no more free memory\n");
 		goto error;
+	}
+	ptr = dpa.s;
+	/**/
+	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
+	((unsigned int*)ptr)[0] |= htonl( dpa.len );
+	((unsigned int*)ptr)[1] |= DP_MSG_CODE;
+	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
+		htonl( result_code );
 
-	/* add Disconect-Cause AVP */
-	/* Vendor-Id AVP */
-	if ( create_avp( &avp, 273, 0, 0, (char*)&disc_cause, 4, 1)!=
-	AAA_ERR_SUCCESS)
-		goto error;
-	if ( AAAAddAVPToList( &(dpr_msg->avpList), avp, dpr_msg->avpList->tail )!=
-	AAA_ERR_SUCCESS) {
-		AAAFreeAVP( &avp );
+	/* send the buffer */
+	return send_aaa_response( &dpa, tr);
+
+	return 1;
+error:
+	return -1;
+}
+
+
+
+int process_dp( struct peer *p, str *buf , int is_req)
+{
+	static unsigned int rpl_pattern = 0x00000007;
+	static unsigned int req_pattern = 0x0000000e;
+	unsigned int mask = 0;
+	unsigned int n;
+	char *ptr;
+	char *foo;
+
+	for_all_AVPS_do_switch( buf , foo , ptr ) {
+		case 268: /* result_code */
+			set_AVP_mask( mask, 0);
+			n = ntohl( ((unsigned int *)ptr)[2] );
+			if (n!=AAA_SUCCESS) {
+				LOG(L_ERR,"ERROR:process_ce: DPA has a non-success "
+					"code : %d\n",n);
+				goto error;
+			}
+			break;
+		case 264: /* orig host */
+			set_AVP_mask( mask, 1);
+			break;
+		case 296: /* orig realm */
+			set_AVP_mask( mask, 2);
+			break;
+		case 273: /* disconnect cause */
+			set_AVP_mask( mask, 3);
+			break;
+	}
+
+	if ( mask!=(is_req?req_pattern:rpl_pattern) ) {
+		LOG(L_ERR,"ERROR:process_dw: dp(a|r) has missing avps(%x<>%x)!!\n",
+			(is_req?req_pattern:rpl_pattern),mask);
 		goto error;
 	}
 
-	/* send the message */
-	//send_aaa_message( dpr_msg, 0, 0, dst_peer);
-
 	return 1;
 error:
-	if (dpr_msg)
-		AAAFreeMessage( &dpr_msg );
 	return -1;
 }
 
-
-
-int send_dpa( struct trans *tr, unsigned int result_code, str *error_msg)
-{
-	AAAMessage   *dpa_msg;
-
-	dpa_msg = 0;
-	//if (!tr || tr->in_req || tr->in_peer)
-	//	goto error;
-
-	/* build a CEA */
-	//dpa_msg = build_rpl_from_req(tr->in_req, result_code, error_msg);
-	if (!dpa_msg)
-		goto error;
-
-	/* send the message */
-	//send_aaa_message( dpa_msg, tr, 0, tr->peer);
-
-	return 1;
-error:
-	if (dpa_msg)
-		AAAFreeMessage( &dpa_msg );
-	return -1;
-}
-#endif
 
 
 
@@ -733,6 +792,8 @@ void dispatch_message( struct peer *p, str *buf)
 	unsigned int code;
 	int          event;
 
+	/* reset the inactivity time */
+	p->last_activ_time = get_ticks();
 	/* get message code */
 	code = ((unsigned int*)buf->s)[1]&MASK_MSG_CODE;
 	/* check the message code */
@@ -780,6 +841,7 @@ void dispatch_message( struct peer *p, str *buf)
 			event++;
 			/* call the peer machine */
 			peer_state_machine( p, event, buf );
+			free(buf->s);
 		}
 	}
 }
@@ -961,6 +1023,8 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 		case PEER_TR_TIMEOUT:
 			lock( p->mutex );
 			switch (p->state) {
+				case PEER_WAIT_DWA:
+					list_del_safe( &p->lh , &activ_peers );
 				case PEER_WAIT_CEA:
 				case PEER_WAIT_DPA:
 					DBG("DEBUG:peer_state_machine: transaction timeout\n");
@@ -985,6 +1049,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 						reset_peer( p );
 						p->state = PEER_UNCONN;
 					} else {
+						list_add_tail_safe( &p->lh, &activ_peers );
 						p->state = PEER_CONN;
 					}
 					unlock( p->mutex );
@@ -1013,6 +1078,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 						p->state = PEER_UNCONN;
 					} else if (cheack_app_ids(p)) {
 						send_cea( (struct trans*)ptr, AAA_SUCCESS);
+						list_add_tail_safe( &p->lh, &activ_peers );
 						p->state = PEER_CONN;
 					} else {
 						LOG(L_ERR,"ERROR:peer_state_machine: no common app\n");
@@ -1051,10 +1117,39 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					goto error;
 			}
 			break;
+		case PEER_IS_INACTIV:
+			lock( p->mutex );
+			switch (p->state) {
+				case PEER_CONN:
+					if (p->last_activ_time+SEND_DWR_TIMEOUT<=get_ticks()) {
+						if (send_dwr( p )==-1) {
+							LOG(L_ERR,"ERROR:peer_state_machine: cannot send"
+								" DWR -> trying later\n");
+						} else {
+							p->state = PEER_WAIT_DWA;
+						}
+					} else {
+						DBG("DEBUG:peer_state_machine: sending DWR - false "
+							"alarm -> cancel sending\n");
+						list_add_tail_safe( &p->lh, &activ_peers );
+					}
+					unlock( p->mutex );
+					break;
+				default:
+					LOG(L_CRIT,"BUUUUG:peer_state_machine: peer_is_inactiv "
+						"triggered outside PEER_CONN state!\n");
+					list_add_tail_safe( &p->lh, &activ_peers );
+					unlock( p->mutex );
+					error_code = 1;
+					goto error;
+			}
+			break;
 		case DWA_RECEIVED:
 			lock( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_DWA:
+					process_dw( p, (str*)ptr, 0 );
+					list_add_tail_safe( &p->lh, &activ_peers );
 					p->state = PEER_CONN;
 					unlock( p->mutex );
 					break;
@@ -1068,10 +1163,19 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			lock( p->mutex );
 			switch (p->state) {
 				case PEER_CONN:
-					// send_dpa() can this be done outside the lock?
-					//tcp_close_lazy( p->conn );
+				case PEER_WAIT_DWA:
+				case PEER_WAIT_DPA:
+					list_del_safe( &p->lh , &activ_peers );
+					DBG("DEBUG:peer_state_machine: DPR received -> "
+						"sending DPA\n");
+					if (process_dp( p, &(((struct trans*)ptr)->req), 1 )==-1) {
+						LOG(L_ERR,"ERROR:peer_state_machine: bad DPR !!\n");
+						send_dpa( (struct trans*)ptr, AAA_MISSING_AVP);
+					} else {
+						send_dpa( (struct trans*)ptr, AAA_SUCCESS);
+					}
+					tcp_close( p );
 					reset_peer( p );
-					atomic_dec( &(p->ref_cnt) );
 					p->state = PEER_UNCONN;
 					unlock( p->mutex );
 					break;
@@ -1085,9 +1189,8 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			lock( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_DPA:
-					//tcp_close_lazy( p->conn );
+					tcp_close( p );
 					reset_peer( p );
-					atomic_dec( &(p->ref_cnt) );
 					p->state = PEER_UNCONN;
 					unlock( p->mutex );
 					break;
@@ -1101,9 +1204,16 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			lock( p->mutex );
 			switch (p->state) {
 				case PEER_CONN:
-					// set peer not usable
-					// send_dpr() - can this be done outside the lock?
-					p->state = PEER_WAIT_DPA;
+					list_del_safe( &p->lh , &activ_peers );
+					if (send_dpr( p ,(unsigned int)ptr )==-1) {
+						LOG(L_ERR,"ERROR:peer_state_machine: cannot send"
+							" DPR : closing tcp directly\n");
+						tcp_close( p );
+						reset_peer( p );
+						p->state = PEER_UNCONN;
+					} else {
+						p->state = PEER_WAIT_DPA;
+					}
 					unlock( p->mutex );
 					break;
 				default:
@@ -1133,6 +1243,8 @@ error:
 void peer_timer_handler(unsigned int ticks, void* param)
 {
 	struct timer_link *tl;
+	struct list_head  *lh;
+	struct list_head  *foo;
 	struct peer *p;
 
 	/* DELETE TIMER LIST */
@@ -1175,6 +1287,22 @@ void peer_timer_handler(unsigned int ticks, void* param)
 		write_command( p->fd, TIMEOUT_PEER_CMD, PEER_CER_TIMEOUT, p, 0);
 	}
 
+	/* ACTIV_PEERS LIST */
+	if ( !list_empty(&(activ_peers.lh)) ) {
+		lock( activ_peers.mutex );
+		list_for_each_safe( lh, foo, &(activ_peers.lh)) {
+			p  = list_entry( lh , struct peer , lh);
+			if (p->last_activ_time+SEND_DWR_TIMEOUT<=ticks) {
+				/* remove it from the list */
+				list_del( lh );
+				/* send command to peer */
+				write_command( p->fd, INACTIVITY_CMD, 0, p, 0);
+			} else {
+				break;
+			}
+		}
+		unlock( activ_peers.mutex );
+	}
 
 }
 
