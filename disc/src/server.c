@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.2 2003/04/12 20:53:50 bogdan Exp $
+ * $Id: server.c,v 1.3 2003/04/13 00:36:35 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -21,9 +21,6 @@
 #include "diameter_api/diameter_api.h"
 #include "transport/trans.h"
 #include "transport/peer.h"
-
-#define I_AM_FOREIGN_SERVER      1
-#define I_AM_NOT_FOREIGN_SERVER  0
 
 
 
@@ -85,15 +82,7 @@ static inline int forward_request( AAAMessage *msg, struct peer *in_p,
 	tr = create_transaction( &(msg->buf), in_p);
 	if (!tr)
 		return -1;
-	/* remember the received hop_by_hop-Id */
-	tr->orig_hopbyhopId = msg->hopbyhopId;
-	/* am I Foreign server for this request? */
-	if ( msg->orig_host->data.len==in_p->aaa_identity.len &&
-	!strncmp(msg->orig_host->data.s,in_p->aaa_identity.s,
-	in_p->aaa_identity.len) )
-		tr->info = I_AM_FOREIGN_SERVER;
-	else
-		tr->info = I_AM_NOT_FOREIGN_SERVER;
+	update_forward_transaction_from_msg( tr , msg , in_p );
 	/* send it out */
 	if ( send_req_to_peer( tr, out_p)==-1) {
 		LOG(L_ERR,"ERROR:forwar_request: unable to forward request\n");

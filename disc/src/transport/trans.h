@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.11 2003/04/10 21:40:03 bogdan Exp $
+ * $Id: trans.h,v 1.12 2003/04/13 00:36:35 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -38,6 +38,10 @@ struct trans {
 	struct timer_link timeout;
 };
 
+
+#define I_AM_FOREIGN_SERVER      1
+#define I_AM_NOT_FOREIGN_SERVER  0
+
 #define TRANS_SEVER   1<<0
 #define TRANS_CLIENT  1<<1
 
@@ -61,6 +65,21 @@ struct trans* create_transaction( str *in_buf, struct peer *in_peer );
 void destroy_transaction( struct trans* );
 
 
+#define update_forward_transaction_from_msg( _tr_ , _msg_ , _in_p_ ) \
+	do { \
+		/* remember the received hop_by_hop-Id */ \
+		(_tr_)->orig_hopbyhopId = (_msg_)->hopbyhopId; \
+		/* am I Foreign server for this request? */ \
+		if ( (_msg_)->orig_host->data.len==(_in_p_)->aaa_identity.len && \
+		!strncmp((_msg_)->orig_host->data.s,(_in_p_)->aaa_identity.s, \
+		(_in_p_)->aaa_identity.len) ) \
+			(_tr_)->info = I_AM_FOREIGN_SERVER; \
+		else \
+			(_tr_)->info = I_AM_NOT_FOREIGN_SERVER; \
+	} while(0)
+
+
+
 /* search a transaction into the hash table based on endtoendID and hopbyhopID
  */
 inline static struct trans* transaction_lookup(struct peer *p,
@@ -78,6 +97,7 @@ inline static struct trans* transaction_lookup(struct peer *p,
 		return get_hlink_payload( linker, struct trans, linker );
 	return 0;
 }
+
 
 
 #endif

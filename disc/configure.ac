@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.13 2003/04/10 18:27:10 andrei Exp $
+dnl $Id: configure.ac,v 1.14 2003/04/13 00:36:35 bogdan Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -23,7 +23,7 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.13 2003/04/10 18:27:10 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.14 2003/04/13 00:36:35 bogdan Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 ##AC_CONFIG_HEADERS([ac_config.h])
@@ -291,4 +291,6 @@ AC_OUTPUT(Makefile src/Makefile src/client/Makefile src/server/Makefile
 			src/client/modules/Makefile
 			src/client/modules/print/Makefile
 			src/client/modules/mipv6/Makefile
+			src/server/modules/Makefile
+			src/server/modules/print/Makefile
 			)
