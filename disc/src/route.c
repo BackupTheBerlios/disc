@@ -1,5 +1,5 @@
 /*
- * $Id: route.c,v 1.9 2003/04/14 14:36:38 andrei Exp $
+ * $Id: route.c,v 1.10 2003/04/14 14:50:02 andrei Exp $
  */
 /*
  * History:
@@ -193,6 +193,8 @@ int do_route(AAAMessage *msg, struct peer *in_p)
 	update_forward_transaction_from_msg(tr, msg, in_p);
 	/* try to send it to the first peer in the route */
 	for(;pl;pl=pl->next){
+		DBG("do_route: pl=%p <%.*s>, peer=%p\n",
+				pl, pl->full_uri.len, pl->full_uri.s, pl->peer);
 		if (pl->peer){
 			if (send_req_to_peer(tr, pl->peer)<0){
 				LOG(L_WARN, "WARNING: do_route: unable to send to %.*s\n",
