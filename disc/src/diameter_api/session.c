@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.23 2003/04/21 15:18:39 bogdan Exp $
+ * $Id: session.c,v 1.24 2003/04/21 16:57:34 cco Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -570,10 +570,11 @@ error:
 /****************************** API FUNCTIONS ********************************/
 
 
-AAAReturnCode  AAAStartSession(
-		AAASessionId **sessionId,
-		AAAApplicationRef appReference,
-		void *context)
+AAAReturnCode  AAAStartSession( 
+				AAASessionId **sessionId,
+				AAAApplicationRef appReference, 
+				void *context
+				)
 {
 	struct session  *session;
 	char            *p;
