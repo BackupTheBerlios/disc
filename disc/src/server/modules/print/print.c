@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.3 2003/04/14 12:47:58 bogdan Exp $
+ * $Id: print.c,v 1.4 2003/04/14 14:06:45 bogdan Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -29,7 +29,7 @@ struct module_exports exports = {
 	"print",
 	AAA_SERVER,
 	4,
-	DOES_AUTH|DOES_ACCT,
+	DOES_AUTH | DOES_ACCT | RUN_ON_REPLY_IF_FOREIGN_SERVER,
 	0, /* no  mod params */
 	
 	mod_init,

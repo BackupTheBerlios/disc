@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.h,v 1.11 2003/04/13 23:01:16 andrei Exp $
+ * $Id: aaa_module.h,v 1.12 2003/04/14 14:06:45 bogdan Exp $
  */
 /* History:
  * --------
@@ -12,8 +12,9 @@
 
 #include "diameter_api/diameter_api.h"
 
-#define DOES_AUTH 1<<0
-#define DOES_ACCT 1<<1
+#define DOES_AUTH                        1<<0
+#define DOES_ACCT                        1<<1
+#define RUN_ON_REPLY_IF_FOREIGN_SERVER   1<<2
 
 extern str module_path;
 

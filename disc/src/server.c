@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.5 2003/04/14 13:09:45 bogdan Exp $
+ * $Id: server.c,v 1.6 2003/04/14 14:06:45 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -256,10 +256,12 @@ void *server_worker(void *attr)
 				/* am I Foreign server for this reply? */
 				if (tr->info==I_AM_FOREIGN_SERVER) {
 					mod = find_module(msg->applicationId);
-					DBG(" ******* running module (%p) for reply "
-						"(I am foreign server)\n",mod);
-					if (mod)
+					if (mod &&
+					mod->exports->flags&RUN_ON_REPLY_IF_FOREIGN_SERVER) {
+						DBG(" ******* running module (%p) for reply "
+							"(I am foreign server)\n",mod);
 						mod->exports->mod_msg( msg, 0);
+					}
 				}
 				/* send the rely */
 				if (send_res_to_peer( &msg->buf, tr->in_peer)==-1) {
