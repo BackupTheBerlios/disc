@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_msg.h,v 1.10 2003/04/22 19:58:41 andrei Exp $
+ * $Id: diameter_msg.h,v 1.11 2003/08/15 15:48:23 elm Exp $
  *
  * 2003-04-07 created by bogdan
  *
@@ -191,7 +191,8 @@ typedef enum {
 	AVP_Session_Timeout               =   27,
 	AVP_Proxy_State                   =   33,
 	AVP_Host_IP_Address               =  257,
-	AVP_Auth_Aplication_Id            =  258,
+	AVP_Auth_Application_Id           =  258,
+	AVP_Acct_Application_Id           =  259,	
 	AVP_Vendor_Specific_Application_Id=  260,
 	AVP_Redirect_Max_Cache_Time       =  262,
 	AVP_Session_Id                    =  263,
