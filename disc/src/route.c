@@ -1,5 +1,5 @@
 /*
- * $Id: route.c,v 1.7 2003/04/14 12:47:58 bogdan Exp $
+ * $Id: route.c,v 1.8 2003/04/14 13:09:45 bogdan Exp $
  */
 /*
  * History:
@@ -203,8 +203,9 @@ int do_route(AAAMessage *msg, struct peer *in_p)
 	destroy_transaction(tr);
 noroute:
 	LOG(L_WARN, "WARNING: do_route: dropping message, no peers/route found\n");
+	return -1;
 end:
-	return 0;
+	return 1;
 error_transaction:
 	LOG(L_ERR, "ERROR: do_route: unable to create transaction\n");
 	return -1;

@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.4 2003/04/13 23:01:16 andrei Exp $
+ * $Id: server.c,v 1.5 2003/04/14 13:09:45 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -39,6 +39,8 @@ static void send_error_reply(AAAMessage *msg, unsigned int response_code)
 {
 	AAAMessage *ans;
 
+	DBG("DEBUG:send_error_reply: sending error answer response %d\n",
+			response_code);
 	ans = AAANewMessage( msg->commandCode, msg->applicationId,
 		&(msg->sessionId->data), msg );
 	if (!ans) {
