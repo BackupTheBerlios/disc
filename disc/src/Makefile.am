@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.21 2003/04/22 18:56:34 andrei Exp $
+## $Id: Makefile.am,v 1.22 2003/11/18 18:15:10 cco Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -29,7 +29,7 @@ common =			aaa_lock.c dprint.c hash_table.c \
 disc_SOURCES = $(common)
 # hash.c only for tests
 				
-EXTRA_DIST=othrod_client.cfg aaa_client.cfg aaa_server.cfg
+EXTRA_DIST=aaa_client.cfg aaa_server.cfg
 
 disc_LDADD =	 mem/libmem.la transport/libtransport.la \
 			diameter_api/libdiameter_api.la diameter_msg/libdiameter_msg.la \
