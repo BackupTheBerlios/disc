@@ -1,4 +1,4 @@
-$Id: TODO,v 1.1 2003/04/08 17:52:25 andrei Exp $
+$Id: TODO,v 1.2 2003/04/08 22:06:24 andrei Exp $
 
 - find a name [all]
 - put GNU license in every file [all]
@@ -7,3 +7,4 @@ $Id: TODO,v 1.1 2003/04/08 17:52:25 andrei Exp $
 - make install ? [andrei]
 
 - grouped avp [bogdan]
+- disable ipv6  var [bogdan]

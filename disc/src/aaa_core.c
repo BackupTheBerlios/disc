@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.3 2003/04/08 18:59:52 andrei Exp $
+ * $Id: aaa_core.c,v 1.4 2003/04/08 22:06:24 andrei Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -24,6 +24,7 @@
 #include "msg_queue.h"
 #include "aaa_module.h"
 #include "cfg_init.h"
+#include "route.h"
 
 
 
@@ -176,7 +177,7 @@ int init_aaa_core(char *cfg_file)
 	str host;
 	*/
 	void* shm_mempool;
-	struct cfg_peer_list* pl;
+	struct peer_entry* pl;
 
 	/* init mallocs */
 	shm_mempool=malloc(shm_mem_size);
@@ -227,7 +228,7 @@ int init_aaa_core(char *cfg_file)
 	}
 
 	/* add the peers from config file */
-	if (pl==0){
+	if (cfg_peer_lst==0){
 		fprintf(stderr, "ERROR: empty peer list\n");
 		goto error;
 	}

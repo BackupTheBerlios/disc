@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_init.c,v 1.3 2003/04/08 18:59:52 andrei Exp $
+ * $Id: cfg_init.c,v 1.4 2003/04/08 22:06:24 andrei Exp $
  *
  * History:
  * --------
@@ -18,6 +18,7 @@
 #include "aaa_module.h"
 #include "aaa_parse_uri.h"
 #include "mem/shm_mem.h"
+#include "route.h"
 
 
 
@@ -25,14 +26,12 @@
 
 static int cfg_set_module_path (struct cfg_line* cl, void* value);
 static int cfg_load_modules(struct cfg_line* cl, void* value);
-static int cfg_addpeer(struct cfg_line* cl, void* value);
+static int cfg_addpair(struct cfg_line* cl, void* callback);
 static int cfg_echo(struct cfg_line* cl, void* value);
 static int cfg_error(struct cfg_line* cl, void* value);
 static int cfg_include(struct cfg_line* cl, void* value);
 
 
-/* peer list*/
-struct cfg_peer_list* cfg_peer_lst=0;
 
 /* config info (null terminated array)*/
 struct cfg_def cfg_ids[]={
@@ -43,7 +42,8 @@ struct cfg_def cfg_ids[]={
 	{"listen_port",  INT_VAL,   &listen_port,  0                   },
 	{"module_path",  STR_VAL,   &module_path,   cfg_set_module_path },
 	{"module",       GEN_VAL,   0,              cfg_load_modules    },
-	{"peer",         GEN_VAL,   &cfg_peer_lst,  cfg_addpeer         },
+	{"peer",         GEN_VAL,   add_cfg_peer,   cfg_addpair         },
+	{"route",        GEN_VAL,   add_route,      cfg_addpair         },
 	{"echo",         GEN_VAL,   0,              cfg_echo            },
 	{"_error",       GEN_VAL,   0,              cfg_error           },
 	{"include",      STR_VAL,   0,              cfg_include         },
@@ -180,36 +180,45 @@ int cfg_include(struct cfg_line* cl, void* value)
 
 
 
-int cfg_addpeer(struct cfg_line* cl, void* value)
+/* reads a str pair and calls callback(s1, s2) */
+int cfg_addpair(struct cfg_line* cl, void* callback)
 {
-	struct cfg_peer_list **pl;
-	struct cfg_peer_list *n;
 	int ret;
+	str* s1;
+	str* s2;
 		
+	s1=0;
+	s2=0;
 	if ((cl->token_no<1)||(cl->token_no>2)){
-		LOG(L_CRIT, "ERROR: cfg_addpeer: invalid number of "
+		LOG(L_CRIT, "ERROR: cfg: invalid number of "
 					"parameters for peer\n");
-		return CFG_PARAM_ERR;
+		ret=CFG_PARAM_ERR;
+		goto error;
 	}
-	n=shm_malloc(sizeof(struct cfg_peer_list));
-	if (n==0){
-		LOG(L_CRIT, "ERROR: cfg_addpeer: mem. alloc. failure\n");
-		return CFG_MEM_ERR;
-	}
-	memset(n, 0, sizeof(struct cfg_peer_list));
-	ret=cfg_getstr(cl->value[0], &n->full_uri);
-	if (ret!=0) return ret;
-	if (aaa_parse_uri(n->full_uri.s, n->full_uri.len, &n->uri)!=0){
-		LOG(L_CRIT, "ERROR: cfg_addpeer: bad uri\n");
-		return CFG_PARAM_ERR;
-	}
+	s1=shm_malloc(sizeof(str));
+	if (s1==0) goto error_mem;
+	s2=shm_malloc(sizeof(str));
+	if (s2==0) goto error_mem;
+	memset(s2, 0, sizeof(str));
+	
+	ret=cfg_getstr(cl->value[0], s1);
+	if (ret!=0) goto error;
 	if (cl->token_no==2){
-		ret=cfg_getstr(cl->value[0], &n->alias);
-		if (ret!=0) return ret;
+		ret=cfg_getstr(cl->value[1], s2);
+		if (ret!=0) goto error;;
 	}
-	/* append to the list*/
-	pl=value;
-	n->next=*pl;
-	*pl=n;
+	if (((int (*)(str*, str*))(callback))(s1, s2)!=0){
+		LOG(L_CRIT, "ERROR: cfg: error adding peer\n");
+		ret=CFG_RUN_ERR;
+		goto error;
+	}
+	
 	return CFG_OK;
+error_mem:
+	LOG(L_CRIT, "ERROR: cfg: memory allocation error\n");
+	ret=CFG_MEM_ERR;
+error:
+	if (s1) shm_free(s1);
+	if (s2) shm_free(s2);
+	return ret;
 }

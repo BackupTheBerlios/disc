@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.16 2003/04/08 18:59:52 andrei Exp $
+## $Id: Makefile.am,v 1.17 2003/04/08 22:06:24 andrei Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -16,13 +16,14 @@ INCLUDES = @INCLTDL@
 
 bin_PROGRAMS = aaa_client aaa_server
 common =			 aaa_lock.c dprint.c hash_table.c \
-					timer.c aaa_module.c aaa_core.c \
+					timer.c aaa_module.c aaa_core.c route.c \
 					cfg_init.c cfg_parser.c aaa_parse_uri.c \
 					aaa_lock.h dprint.h hash.h lock_alloc.h sem.h \
 					timer.h config.h fastlock.h hash_table.h lock_ops.h \
 					utils.h counter.h globals.h msg_queue.h msg_queue.c \
 					list.h locking.h str.h aaa_module.h aaa_core.h \
-					cfg_init.h cfg_parser.h parser_f.h aaa_parse_uri.h
+					cfg_init.h cfg_parser.h parser_f.h aaa_parse_uri.h \
+					route.h
 #
 # client
 #
