@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.9 2003/04/08 13:29:28 bogdan Exp $
+ * $Id: aaa_module.c,v 1.10 2003/04/08 21:00:19 andrei Exp $
  */
 /*
  * History:
@@ -71,8 +71,8 @@ int load_module(char* name)
 	
 	handle=lt_dlopenext(name);
 	if (handle==0){
-		LOG(L_CRIT, "ERROR: load_module: failed to load <%s> in <%s>\n",
-					name, MODULE_SEARCH_PATH);
+		LOG(L_CRIT, "ERROR: load_module: failed to load <%s> in <%s>: %s\n",
+					name, MODULE_SEARCH_PATH, lt_dlerror());
 		ret=-1;
 		goto error;
 	}
