@@ -17,6 +17,10 @@
 #include "../transport/tcp_shell.h"
 #include "../aaa_module.h"
 
+#include "../diameter_api/diameter_types.h"
+#include "../diameter_api/diameter_api.h"
+
+
 
 
 /* shared mem. size*/
@@ -109,6 +113,8 @@ void init_random_generator()
 int init_client()
 {
 	void* shm_mempool;
+	str aaa_id;
+	str host;
 
 	/* init mallocs */
 	shm_mempool=malloc(shm_mem_size);
@@ -152,20 +158,31 @@ int init_client()
 		goto error;
 	}
 
+	/* starts the transport layer - tcp */
+	if (init_tcp_shell(DEFAULT_TCP_RECEIVE_THREADS))
+
+	if( AAAOpen("aaa_lib.cfg")!=AAA_ERR_SUCCESS ) {
+		return -1;
+	}
+
+	/* add the peers from config file */
+	//..................
+	host.s   = "ugluk.mobis.fokus.gmd.de";
+	host.len = strlen(host.s);
+	aaa_id.s   = "aaa://ugluk.mobis.fokus.gmd.de:1812;transport=tcp";
+	aaa_id.len = strlen( aaa_id.s );
+	add_peer( &aaa_id, &host, 1812);
+
 	/* init the script */
 	if ( init_script()==-1 ) {
 		goto error;
 	}
 
-	/* starts the transport layer - tcp */
-	if (init_tcp_shell(DEFAULT_TCP_RECEIVE_THREADS))
-
-	//if( AAAOpen("aaa_lib.cfg")!=AAA_ERR_SUCCESS ) {
-	//	return -1;
-	//}
-
 	/* start the timer */
 	init_timer();
+
+	/* start the tcp shell */
+	start_tcp_accept();
 
 	/* init modules loading */
 	init_module_loading();
@@ -173,7 +190,6 @@ int init_client()
 	load_module("client/modules/print/print");
 	init_modules();
 	
-
 	return 1;
 error:
 	printf("ERROR: cannot init the client\n");
@@ -185,8 +201,12 @@ error:
 
 void close_client()
 {
+	/* close the libarary */
+	AAAClose();
+
 	/* destroy the modules */
 	destroy_modules();
+
 	/* stop the timer */
 	destroy_timer();
 
@@ -211,24 +231,20 @@ void close_client()
 
 int main(int argc, char *argv[])
 {
-	str aaa_id;
-	str host;
+	str *sID;
+	AAAMessage *req;
+	AAA_AVP *avp;
 
 	if ( init_client()==-1 )
 		exit(-1);
 
-	/* add the peers from config file */
-	//..................
-	host.s   = "ugluk.mobis.fokus.gmd.de";
-	host.len = strlen(host.s);
-	aaa_id.s   = "aaa://ugluk.mobis.fokus.gmd.de:1812;transport=tcp";
-	aaa_id.len = strlen( aaa_id.s );
-	add_peer( &aaa_id, &host, 1812);
+	sleep( 5 );
 
-	/* start the tcp shell */
-	start_tcp_accept();
-
-
+	AAAStartSession( &sID, 3123, 0);
+	req = AAANewMessage( 456, 4, sID, 0);
+	AAACreateAVP( &avp, AVP_Destination_Realm, 0, 0, "gmd.de", 6);
+	AAAAddAVPToMessage( req, avp, req->orig_realm);
+	AAASendMessage( req );
 
 	for(;;)
 		sleep( 40 );

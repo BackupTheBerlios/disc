@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.3 2003/03/17 19:10:55 bogdan Exp $
+ * $Id: trans.c,v 1.4 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -73,7 +73,7 @@ struct trans* create_transaction(str *buf, struct session *ses, struct peer *p)
 	t->req.s = buf->s;
 	t->req.len = buf->len;
 	/* link the outgoing peer */
-	atomic_inc( &(p->ref_cnt) );
+	//atomic_inc( &(p->ref_cnt) );  <--- SGF!!!
 	t->peer = p;
 
 	return t;

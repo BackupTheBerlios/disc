@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.20 2003/03/18 17:29:11 bogdan Exp $
+ * $Id: init_conf.c,v 1.21 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -99,8 +99,8 @@ AAAReturnCode AAAOpen(char *configFileName)
 	}
 
 	/* read the config file */
-	if ( read_config_file(configFileName)!=1)
-		goto error_config;
+	//if ( read_config_file(configFileName)!=1)
+	//	goto error_config;
 
 	/* save the name of the config file  */
 	config_filename = shm_malloc( strlen(configFileName)+1 );

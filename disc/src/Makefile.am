@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.4 2003/03/28 19:06:54 andrei Exp $
+## $Id: Makefile.am,v 1.5 2003/03/28 20:27:24 bogdan Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -26,7 +26,7 @@ aaa_client_SOURCES = aaa_lock.c dprint.c hash_table.c sh_mutex.c \
 				
 EXTRA_DIST=		server
 
-aaa_client_LDADD = diameter_api/libdiameter_api.la mem/libmem.la \
+aaa_client_LDADD =  mem/libmem.la \
 					transport/libtransport.la client/libclient.la \
 					@LIBLTDL@
 # @LIBADD_DL@ # not needed for newer libtool version (>=1.4)

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.9 2003/03/28 14:20:43 bogdan Exp $
+ * $Id: peer.h,v 1.10 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -175,7 +175,9 @@ int add_peer( str *aaa_identity, str *host, unsigned int port);
 
 void init_all_peers();
 
-int send_req_to_peers(struct trans *tr , struct peer_chaine *pc);
+int send_req_to_peers( struct trans *tr , struct peer_chaine *pc);
+
+int send_res_to_peer( str *buf, struct peer *p);
 
 int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *info);
 
@@ -243,7 +245,6 @@ static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 
 	return res;
 }
-
 
 
 

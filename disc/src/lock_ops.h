@@ -1,4 +1,4 @@
-/* $Id: lock_ops.h,v 1.1 2003/03/14 15:28:57 bogdan Exp $ */
+/* $Id: lock_ops.h,v 1.2 2003/03/28 20:27:24 bogdan Exp $ */
 /*
  *
  * Copyright (C) 2001-2003 Fhg Fokus
@@ -170,7 +170,7 @@ inline static void lock_get(gen_lock_t* lock)
 inline static void lock_release(gen_lock_t* lock)
 {
 	struct sembuf sop;
-	
+
 	sop.sem_num=0;
 	sop.sem_op=1; /* up */
 	sop.sem_flg=0; 

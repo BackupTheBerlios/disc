@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_api.h,v 1.4 2003/03/26 17:58:38 bogdan Exp $
+ * $Id: diameter_api.h,v 1.5 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2002-10-04 created by illya (komarov@fokus.gmd.de)
  *
@@ -114,33 +114,33 @@ AAAReturnCode AAACreateAVP(
 		char *data,
 		size_t length);
 
-AAAReturnCode AAACreateAndAddAVPToList(
-		AAA_AVP_LIST **avpList,
+AAAReturnCode AAACreateAndAddAVPToMessage(
+		AAAMessage *msg,
 		AAA_AVPCode code,
 		AAA_AVPFlag flags,
 		AAAVendorId vendorId,
 		char *data,
 		size_t length);
 
-AAAReturnCode AAAAddAVPToList(
-		AAA_AVP_LIST *avpList,
+AAAReturnCode AAAAddAVPToMessage(
+		AAAMessage *msg,
 		AAA_AVP *avp,
 		AAA_AVP *position);
 
 AAA_AVP *AAAFindMatchingAVP(
-		AAA_AVP_LIST *avpList,
+		AAAMessage *msg,
 		AAA_AVP *startAvp,
 		AAA_AVPCode avpCode,
 		AAAVendorId vendorId,
 		AAASearchType searchType);
 
-AAAReturnCode AAAJoinAVPLists(
+/*AAAReturnCode AAAJoinAVPLists(
 		AAA_AVP_LIST *dest,
 		AAA_AVP_LIST *source,
-		AAA_AVP      *position);
+		AAA_AVP      *position);*/
 
-AAAReturnCode AAARemoveAVPFromList(
-		AAA_AVP_LIST *avpList,
+AAAReturnCode AAARemoveAVPFromMessage(
+		AAAMessage *msg,
 		AAA_AVP *avp);
 
 AAAReturnCode AAAFreeAVP(

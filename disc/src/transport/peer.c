@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.10 2003/03/28 14:20:43 bogdan Exp $
+ * $Id: peer.c,v 1.11 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -474,17 +474,20 @@ void destroy_peer( struct peer *p)
 }
 
 
-
-
 int send_req_to_peers( struct trans *tr , struct peer_chaine *pc)
 {
 	for( ; pc ; pc=pc->next ) {
+		DBG("before p=%p!!\n",pc->peer);
 		lock_get( pc->peer->mutex );
+		DBG("after!!\n");
 		if ( pc->peer->state!=PEER_CONN ) {
+			DBG("peer closed!\n");
 			lock_release( pc->peer->mutex);
 			continue;
 		}
 		/* peer available for sending */
+		DBG("peer \"%.*s\" available for sending\n",pc->peer->aaa_identity.len,
+			pc->peer->aaa_identity.s);
 		add_cell_to_htable( pc->peer->trans_table, &(tr->linker) );
 		tr->peer = pc->peer;
 		/* the hash label is used as hop-by-hop ID */
@@ -499,8 +502,26 @@ int send_req_to_peers( struct trans *tr , struct peer_chaine *pc)
 		}
 	}
 
+	DBG("cannot send\n");
 	return -1;
 }
+
+
+
+int send_res_to_peer( str *buf, struct peer *p)
+{
+	lock_get( p->mutex );
+	if ( p->state==PEER_CONN ) {
+		if (write( p->sock, buf->s, buf->len)!=-1) {
+			lock_release( p->mutex);
+			return 1;
+		}
+	}
+
+	lock_release( p->mutex);
+	return -1;
+}
+
 
 
 

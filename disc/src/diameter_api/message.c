@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.19 2003/03/28 14:20:43 bogdan Exp $
+ * $Id: message.c,v 1.20 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -362,13 +362,11 @@ int build_buf_from_msg( AAAMessage *msg )
 	*p = (unsigned char)msg->flags;
 	p += FLAGS_SIZE + COMMAND_CODE_SIZE;
 	/* application-ID */
-	// ?????????
+	((unsigned int*)p)[0] = htonl(msg->applicationId);
 	p += APPLICATION_ID_SIZE;
 	/* hop by hop id */
-	//((unsigned int*)p)[0] = msg->hopbyhopID;
 	p += HOP_BY_HOP_IDENTIFIER_SIZE;
 	/* end to end id */
-	//((unsigned int*)p)[0] = msg->endtoendID;
 	p += END_TO_END_IDENTIFIER_SIZE;
 
 	/* AVPS */
@@ -446,6 +444,7 @@ int send_request( AAAMessage *msg)
 	tr->linker.hash_code = hash( &s , pc->peer->trans_table->hash_size );
 
 	/* send the request */
+	DBG(" before send_req_to_peers!\n");
 	if (send_req_to_peers(tr, (struct peer_chaine*)msg->peers)==-1) {
 		LOG(L_ERR,"ERROR:send_aaa_request: send returned error!\n");
 		goto error;
@@ -469,22 +468,38 @@ error:
 
 
 
-int send_aaa_response( str *buf, struct trans *tr)
+/* sends out a reply/response/answer
+ */
+int send_aaa_response( AAAMessage *msg)
 {
-	int ret;
+	str *req;;
+
+	/* generate the buf from the message */
+	if ( build_buf_from_msg( msg )==-1 )
+		goto error;
+
+	/* copy the end-to-end id and hop-by-hop id */
+	req = &(((struct trans*)msg->intern)->req);
+	((unsigned int*)msg->buf.s)[3] = ((unsigned int*)req->s)[3];
+	((unsigned int*)msg->buf.s)[4] = ((unsigned int*)req->s)[4];
 
 	/* send the message */
-	ret = tcp_send( tr->peer, buf->s, buf->len);
-	/* what's the score?? */
-	if (ret==-1) {
-		LOG(L_ERR,"ERROR:send_aaa_response: tcp_send returned error!\n");
+	if (send_res_to_peer(&(msg->buf),((struct trans*)msg->intern)->peer)==-1) {
+		LOG(L_ERR,"ERROR:send_aaa_response: send returned error!\n");
 	}
 
 	/* destroy everything */
-	destroy_transaction( tr );
-	shm_free( buf->s );
+	destroy_transaction( (struct trans*)msg->intern );
+	shm_free( msg->buf.s );
 
-	return ret;
+	return 1;
+error:
+	if (msg->buf.s) {
+		shm_free( msg->buf.s );
+		msg->buf.s = 0;
+		msg->buf.len = 0;
+	}
+	return -1;
 }
 
 
@@ -529,7 +544,7 @@ AAAMessage *AAANewMessage(
 	/* add session ID */
 	avp = 0;
 	if ( create_avp( &avp, 263, 0, 0, sessionId->s, sessionId->len, 0)
-	!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp, 0)
+	!=AAA_ERR_SUCCESS || AAAAddAVPToMessage( msg, avp, 0)
 	!=AAA_ERR_SUCCESS ) {
 		LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add Session-Id avp\n");
 		if (avp) AAAFreeAVP( &avp );
@@ -539,8 +554,8 @@ AAAMessage *AAANewMessage(
 	/* add origin host AVP */
 	avp = 0;
 	if (create_avp( &avp, 264, 0, 0, aaa_identity.s, aaa_identity.len, 0)
-	!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp,
-	msg->avpList.tail)!=AAA_ERR_SUCCESS ) {
+	!=AAA_ERR_SUCCESS || AAAAddAVPToMessage( msg, avp, msg->avpList.tail)
+	!=AAA_ERR_SUCCESS ) {
 		LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add Origin-Host avp\n");
 		if (avp) AAAFreeAVP( &avp );
 		goto error;
@@ -549,8 +564,8 @@ AAAMessage *AAANewMessage(
 	/* add origin realm AVP */
 	avp = 0;
 	if (create_avp( &avp, 296, 0, 0, aaa_realm.s, aaa_realm.len, 0)
-	!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp,
-	msg->avpList.tail)!=AAA_ERR_SUCCESS ) {
+	!=AAA_ERR_SUCCESS || AAAAddAVPToMessage( msg, avp, msg->avpList.tail)
+	!=AAA_ERR_SUCCESS ) {
 		LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add Origin-Realm avp\n");
 		if (avp) AAAFreeAVP( &avp );
 		goto error;
@@ -574,8 +589,8 @@ AAAMessage *AAANewMessage(
 		avp = 0;
 		code = AAA_SUCCESS;
 		if (create_avp(&avp,AVP_Result_Code,0,0,(char*)&code,sizeof(code),1)
-		!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp,
-		msg->avpList.tail)!=AAA_ERR_SUCCESS ) {
+		!=AAA_ERR_SUCCESS || AAAAddAVPToMessage( msg, avp, msg->avpList.tail)
+		!=AAA_ERR_SUCCESS ) {
 			LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add "
 				"Result-Code avp\n");
 			if (avp) AAAFreeAVP( &avp );
@@ -586,9 +601,9 @@ AAAMessage *AAANewMessage(
 		/* mirror all the proxy-info avp in the same order */
 		avp_t = request->avpList.head;
 		while ( (avp_t=AAAFindMatchingAVP
-		(&(request->avpList),avp_t,284,0,AAA_FORWARD_SEARCH))!=0 ) {
-			if ( (avp=clone_avp(avp_t,0))==0 || AAAAddAVPToList
-			( &(msg->avpList), avp, msg->avpList.tail)!=AAA_ERR_SUCCESS )
+		(request,avp_t,284,0,AAA_FORWARD_SEARCH))!=0 ) {
+			if ( (avp=clone_avp(avp_t,0))==0 || AAAAddAVPToMessage( msg, avp,
+			msg->avpList.tail)!=AAA_ERR_SUCCESS )
 				goto error;
 		}
 	}
@@ -714,7 +729,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		ret = do_routing( msg, &pc );
 		if (ret!=1 || pc==0) {
 			LOG(L_ERR,"ERROR:AAASendMessage: no outgoing peer found for msg!"
-				" do_routing returned %d.\n",ret);
+				" do_routing returned %d, pc=%p.\n",ret,pc);
 			goto error;
 		}
 		msg->peers = pc;
@@ -877,9 +892,10 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 			goto error;
 		}
 
-		ptr += to_32x_len( avp_data_len );
 		/* link the avp into aaa message to the end */
-		AAAAddAVPToList( &(msg->avpList), avp, msg->avpList.tail);
+		AAAAddAVPToMessage( msg, avp, msg->avpList.tail);
+
+		ptr += to_32x_len( avp_data_len );
 	}
 
 	/* link the buffer to the message */

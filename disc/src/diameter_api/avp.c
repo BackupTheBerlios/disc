@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.7 2003/03/26 17:58:38 bogdan Exp $
+ * $Id: avp.c,v 1.8 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  * 2003-03-12 converted to shm_malloc/free (andrei)
@@ -146,9 +146,64 @@ error:
 
 
 
-/** This function creates an AVP and adds it to an AVP list */
-AAAReturnCode AAACreateAndAddAVPToList(
-	AAA_AVP_LIST **avpList,
+/* Insert the AVP avp into this avpList of a message after position */
+AAAReturnCode  AAAAddAVPToMessage(
+	AAAMessage *msg,
+	AAA_AVP *avp,
+	AAA_AVP *position)
+{
+	AAA_AVP *avp_t;
+
+	if ( !msg || !avp ) {
+		LOG(L_ERR,"ERROR:AAAAddAVPToList: param msg or avp passed null"
+			" or *avpList=NULL and position!=NULL !!\n");
+		return AAA_ERR_PARAMETER;
+	}
+
+	if (!position) {
+		/* insert at the begining */
+		avp->next = msg->avpList.head;
+		avp->prev = 0;
+		msg->avpList.head = avp;
+		if (avp->next)
+			avp->next->prev = avp;
+		else
+			msg->avpList.tail = avp;
+	} else {
+		/* look after avp from position */
+		for(avp_t=msg->avpList.head;avp_t&&avp_t!=position;avp_t=avp_t->next);
+		if (!avp_t) {
+			LOG(L_ERR,"ERROR: AAACreateAVP: the \"position\" avp is not in"
+				"\"msg\" message!!\n");
+			return AAA_ERR_PARAMETER;
+		}
+		/* insert after position */
+		avp->next = position->next;
+		position->next = avp;
+		if (avp->next)
+			avp->next->prev = avp;
+		else
+			msg->avpList.tail = avp;
+		avp->prev = position;
+	}
+
+	/* update the short-cuts */
+	switch (avp->code) {
+		case AVP_Session_Id: msg->sessionId = avp;break;
+		case AVP_Origin_Host: msg->orig_host = avp;break;
+		case AVP_Origin_Realm: msg->orig_realm = avp;break;
+		case AVP_Destination_Host: msg->dest_host = avp;break;
+		case AVP_Destination_Realm: msg->dest_realm = avp;break;
+	}
+
+	return AAA_ERR_SUCCESS;
+}
+
+
+
+/** This function creates an AVP and adds it to an AVP list of a message */
+AAAReturnCode AAACreateAndAddAVPToMessage(
+	AAAMessage *msg,
 	AAA_AVPCode code,
 	AAA_AVPFlag flags,
 	AAAVendorId vendorId,
@@ -158,8 +213,8 @@ AAAReturnCode AAACreateAndAddAVPToList(
 	AAA_AVP *avp;
 
 	/* some checks */
-	if (!avpList || !avpList) {
-		LOG(L_ERR,"ERROR:AAACreateAndAddAVPToList: param avpList cannot"
+	if (!msg ) {
+		LOG(L_ERR,"ERROR:AAACreateAndAddAVPToList: param mesage cannot"
 			" be null!!\n");
 		return AAA_ERR_PARAMETER;
 	}
@@ -168,69 +223,15 @@ AAAReturnCode AAACreateAndAddAVPToList(
 	if (AAACreateAVP(&avp,code,flags,vendorId,data,length)!=AAA_ERR_SUCCESS)
 		return AAA_ERR_NOMEM;
 
-	/* link the AVP into the list */
-	if (!(*avpList)->tail)
-		(*avpList)->head = avp;
-	else
-		(*avpList)->tail->next = avp;
-	avp->prev = (*avpList)->tail;
-	(*avpList)->tail = avp;
-
-	return AAA_ERR_SUCCESS;
-}
-
-
-
-/* Insert the AVP avp into this avpList after position */
-AAAReturnCode  AAAAddAVPToList(
-	AAA_AVP_LIST *avpList,
-	AAA_AVP *avp,
-	AAA_AVP *position)
-{
-	AAA_AVP *avp_t;
-
-	if ( !avpList || !avp ) {
-		LOG(L_ERR,"ERROR:AAAAddAVPToList: param avpList or avp passed null"
-			" or *avpList=NULL and position!=NULL !!\n");
-		return AAA_ERR_PARAMETER;
-	}
-
-	if (!position) {
-		/* insert at the begining */
-		avp->next = avpList->head;
-		avp->prev = 0;
-		avpList->head = avp;
-		if (avp->next)
-			avp->next->prev = avp;
-		else
-			avpList->tail = avp;
-	} else {
-		/* look after avp from position */
-		for(avp_t=avpList->head;avp_t&&avp_t!=position;avp_t=avp_t->next);
-		if (!avp_t) {
-			LOG(L_ERR,"ERROR: AAACreateAVP: the \"position\" avp is not in"
-				"\"avpList\" list!!\n");
-			return AAA_ERR_PARAMETER;
-		}
-		/* insert after position */
-		avp->next = position->next;
-		position->next = avp;
-		if (avp->next)
-			avp->next->prev = avp;
-		else
-			avpList->tail = avp;
-		avp->prev = position;
-	}
-
-	return AAA_ERR_SUCCESS;
-
+	/* add avp at the end */
+	return AAAAddAVPToMessage( msg, avp, msg->avpList.tail);
 }
 
 
 
 /* This function finds an AVP with matching code and vendor id */
 AAA_AVP  *AAAFindMatchingAVP(
-	AAA_AVP_LIST *avpList,
+	AAAMessage *msg,
 	AAA_AVP *startAvp,
 	AAA_AVPCode avpCode,
 	AAAVendorId vendorId,
@@ -239,12 +240,12 @@ AAA_AVP  *AAAFindMatchingAVP(
 	AAA_AVP *avp_t;
 
 	/* param checking */
-	if (!avpList) {
-		LOG(L_ERR,"ERROR:FindMatchingAVP: param avpList passed null !!\n");
+	if (!msg) {
+		LOG(L_ERR,"ERROR:FindMatchingAVP: param msg passed null !!\n");
 		goto error;
 	}
 	/* search the startAVP avp */
-	for(avp_t=avpList->head;avp_t&&avp_t!=startAvp;avp_t=avp_t->next);
+	for(avp_t=msg->avpList.head;avp_t&&avp_t!=startAvp;avp_t=avp_t->next);
 	if (!avp_t) {
 		LOG(L_ERR,"ERROR: AAAFindMatchingAVP: the \"position\" avp is not in"
 			"\"avpList\" list!!\n");
@@ -253,7 +254,8 @@ AAA_AVP  *AAAFindMatchingAVP(
 
 	/* where should I start searching from ? */
 	if (!startAvp)
-		avp_t=(searchType==AAA_FORWARD_SEARCH)?(avpList->head):(avpList->tail);
+		avp_t=(searchType==AAA_FORWARD_SEARCH)?(msg->avpList.head):
+			(msg->avpList.tail);
 	else
 		avp_t=startAvp;
 
@@ -269,7 +271,7 @@ error:
 }
 
 
-
+#if 0
 /*  The following function joins together two AVP lists */
 AAAReturnCode  AAAJoinAVPLists(
 	AAA_AVP_LIST *dest,
@@ -308,25 +310,25 @@ AAAReturnCode  AAAJoinAVPLists(
 	}
 	return AAA_ERR_SUCCESS;
 }
+#endif
 
 
-
-/* This function removes an AVP from a list */
-AAAReturnCode  AAARemoveAVPFromList(
-	AAA_AVP_LIST *avpList,
+/* This function removes an AVP from a list of a message */
+AAAReturnCode  AAARemoveAVPFromMessage(
+	AAAMessage *msg,
 	AAA_AVP *avp)
 {
 	AAA_AVP *avp_t;
 
 	/* param check */
-	if ( !avpList || !avp ) {
+	if ( !msg || !avp ) {
 		LOG(L_ERR,"ERROR:AAAAddAVPToList: param AVP_LIST \"avpList\" or AVP "
 			"\"avp\" passed null !!\n");
 		return AAA_ERR_PARAMETER;
 	}
 
 	/* search the "avp" avp */
-	for(avp_t=avpList->head;avp_t&&avp_t!=avp;avp_t=avp_t->next);
+	for(avp_t=msg->avpList.head;avp_t&&avp_t!=avp;avp_t=avp_t->next);
 	if (!avp_t) {
 		LOG(L_ERR,"ERROR: AAACreateAVP: the \"avp\" avp is not in "
 			"\"avpList\" avp list!!\n");
@@ -334,15 +336,24 @@ AAAReturnCode  AAARemoveAVPFromList(
 	}
 
 	/* remove the avp from list */
-	if (avpList->head==avp)
-		avpList->head = avp->next;
+	if (msg->avpList.head==avp)
+		msg->avpList.head = avp->next;
 	else
 		avp->prev->next = avp->next;
 	if (avp->next)
 		avp->next->prev = avp->prev;
 	else
-		avpList->tail = avp->prev;
+		msg->avpList.tail = avp->prev;
 	avp->next = avp->prev = 0;
+
+	/* update short-cuts */
+	switch (avp->code) {
+		case AVP_Session_Id: msg->sessionId = 0;break;
+		case AVP_Origin_Host: msg->orig_host = 0;break;
+		case AVP_Origin_Realm: msg->orig_realm = 0;break;
+		case AVP_Destination_Host: msg->dest_host = 0;break;
+		case AVP_Destination_Realm: msg->dest_realm = 0;break;
+	}
 
 	return AAA_ERR_SUCCESS;
 }

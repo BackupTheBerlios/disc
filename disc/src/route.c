@@ -1,5 +1,5 @@
 /*
- * $Id: route.c,v 1.1 2003/03/28 14:20:43 bogdan Exp $
+ * $Id: route.c,v 1.2 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2003-03-27 created by bogdan
  */
@@ -60,7 +60,6 @@ int do_routing( AAAMessage *msg, struct peer_chaine **pc )
 
 	/* do routing based on destination-realm AVP */
 	p_chaine = 0;
-	// run the script
 	res = run_script( &p_chaine );
 	switch (res) {
 		case -1:

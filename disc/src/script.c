@@ -1,5 +1,5 @@
 /*
- * $Id: script.c,v 1.1 2003/03/28 14:20:43 bogdan Exp $
+ * $Id: script.c,v 1.2 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2003-03-27 created by bogdan
  */
@@ -10,7 +10,6 @@
 #include "list.h"
 #include "route.h"
 #include "script.h"
-//#include "globals.h"
 
 
 static struct peer_chaine *all_peers;

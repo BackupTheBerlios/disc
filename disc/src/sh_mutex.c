@@ -1,5 +1,5 @@
 /*
- * $Id: sh_mutex.c,v 1.2 2003/03/14 16:54:07 bogdan Exp $
+ * $Id: sh_mutex.c,v 1.3 2003/03/28 20:27:24 bogdan Exp $
  *
  * 2003-02-26 created by bogdan
  *
@@ -50,5 +50,5 @@ void destroy_shared_mutexes()
 gen_lock_t *get_shared_mutex()
 {
 	atomic_inc(&mutex_counter);
-	return &(shared_mutexes[(mutex_counter.value)|(NR_SHARED_MUTEXES-1)]);
+	return &(shared_mutexes[(mutex_counter.value)&(NR_SHARED_MUTEXES-1)]);
 }
