@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_shell.c,v 1.10 2003/04/22 19:58:41 andrei Exp $
+ * $Id: tcp_shell.c,v 1.11 2003/04/22 21:18:44 bogdan Exp $
  *
  *  History:
  *  --------
@@ -367,7 +367,8 @@ int get_new_receive_thread()
 	/* increase its load */
 	ti->load++;
 
-	if ( ti->tl.next!=&ti->tl && get_payload(ti->tl.next)->load<ti->load ){
+	if ( ti->tl.next!=&rcv_thread_list &&
+	get_payload(ti->tl.next)->load<ti->load ){
 		/* remove the first element */
 		list_del_zero( rcv_thread_list.next );
 		/* put it back in list into the corect position */
@@ -383,6 +384,8 @@ int get_new_receive_thread()
 	/* unlock the list */
 	lock_release( list_mutex );
 
+	LOG(L_INFO,"INFO:get_new_receive_thread: returning thread %p load[%d]\n",
+		ti,ti->load);
 	return ti->cmd_pipe[1];
 }
 
