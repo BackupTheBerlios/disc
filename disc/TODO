@@ -1,13 +1,10 @@
-$Id: TODO,v 1.8 2003/04/22 12:35:48 andrei Exp $
+$Id: TODO,v 1.9 2003/04/22 20:14:13 andrei Exp $
 
-- put GNU license in every file [all]
 - different autoconf for modules [andrei]
 - shared lib from diameter_msg [andrei]
-- make install ? [andrei]
 
 - grouped avp [bogdan]
 
 - use *_config.h for autoconf
 - disable NAGLE, set TOS to low delay
 
-- build by default client/modules/mipv6 & client/modules/mipv6_server ?
