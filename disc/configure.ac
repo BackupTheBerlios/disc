@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.12 2003/04/09 22:22:58 andrei Exp $
+dnl $Id: configure.ac,v 1.13 2003/04/10 18:27:10 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -14,6 +14,7 @@ dnl             added automake 1.4 backward compatibility stuff (andrei)
 dnl             added big endian check & config.cache (andrei)
 dnl 2003-04-09  added config.h generation preliminary support
 dnl             moved __CPU_... & __OS_... to CPPFLAGS (andrei)
+dnl 2003-04-10  debug build without optimizations (andrei)
 dnl
 dnl TODO:
 dnl -----
@@ -22,7 +23,7 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.12 2003/04/09 22:22:58 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.13 2003/04/10 18:27:10 andrei Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 ##AC_CONFIG_HEADERS([ac_config.h])
@@ -165,6 +166,8 @@ dnl get/set compiler flags
 export srcdir
 if test -z "$enable_debug_build" ; then
 	CFLAGS=`$srcdir/ccopts.sh $CC`
+else
+	CFLAGS= -g
 fi
 CCVER_OUTPUT=`$srcdir/ccver.sh $CC`
 CCVER=`echo $CCVER_OUTPUT| cut -d" " -f2`
