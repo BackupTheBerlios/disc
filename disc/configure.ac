@@ -1,9 +1,16 @@
-dnl $Id: configure.ac,v 1.1 2003/03/24 18:45:10 andrei Exp $
+dnl $Id: configure.ac,v 1.2 2003/03/26 17:59:28 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
+dnl
+dnl
+dnl History:
+dnl --------
+dnl 2003-03-24  created by andrei
+dnl 2003-03-26  fixed "./" path for cc*.sh (andrei)
+
 
 AC_PREREQ(2.54)
-AC_REVISION($Id: configure.ac,v 1.1 2003/03/24 18:45:10 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.2 2003/03/26 17:59:28 andrei Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 AM_INIT_AUTOMAKE([nostdinc dist-bzip2 dist-shar dist-zip dist-tarZ])
@@ -113,10 +120,11 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 
 dnl get/set compiler flags
+export srcdir
 if test -z "$enable_debug_build" ; then
-	CFLAGS=`./ccopts.sh $CC`
+	CFLAGS=`$srcdir/ccopts.sh $CC`
 fi
-CCVER_OUTPUT=`./ccver.sh $CC`
+CCVER_OUTPUT=`$srcdir/ccver.sh $CC`
 CCVER=`echo $CCVER_OUTPUT| cut -d" " -f2`
 CCNAME=`echo $CCVER_OUTPUT| cut -d" " -f1`
 
@@ -218,5 +226,5 @@ AC_CHECK_MEMBERS([struct sockaddr.sa_len], AC_DEFINE([HAVE_SOCKADDR_SA_LEN]),,
 )
 
 
-AC_OUTPUT(src/Makefile src/client/Makefile src/diameter_api/Makefile
+AC_OUTPUT(Makefile src/Makefile src/client/Makefile src/diameter_api/Makefile
 			src/mem/Makefile src/transport/Makefile)

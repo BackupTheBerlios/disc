@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#$Id: ccopts.sh,v 1.1 2003/03/24 18:45:10 andrei Exp $
+#$Id: ccopts.sh,v 1.2 2003/03/26 17:59:28 andrei Exp $
 #
 # returns the CFLAGS for the given compiler (maximum optimizations)
 #
@@ -25,8 +25,12 @@ then
 	exit 1
 fi
 
+if [ -z "$srcdir" ]
+then
+	srcdir=.
+fi
 
-if  CCVER=`./ccver.sh $1` 
+if  CCVER=`$srcdir/ccver.sh $1` 
 then
 	NAME=`echo "$CCVER"|cut -d" " -f 1`
 	VER=`echo "$CCVER"|cut -d" " -f 2`
