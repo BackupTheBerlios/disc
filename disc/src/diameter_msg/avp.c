@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.4 2003/04/22 19:58:41 andrei Exp $
+ * $Id: avp.c,v 1.5 2003/08/15 16:42:08 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  * 2003-03-12 converted to shm_malloc/free (andrei)
@@ -219,20 +219,22 @@ AAA_AVP  *AAAFindMatchingAVP(
 		LOG(L_ERR,"ERROR:FindMatchingAVP: param msg passed null !!\n");
 		goto error;
 	}
-	/* search the startAVP avp */
-	for(avp_t=msg->avpList.head;avp_t&&avp_t!=startAvp;avp_t=avp_t->next);
-	if (!avp_t) {
-		LOG(L_ERR,"ERROR: AAAFindMatchingAVP: the \"position\" avp is not in"
-			"\"avpList\" list!!\n");
-		goto error;
-	}
 
 	/* where should I start searching from ? */
-	if (!startAvp)
+	if (startAvp) {
+		/* double-check the startAVP avp */
+		for(avp_t=msg->avpList.head;avp_t&&avp_t!=startAvp;avp_t=avp_t->next);
+		if (!avp_t) {
+			LOG(L_ERR,"ERROR: AAAFindMatchingAVP: the \"position\" avp is not "
+				"in \"avpList\" list!!\n");
+			goto error;
+		}
+		avp_t=startAvp;
+	} else {
+		/* if no startAVP -> start from one of the ends */
 		avp_t=(searchType==AAA_FORWARD_SEARCH)?(msg->avpList.head):
 			(msg->avpList.tail);
-	else
-		avp_t=startAvp;
+	}
 
 	/* start searching */
 	while(avp_t) {
