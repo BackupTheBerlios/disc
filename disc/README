@@ -1,10 +1,11 @@
-$Id: README,v 1.3 2003/10/08 10:43:32 cco Exp $
+$Id: README,v 1.4 2003/10/24 20:15:14 cco Exp $
 
 
 DISC (DIameter Server Client) is an AAA diameter implementation. DISC can be configured to act as a diameter server or a diameter client.
 DISC enables a flexible plug-in model for new applications. Third parties can easily link their plug-ins with the server or client code and provide thereby adavanced and customized services.
 
 For more information see INSTALL and the example configurations in src/*.cfg.
+
 
 Configuration files
 --------------------
@@ -60,5 +61,78 @@ route mobis.ip6   lugduf
 (assuming that lugduf was declared as an alias before. or is the actual 
 fqdn of the host)
 
-note that in the case of the server a next hop MUST be defined as a peer.
+note that in the case of the server every next hop MUST be defined as a peer.
 
+
+Writing Modules / Diameter API
+------------------------------
+
+AAA application specific support in disc is implemented by means of
+custom modules. 
+
+the main data structure associated to a module is "struct module_exports" 
+which has the following definition:
+
+struct module_exports{
+    char* name; /* module name, must be unique */
+    unsigned int mod_type; /* module's type - server or client */
+    unsigned int app_id; /* application id*/
+    unsigned int flags; /* flags */
+    struct module_param* params;/* module parameters, null terminated array*/
+   
+    int (*mod_init)();   /* module initialization function */
+    void (*mod_destroy)(); /* called on exit */
+    
+    int (*mod_msg)(AAAMessage*, void*); /* called for each message */
+    int (*mod_tout)(int, AAASessionId*, void*);  /* called for all timeout */
+};
+
+a module has to implement the following functions:
+
+	o  int mod_init() - it is run at module loading and usually would
+	read configuration variables and set up the initial configuration.
+
+	o  void mod_destroy() - it is run on exit and it can be used 
+	for cleaning up.
+
+	o  int mod_msg(AAAMessage* message, void* context) - it is run by 
+	disc for every received AAA command belonging to the application 
+	implemented by the module. 
+	one specifies the AAA application implemented by the
+	module by setting the "app_id" field in the "struct module_exports"
+	data structure. 
+	the received message is pointed to by "message"; "context" points to
+	the arbitrary context related to the session this message is part
+	of. 
+
+	o  int mod_tout(int flags, AAASessionId* session, void* context) - 
+	two kinds of timeouts can occur: a session timeout or a transaction 
+	timeout. 
+	when either of the two appears and the module has to do with it (i.e. it
+	has created this session or transaction), then this function will be
+	called. the "flags" will tell you what kind of timeout has occured:
+	flags==ANSWER_TIMEOUT_EVENT means a transaction timed out, whereas
+	flags==SESSION_TIMEOUT_EVENT means the end of a session.
+	the parameter "session" points to the actual value of the AAA session id, 
+	and "context" points to the arbitrary context related to this
+	session. 
+
+for implementing disc modules one can rely on the diameter API functions
+already provided by disc. for that one needs to include 
+src/diameter_api/diameter_api.h. the implementation of this API is based
+on draft-ietf-aaa-diameter-api-03; however NOT all the functions
+specified there are implemented and the implementation is NOT provided
+(at least for the time being) as an separate library.
+
+
+three example modules are provided:
+
+1.  src/client/modules/print
+
+2.  src/client/modules/mipv6 - a module implementing loosely the 
+(AAA client part of) mipv6 AAA application as specified in
+<draft-le-aaa-diameter-mobileipv6-03.txt> 
+
+3.  src/server/modules/mipv6_server - a module implementing loosely the (AAA
+server part of) mipv6  AAA application as specified in
+<draft-le-aaa-diameter-mobileipv6-03.txt>
