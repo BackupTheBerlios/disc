@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.1 2003/04/08 13:29:28 bogdan Exp $
+ * $Id: aaa_core.c,v 1.2 2003/04/08 15:44:32 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -20,6 +20,7 @@
 #include "globals.h"
 #include "mem/shm_mem.h"
 #include "timer.h"
+#include "utils.h"
 #include "msg_queue.h"
 #include "aaa_module.h"
 #include "cfg_init.h"
@@ -38,13 +39,13 @@ int debug=9;
 /* use std error for loging - default value */
 int log_stderr=1;
 
-/* aaa identity of the client */
+/* aaa identity */
 str aaa_identity= {0, 0};
 
-/* realm served by this client */
+/* realm served */
 str aaa_realm= {0, 0};
 
-/* fqdn of the client */
+/* fqdn */
 str aaa_fqdn= {0, 0 };
 
 /* product name */
@@ -60,7 +61,10 @@ unsigned int listen_port = DEFAULT_LISTENING_PORT;
 unsigned int do_relay = 0;
 
 
-
+#define AAAID_START          "aaa://"
+#define AAAID_START_LEN      (sizeof(AAAID_START)-1)
+#define TRANSPORT_PARAM      ";transport=tcp"
+#define TRANSPORT_PARAM_LEN  (sizeof(TRANSPORT_PARAM)-1)
 
 
 void init_random_generator()
@@ -89,6 +93,49 @@ void init_random_generator()
 
 
 
+int generate_aaaIdentity()
+{
+	char port_s[32];
+	int  port_len;
+	char *ptr;
+
+	/* convert port into string */
+	port_len = int2str( listen_port, port_s, 32 );
+
+	/* compute the length */
+	aaa_identity.len = AAAID_START_LEN + aaa_fqdn.len + 1/*:*/ +
+		port_len + TRANSPORT_PARAM_LEN;
+
+	/* allocate mem */
+	aaa_identity.s = (char*)shm_malloc( aaa_identity.len );
+	if (!aaa_identity.s) {
+		LOG(L_CRIT,"ERROR:generate_aaaIdentity: no free memory -> cannot "
+			"generate aaa_identity\n");
+		return -1;
+	}
+
+	ptr = aaa_identity.s;
+	memcpy( ptr, AAAID_START, AAAID_START_LEN );
+	ptr += AAAID_START_LEN;
+
+	memcpy( ptr, aaa_fqdn.s, aaa_fqdn.len );
+	ptr += aaa_fqdn.len;
+
+	*(ptr++) = ':';
+
+	memcpy( ptr, port_s, port_len );
+	ptr += port_len;
+
+	memcpy( ptr, TRANSPORT_PARAM, TRANSPORT_PARAM_LEN );
+	ptr += TRANSPORT_PARAM_LEN;
+
+	LOG(L_INFO,"INFO:generate_aaaIdentity: [%.*s]\n",
+		aaa_identity.len,aaa_identity.s);
+	return 1;
+}
+
+
+
 void destroy_aaa_core()
 {
 	/* stop & destroy the modules */
@@ -108,6 +155,10 @@ void destroy_aaa_core()
 
 	/* destroy the peer manager */
 	destroy_peer_manager( peer_table );
+
+	/**/
+	if (aaa_identity.s)
+		shm_free(aaa_identity.s);
 
 	/* destroy tge timer */
 	destroy_timer();
@@ -144,6 +195,11 @@ int init_aaa_core(char *cfg_file)
 	/* read config file */
 	if (read_config_file( cfg_file )!=0){
 		fprintf(stderr, "bad config %s\n", cfg_file);
+		goto error;
+	}
+
+	/* build the aaa_identity based on FQDN and port */
+	if ( generate_aaaIdentity()==-1 ) {
 		goto error;
 	}
 

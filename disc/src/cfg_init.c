@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_init.c,v 1.1 2003/04/07 21:27:52 andrei Exp $
+ * $Id: cfg_init.c,v 1.2 2003/04/08 15:44:32 bogdan Exp $
  *
  * History:
  * --------
@@ -33,7 +33,6 @@ static int cfg_include(struct cfg_line* cl, void* value);
 struct cfg_def cfg_ids[]={
 	{"debug",        INT_VAL,   &debug,        0                   },
 	{"log_stderr",   INT_VAL,   &log_stderr,   0                   },
-	{"aaa_identity", STR_VAL,   &aaa_identity, 0                   },
 	{"aaa_realm",    STR_VAL,   &aaa_realm,    0                   },
 	{"aaa_fqdn",     STR_VAL,   &aaa_fqdn,     0                   },
 	{"listen_port",  INT_VAL,   &listen_port,  0                   },
