@@ -12,7 +12,6 @@
 #include "../mem/shm_mem.h"
 #include "../sh_mutex.h"
 #include "../timer.h"
-#include "../script.h"
 #include "../msg_queue.h"
 #include "../transport/peer.h"
 #include "../transport/tcp_shell.h"
@@ -21,6 +20,8 @@
 #include "../diameter_api/diameter_types.h"
 #include "../diameter_api/diameter_api.h"
 
+#include "worker.h"
+#include "dest.h"
 
 
 
@@ -186,7 +187,7 @@ int init_client()
 	add_peer( &aaa_id, &host, 1812);
 
 	/* init the script */
-	if ( init_script()==-1 ) {
+	if ( init_dest_peers()==-1 ) {
 		goto error;
 	}
 

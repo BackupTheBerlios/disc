@@ -1,5 +1,5 @@
 /*
- * $Id: message.h,v 1.11 2003/03/28 20:27:24 bogdan Exp $
+ * $Id: message.h,v 1.12 2003/04/01 12:03:16 bogdan Exp $
  *
  * 2003-02-07 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -40,6 +40,7 @@ int send_request( AAAMessage *msg );
 
 int send_response( AAAMessage *msg);
 
+int get_dest_peers( AAAMessage *msg, struct peer_chaine **pc );
 
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.21 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: message.c,v 1.22 2003/04/01 12:03:16 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -22,7 +22,6 @@
 #include "../str.h"
 #include "../utils.h"
 #include "../locking.h"
-#include "../route.h"
 #include "../globals.h"
 #include "../transport/peer.h"
 #include "message.h"
@@ -726,7 +725,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		ses = (struct session*)msg->intern;
 		/* where     should I send this request? */
 		pc = 0;
-		ret = do_routing( msg, &pc );
+		ret = get_dest_peers( msg, &pc );
 		if (ret!=1 || pc==0) {
 			LOG(L_ERR,"ERROR:AAASendMessage: no outgoing peer found for msg!"
 				" do_routing returned %d, pc=%p.\n",ret,pc);

@@ -1,21 +1,21 @@
-/*
- * $Id: script.c,v 1.2 2003/03/28 20:27:24 bogdan Exp $
- *
- * 2003-03-27 created by bogdan
+/*$
+ * $Id: dest.c,v 1.1 2003/04/01 12:03:16 bogdan Exp $$
+ *$
+ * 2003-04-01 created by bogdan$
  */
 
 
-#include "mem/shm_mem.h"
-#include "dprint.h"
-#include "list.h"
-#include "route.h"
-#include "script.h"
+
+#include "../mem/shm_mem.h"
+#include "../dprint.h"
+#include "../transport/peer.h"
+#include "../diameter_api/message.h"
 
 
 static struct peer_chaine *all_peers;
 
 
-int init_script()
+int init_dest_peers()
 {
 	struct list_head   *lh;
 	struct peer_chaine *pc, *last;
@@ -26,7 +26,7 @@ int init_script()
 	list_for_each( lh, &(peer_table->peers) ) {
 		pc = (struct peer_chaine*)shm_malloc(sizeof(struct peer_chaine));
 		if (!pc) {
-			LOG(L_ERR,"ERROR:init_script:no more free memory!\n");
+			LOG(L_ERR,"ERROR:init_dest_peers: no more free memory!\n");
 			goto error;
 		}
 		/* add to list */
@@ -47,7 +47,7 @@ error:
 
 
 
-int run_script( struct peer_chaine **chaine )
+int get_dest_peers( AAAMessage *msg, struct peer_chaine **chaine )
 {
 	if (chaine)
 		*chaine = all_peers;
