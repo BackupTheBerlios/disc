@@ -1,6 +1,6 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- * $Id: dictionary.c,v 1.15 2003/04/26 11:54:27 ilk Exp $
+ * $Id: dictionary.c,v 1.16 2003/04/28 13:58:18 ilk Exp $
  *
  * Copyright (C) 2002-2003 Fhg Fokus
  *
@@ -44,7 +44,7 @@ AAAValue AAAValueFromName(char *avpName,
 	                        char *valueName){
 									  
    AAAValue value=0;
-   if(AAAFindValue( vendorName,avpName,valueName,&value)== AAA_ERR_SUCCESS)
+   if(AAAFindValue( vendorName,avpName,&valueName,&value)== AAA_ERR_SUCCESS)
 		return value;
 	else
 		return AAA_ERR_NOT_FOUND;
@@ -62,15 +62,20 @@ AAAValue AAAValueFromAVPCode(AAA_AVPCode avpCode,
 	                           char *valueName){
    AAAValue value=0;
    AAADictionaryEntry *entry;
+   AAAReturnCode ret;
    entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
    if (AAADictionaryEntryFromAVPCode(avpCode,vendorId,entry)==AAA_ERR_SUCCESS){
-		if(AAAFindValue( NULL,entry->avpName,valueName,&value)== AAA_ERR_SUCCESS)
+		ret=AAAFindValue( NULL,entry->avpName,&valueName,&value);
+      free(entry);
+		if(ret== AAA_ERR_SUCCESS)         
 			return value;
 		else
 			return AAA_ERR_NOT_FOUND;
 	}
-	else
+	else{
+		free(entry);
 		return AAA_ERR_NOT_FOUND;
+	}
   
 }
 
@@ -79,15 +84,20 @@ const char *AAALookupValueNameUsingValue(AAA_AVPCode avpCode,
 			                                   AAAValue value){
    char* valueName=NULL;
    AAADictionaryEntry *entry;
+   AAAReturnCode ret;
    entry=(AAADictionaryEntry*)malloc(sizeof(AAADictionaryEntry));
    if (AAADictionaryEntryFromAVPCode(avpCode,vendorId,entry)==AAA_ERR_SUCCESS){
-   	if(AAAFindValue( NULL,entry->avpName,valueName,&value)== AAA_ERR_SUCCESS)
+		ret=AAAFindValue( NULL,entry->avpName,&valueName,&value);
+		free(entry);
+		if(ret==AAA_ERR_SUCCESS)
 			return valueName;
 		else
 			return NULL;
 	}
-	else
+	else{
+		free(entry);
 		return NULL;
+	}
 }
 
 boolean_t AAAGetCommandCode(char *commandName,
@@ -134,23 +144,24 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
    entry->avpName=(char*)malloc(strlen(charEntry[1]+1));
    strcpy(entry->avpName,charEntry[1]);
    entry->avpCode=atoi(charEntry[2]);
+   free(charEntry[2]);
    for(i=0;i<sizeof(dataTypes)/sizeof(char*);i++)
-   	if(!strcasecmp(charEntry[4],dataTypes[i]))
+   	if(!strcasecmp(charEntry[3],dataTypes[i]))
 			entry->avpType=AAA_AVP_DATA_TYPE;
    for(i=0;i<sizeof(octetStrings)/sizeof(char*);i++)
-   	if(!strcasecmp(charEntry[4],octetStrings[i]))
+   	if(!strcasecmp(charEntry[3],octetStrings[i]))
 			entry->avpType=AAA_AVP_STRING_TYPE;
    for(i=0;i<sizeof(addressTypes)/sizeof(char*);i++)
-   	if(!strcasecmp(charEntry[4],addressTypes[i]))
+   	if(!strcasecmp(charEntry[3],addressTypes[i]))
 			entry->avpType=AAA_AVP_ADDRESS_TYPE;
    for(i=0;i<sizeof(integer32Types)/sizeof(char*);i++)
-   	if(!strcasecmp(charEntry[4],integer32Types[i]))
+   	if(!strcasecmp(charEntry[3],integer32Types[i]))
 			entry->avpType=AAA_AVP_INTEGER32_TYPE;
    for(i=0;i<sizeof(integer64Types)/sizeof(char*);i++)
-   	if(!strcasecmp(charEntry[4],integer64Types[i]))
+   	if(!strcasecmp(charEntry[3],integer64Types[i]))
 			entry->avpType=AAA_AVP_INTEGER64_TYPE;
    for(i=0;i<sizeof(timeTypes)/sizeof(char*);i++)
-   	if(!strcasecmp(charEntry[4],timeTypes[i]))
+   	if(!strcasecmp(charEntry[3],timeTypes[i]))
 			entry->avpType=AAA_AVP_TIME_TYPE;
       return AAA_ERR_SUCCESS;
    
@@ -159,24 +170,25 @@ AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
 }
 AAAReturnCode AAAFindValue(  char* vendorName,
 										char* avpName,
-                              char* valueName,
+                              char** valueName,
                               AAAValue* value){
    char* charEntry[4];
    char vendorVal[]="VALUE";
    charEntry[0]=vendorVal;
    charEntry[1]=avpName;
-   charEntry[2]=valueName;
+   charEntry[2]=*valueName;
    if(*value==0)
    	charEntry[3]=NULL;
    else{
 		charEntry[3]=(char*)malloc(10);
-      sprintf(charEntry[2],"%i",*value);
+      sprintf(charEntry[3],"%i",*value);
    }
-   if(!findEntry(charEntry,4))
+	if(!findEntry(charEntry,4))
       return AAA_ERR_NOT_FOUND;
-   valueName=(char*)malloc(strlen(charEntry[2])+1);
-   strcpy(valueName,charEntry[2]);
-   *value=atoi(charEntry[3]);
+   *valueName=(char*)malloc(strlen(charEntry[2])+1);
+   strcpy(*valueName,charEntry[2]);
+	*value=atoi(charEntry[3]);
+	free(charEntry[3]);
    return AAA_ERR_SUCCESS;
 }
 
@@ -224,6 +236,7 @@ int findEntry( char** extEntry, int sizeOfEntry){
 			if(extEntry[i]==NULL){
 				extEntry[i]=(char*)malloc(strlen(entry[i])+1);
 				strcpy(extEntry[i],entry[i]);
+				free(entry[i]);
 			}
 	}
    return match;
@@ -238,17 +251,14 @@ int findWord( char* word){
          while ((num=fgetc(file))!='\n' && num!=EOF);
       else{
          if(num == word[0]){
-				buff=malloc(strlen(word)+1);
-            buff[0]=num;
             match = 1; 
             for(i=1; i<strlen(word); i++){
-               if((buff[i]=fgetc(file))=='\n' || buff[i]==EOF || buff[i]!= word[i]){
+               if((num=fgetc(file))=='\n' || num==EOF || num!= word[i]){
                   match = 0;
                   break;
                }
 					match = 1;
             }  
-            buff[strlen(word)]=0;
 			} 
 		}
 	}
