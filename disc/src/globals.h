@@ -1,5 +1,5 @@
 /*
- * $Id: globals.h,v 1.6 2003/04/09 16:34:44 andrei Exp $
+ * $Id: globals.h,v 1.7 2003/04/11 17:48:02 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -38,6 +38,8 @@ extern unsigned int vendor_id;
 
 extern unsigned int do_relay;
 
+/* my status - client, server, statefull server */
+extern unsigned int my_aaa_status;
 
 #endif
 

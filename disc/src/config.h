@@ -1,5 +1,5 @@
 /*
- * $Id: config.h,v 1.4 2003/04/08 13:29:28 bogdan Exp $
+ * $Id: config.h,v 1.5 2003/04/11 17:48:02 bogdan Exp $
  */
 /* History:
  * --------
@@ -21,6 +21,10 @@
 
 /* default number of receiving thread for tcp */
 #define DEFAULT_TCP_RECEIVE_THREADS 4
+
+/* default number of working threads */
+#define DEAFULT_WORKER_THREADS  4
+
 
 #define VENDOR_ID   0x0000caca
 

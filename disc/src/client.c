@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.6 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: client.c,v 1.1 2003/04/11 17:50:07 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -10,58 +10,72 @@
 #include <pthread.h>
 #include <string.h>
 #include <errno.h>
-#include "../mem/shm_mem.h"
-#include "../dprint.h"
-#include "../timer.h"
-#include "../msg_queue.h"
-#include "../aaa_module.h"
-#include "../diameter_api/diameter_api.h"
-#include "../transport/trans.h"
-#include "worker.h"
+
+#include "mem/shm_mem.h"
+#include "diameter_api/diameter_api.h"
+#include "transport/trans.h"
+#include "transport/peer.h"
+#include "dprint.h"
+#include "timer.h"
+#include "msg_queue.h"
+#include "aaa_module.h"
 
 
-static pthread_t *worker_id = 0;
-static int nr_worker_threads = 0;
-
-
-void *client_worker(void *attr);
+static struct peer_chain *all_peers;
 
 
 
-
-int start_client_workers( int nr_workers )
+int init_all_peers_list()
 {
-	int i;
+	struct list_head  *lh;
+	struct peer_chain *pc, *last;
 
-	worker_id = (pthread_t*)shm_malloc( nr_workers*sizeof(pthread_t));
-	if (!worker_id) {
-		LOG(L_ERR,"ERROR:build_workers: cannot get free memory!\n");
-		return -1;
+	all_peers = 0;
+	last = 0;
+
+	list_for_each( lh, &(peer_table->peers) ) {
+		pc = (struct peer_chain*)shm_malloc(sizeof(struct peer_chain));
+		if (!pc) {
+			LOG(L_ERR,"ERROR:init_dest_peers: no more free memory!\n");
+			goto error;
 	}
-
-	for(i=0;i<nr_workers;i++) {
-		if (pthread_create( &worker_id[i], /*&attr*/ 0, &client_worker, 0)!=0){
-			LOG(L_ERR,"ERROR:build_workers: cannot create worker thread\n");
-			return -1;
+		/* add to list */
+		pc->p = list_entry(lh, struct peer, all_peer_lh);
+		pc->next = 0;
+		if (!last) {
+			all_peers = pc;
+		} else {
+			last->next = pc;
 		}
-		nr_worker_threads++;
+		last = pc;
 	}
 
 	return 1;
+error:
+	return -1;
 }
 
 
 
-
-void stop_client_workers()
+void destroy_all_peers_list()
 {
-	int i;
+	struct peer_chain *pc, *pc_foo;
 
-	if (worker_id) {
-		for(i=0;i<nr_worker_threads;i++)
-			pthread_cancel( worker_id[i]);
-		shm_free( worker_id );
+	pc = all_peers;
+	while(pc) {
+		pc_foo = pc;
+		pc = pc->next;
+		shm_free( pc_foo);
 	}
+}
+
+
+
+int get_all_peers( AAAMessage *msg, struct peer_chain **chaine )
+{
+	if (chaine)
+		*chaine = all_peers;
+	return 1;
 }
 
 

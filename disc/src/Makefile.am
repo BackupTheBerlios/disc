@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.17 2003/04/08 22:06:24 andrei Exp $
+## $Id: Makefile.am,v 1.18 2003/04/11 17:48:02 bogdan Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -14,38 +14,27 @@ SUBDIRS = diameter_msg diameter_api transport mem client server
 
 INCLUDES = @INCLTDL@
 
-bin_PROGRAMS = aaa_client aaa_server
-common =			 aaa_lock.c dprint.c hash_table.c \
+bin_PROGRAMS = aaa
+common =			aaa_lock.c dprint.c hash_table.c \
 					timer.c aaa_module.c aaa_core.c route.c \
 					cfg_init.c cfg_parser.c aaa_parse_uri.c \
+					server.c client.c \
 					aaa_lock.h dprint.h hash.h lock_alloc.h sem.h \
 					timer.h config.h fastlock.h hash_table.h lock_ops.h \
 					utils.h counter.h globals.h msg_queue.h msg_queue.c \
 					list.h locking.h str.h aaa_module.h aaa_core.h \
 					cfg_init.h cfg_parser.h parser_f.h aaa_parse_uri.h \
-					route.h
-#
-# client
-#
-aaa_client_SOURCES = $(common)
+					route.h server.h client.h
+
+aaa_SOURCES = $(common)
 # hash.c only for tests
 				
-EXTRA_DIST=		server aaa_client.cfg aaa_lib.cfg
+EXTRA_DIST=	server aaa_client.cfg aaa_server.cfg
 
-aaa_client_LDADD =  mem/libmem.la \
-					transport/libtransport.la client/libclient.la \
-					@LIBLTDL@
+aaa_LDADD =	../libltdl/libltdlc.la mem/libmem.la transport/libtransport.la \
+			diameter_api/libdiameter_api.la diameter_msg/libdiameter_msg.la
+			@LIBLTDL@
 # @LIBADD_DL@ # not needed for newer libtool version (>=1.4)
-aaa_client_LDFLAGS = -export-dynamic -pthread
-
-#
-# server
-#
-aaa_server_SOURCES = $(common)
-aaa_server_LDADD =  mem/libmem.la \
-					transport/libtransport.la server/libserver.la \
-					@LIBLTDL@
-# @LIBADD_DL@ # not needed for newer libtool version (>=1.4)
-aaa_server_LDFLAGS = -export-dynamic -pthread
+aaa_LDFLAGS = -export-dynamic -pthread
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_init.c,v 1.6 2003/04/09 18:12:44 andrei Exp $
+ * $Id: cfg_init.c,v 1.7 2003/04/11 17:48:02 bogdan Exp $
  *
  * History:
  * --------
@@ -11,6 +11,7 @@
 
 #include "../libltdl/ltdl.h"
 
+#include "diameter_api/diameter_api.h"
 #include "dprint.h"
 #include "cfg_init.h"
 #include "cfg_parser.h"
@@ -30,6 +31,7 @@ static int cfg_addpair(struct cfg_line* cl, void* callback);
 static int cfg_echo(struct cfg_line* cl, void* value);
 static int cfg_error(struct cfg_line* cl, void* value);
 static int cfg_include(struct cfg_line* cl, void* value);
+static int cfg_set_aaa_status(struct cfg_line* cl, void* value);
 
 
 
@@ -40,6 +42,7 @@ struct cfg_def cfg_ids[]={
 	{"aaa_realm",    STR_VAL,   &aaa_realm,    0                   },
 	{"aaa_fqdn",     STR_VAL,   &aaa_fqdn,     0                   },
 	{"listen_port",  INT_VAL,   &listen_port,  0                   },
+	{"aaa_status",   STR_VAL,   0,              cfg_set_aaa_status  },
 	{"module_path",  STR_VAL,   &module_path,   cfg_set_module_path },
 	{"module",       GEN_VAL,   0,              cfg_load_modules    },
 	{"peer",         GEN_VAL,   add_cfg_peer,   cfg_addpair         },
@@ -175,6 +178,34 @@ int cfg_include(struct cfg_line* cl, void* value)
 	ret=read_config_file(s.s);
 	shm_free(s.s);
 	return ret;
+}
+
+
+
+int cfg_set_aaa_status(struct cfg_line* cl, void* value)
+{
+	char* status_str[] =
+		{"aaa_client","aaa_server","aaa_server_statefull"};
+	unsigned int status_int[] =
+		{AAA_CLIENT,AAA_SERVER,AAA_SERVER_STATEFULL};
+	int i;
+
+	if (cl->token_no!=1){
+		LOG(L_CRIT, "ERROR: too many parameters for aaa_status\n");
+		return CFG_PARAM_ERR;
+	}
+	if (cl->has_equal!=1){
+		LOG(L_CRIT, "ERROR: missing equal for aaa_status\n");
+		return CFG_PARAM_ERR;
+	}
+	for( i=(sizeof(status_str)/sizeof(char*))-2 ; i>=0 ; i--)
+		if (!strcasecmp(cl->value[0],status_str[i]) ) {
+			my_aaa_status = status_int[i];
+			return CFG_OK;
+		}
+	LOG(L_CRIT,"ERROR: unknown \"%s\" value for aaa_status\n"
+		"\tSupported values: AAA_SERVER, AAA_CLIENT\n",cl->value[0]);
+	return CFG_ERR;
 }
 
 

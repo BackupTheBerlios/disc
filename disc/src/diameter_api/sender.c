@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.5 2003/04/10 23:54:02 bogdan Exp $
+ * $Id: sender.c,v 1.6 2003/04/11 17:48:02 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -29,7 +29,7 @@
 #include "session.h"
 
 
-int get_dest_peers( AAAMessage *msg, struct peer_chain **pc );
+extern int (*get_dest_peers)(AAAMessage*,struct peer_chain **);
 
 
 /****************************** API FUNCTIONS ********************************/
@@ -60,12 +60,17 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 
 	if ( !is_req(msg) ) {
 		/* it's a response */
+		if (my_aaa_status==AAA_CLIENT) {
+			LOG(L_ERR,"ERROR:AAASendMessage: AAA client does not send answers
+				!! -> read the draft!!!\n");
+			goto error;
+		}
 
 		/* generate the buf from the message */
 		if ( AAABuildMsgBuffer( msg )==-1 )
 			goto error;
 
-		if (!msg->no_ses) {
+		if ( my_aaa_status!=AAA_SERVER ) {
 			ses = sId2session( msg->sId );
 			/* update the session state machine */
 			switch (msg->commandCode) {
@@ -81,12 +86,19 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		/* send the reply to the request incoming peer  */
 		if (send_res_to_peer( &(msg->buf), (struct peer*)msg->in_peer)==-1) {
 			LOG(L_ERR,"ERROR:send_aaa_response: send returned error!\n");
-			if (!msg->no_ses)
+			if ( my_aaa_status!=AAA_SERVER )
 				session_state_machine( ses, AAA_SEND_FAILED, 0);
 			goto error;
 		}
 	} else {
-		/* it's a request -> get its session */
+		/* it's a request */
+		if (my_aaa_status!=AAA_CLIENT) {
+			LOG(L_ERR,"ERROR:AAASendMessage: AAA stateless server does not "
+				"send answers!! -> read the draft!!!\n");
+			goto error;
+		}
+
+		/* -> get its session */
 		ses = sId2session( msg->sId );
 
 		/* where should I send this request? */

@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.4 2003/04/10 23:54:02 bogdan Exp $
+ * $Id: message.c,v 1.5 2003/04/11 17:48:02 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -189,7 +189,6 @@ AAAMessage *AAANewMessage(
 	} else {
 		/* it'a an answer -> it will have the same session Id */
 		msg->sId = request->sId;
-		msg->no_ses = request->no_ses;
 		/* link the incoming peer to the answer */
 		msg->in_peer = request->in_peer;
 		/* set the P flag as in request */

@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.8 2003/04/10 21:40:03 bogdan Exp $
+ * $Id: print.c,v 1.9 2003/04/11 17:48:02 bogdan Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -79,7 +79,7 @@ error:
 			if (sID)
 				AAAEndSession( sID );
 			if (req)
-				AAAFreeMesage( &req );
+				AAAFreeMessage( &req );
 		}
 		//sleep(60);
 	}

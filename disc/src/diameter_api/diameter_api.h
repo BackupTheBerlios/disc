@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_api.h,v 1.8 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: diameter_api.h,v 1.9 2003/04/11 17:48:02 bogdan Exp $
  *
  * 2002-10-04 created by illya (komarov@fokus.gmd.de)
  *
@@ -28,6 +28,16 @@ typedef enum {
 	_B_FALSE,
 	_B_TRUE
 }boolean_t;
+
+
+/* possible identities for AAA parties */
+enum AAA_STATUS {
+	AAA_UNDEFINED = 0,
+	AAA_CLIENT = 1,
+	AAA_SERVER = 2,
+	AAA_SERVER_STATELESS = 2,
+	AAA_SERVER_STATEFULL = 3,
+};
 
 
 /* The following defines the possible security characteristics for a host

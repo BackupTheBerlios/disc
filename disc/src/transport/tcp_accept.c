@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_accept.c,v 1.8 2003/04/10 23:54:02 bogdan Exp $
+ * $Id: tcp_accept.c,v 1.9 2003/04/11 17:48:02 bogdan Exp $
  *
  *  History:
  *  --------
@@ -27,8 +27,6 @@
 #include "ip_addr.h"
 #include "tcp_shell.h"
 #include "tcp_accept.h"
-
-#define ADDRESS_ALREADY_IN_USE 98
 
 
 /* used by do_accept
@@ -72,15 +70,11 @@ error:
 
 void *do_accept(void *arg)
 {
-	struct ip_addr servip;
-	union sockaddr_union servaddr;
 	unsigned int server_sock4;
 #ifdef USE_IPV6
 	unsigned int server_sock6;
-	unsigned int bind_retest;
 #endif
 	unsigned int max_sock;
-	unsigned int option;
 	struct thread_info *tinfo;
 	struct command cmd;
 	int  nready;
@@ -95,139 +89,9 @@ void *do_accept(void *arg)
 	FD_SET( tinfo->cmd_pipe[0], &(tinfo->rd_set));
 	max_sock = tinfo->cmd_pipe[0];
 
+
 	server_sock4 = -1;
-#ifdef USE_IPV6
 	server_sock6 = -1;
-	bind_retest = 0;
-	if (disable_ipv6) goto do_bind4; /* skip ipv6 binding part*/
-do_bind6:
-	LOG(L_INFO,"INFO: doing socket and bind for IPv6...\n");
-	/* create the listening socket fpr IPv6 */
-	if ((server_sock6 = socket(AF_INET6, SOCK_STREAM, 0)) == -1) {
-		LOG(L_ERR,"ERROR:do_accept: error creating server socket IPv6: %s\n",
-			strerror(errno));
-		goto error;
-	}
-
-	// TO DO: what was this one good for?
-	option = 1;
-	setsockopt(server_sock6,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));
-
-	memset( &servip, 0, sizeof(servip) );
-	servip.af = AF_INET6;
-	servip.len = 16;
-	memcpy( &servip.u.addr, &in6addr_any, servip.len);
-	init_su( &servaddr, &servip, htons(listen_port));
-
-	if ( (bind( server_sock6, (struct sockaddr*)&servaddr,
-	sockaddru_len(servaddr)))==-1) {
-		LOG(L_ERR,"ERROR:do_accept: error binding server socket IPv6: %s\n",
-			strerror(errno));
-		goto error;
-	}
-
-	/* IMPORTANT: I have to do listen here to be able to ketch an AAIU on IPv4;
-	 * bind is not sufficient because of the SO_REUSEADDR option */
-	if ((listen( server_sock6, 4)) == -1) {
-		LOG(L_ERR,"ERROR:do_accept: error listening on server socket IPv6: "
-			"%s\n",strerror(errno));
-		goto error;
-	}
-
-	if (bind_retest)
-		goto bind_done;
-
-do_bind4:
-#endif
-	LOG(L_INFO,"INFO: doing socket and bind for IPv4...\n");
-	/* create the listening socket fpr IPv4 */
-	if ((server_sock4 = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		LOG(L_ERR,"ERROR:do_accept: error creating server socket IPv4: %s\n",
-			strerror(errno));
-		goto error;
-	}
-
-	// TO DO: what was this one good for?
-	option = 1;
-	setsockopt(server_sock4,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));
-
-	memset( &servip, 0, sizeof(servip) );
-	servip.af = AF_INET;
-	servip.len = 4;
-	servip.u.addr32[0] = INADDR_ANY;
-	init_su( &servaddr, &servip, htons(listen_port));
-
-	if ((bind( server_sock4, (struct sockaddr*)&servaddr,
-	sockaddru_len(servaddr)))==-1 ) {
-#ifdef USE_IPV6
-		if (!disable_ipv6){
-			if (errno==ADDRESS_ALREADY_IN_USE && !bind_retest) {
-				/* I'm doing bind4 for the first time */
-				LOG(L_WARN,"WARNING:do_accept: got AAIU for IPv4 with IPv6 on"
-						" -> close IPv6 and retry\n");
-				close( server_sock6 );
-				server_sock6 = -1;
-				bind_retest = 1;
-				goto do_bind4;
-			}
-		}
-#endif
-		LOG(L_ERR,"ERROR:do_accept: error binding server socket IPv4: %s\n",
-			strerror(errno));
-		goto error;
-	}
-#ifdef USE_IPV6
-	else {
-		if (!disable_ipv6){
-			if (bind_retest) {
-				/* if a manage to re-bind4 (after an AAIU) with bind6 disable,
-				 * means the OS does automaticlly bind4 when bind6; in this case
-				 * i will disable the bind4 and re-bind6 */
-				LOG(L_INFO,"INFO:do_accept: bind for IPv4 succeded on retesting"
-					" without IPv6 -> close IPv4 and bind only IPv6\n");
-				close( server_sock4 );
-				server_sock4 = -1;
-				goto do_bind6;
-			} else {
-				LOG(L_INFO,"INFO:do_accept: bind for IPv4 succeded along with"
-					" bind IPv6 -> keep them both\n");
-			}
-		}
-	}
-#endif
-
-
-	/* binding part done -> do listen */
-
-#ifdef USE_IPV6
-bind_done:
-
-	/* IPv6 socket */
-	/* update the max_sock */
-	DBG("DEBUG:do_accept: adding server_sock6\n");
-	if ((!disable_ipv6)&&(server_sock6>max_sock))
-		max_sock = server_sock6;
-
-	if (server_sock4!=-1) {
-#endif
-
-	/* IPv4 sock */
-	if ((listen( server_sock4, 4)) == -1) {
-		LOG(L_ERR,"ERROR:do_accept: error listening on server socket IPv4: "
-			"%s\n",strerror(errno) );
-		goto error;
-	}
-
-	DBG("DEBUG:do_accept: adding server_sock4\n");
-	/* update the max_sock */
-	if (server_sock4>max_sock)
-		max_sock = server_sock4;
-
-#ifdef USE_IPV6
-	}
-#endif
-
-
 
 	while(1){
 		read_set = tinfo->rd_set;
@@ -247,7 +111,8 @@ bind_done:
 		if (nready == 0) 
 			assert(0);
 #ifdef USE_IPV6
-		if (nready && (!disable_ipv6)&&(FD_ISSET(server_sock6, &read_set))){
+		if (nready && (!disable_ipv6)&&(server_sock6!=-1)&&
+		(FD_ISSET(server_sock6, &read_set))){
 				accept_connection(server_sock6);
 				nready--;
 		}
@@ -285,11 +150,23 @@ bind_done:
 					LOG(L_INFO,"INFO:do_accept: START_ACCEPT command "
 						"received-> start accepting connections\n");
 #ifdef USE_IPV6
-				if (!disable_ipv6)	
+					if (!disable_ipv6) {
+						server_sock6 = ((unsigned int*)(cmd.attrs))[1];
+						DBG("DEBUG:do_accept: adding server_sock6\n");
+						/* update the max_sock */
+						if (server_sock6>max_sock)
+							max_sock = server_sock6;
 						FD_SET( server_sock6, &(tinfo->rd_set));
+					}
 #endif
-				if (server_sock4!=-1)
-					FD_SET( server_sock4, &(tinfo->rd_set));
+					server_sock4 = ((unsigned int*)(cmd.attrs))[0];
+					if (server_sock4!=-1) {
+						DBG("DEBUG:do_accept: adding server_sock4\n");
+						/* update the max_sock */
+						if (server_sock4>max_sock)
+							max_sock = server_sock4;
+						FD_SET( server_sock4, &(tinfo->rd_set));
+					}
 					break;
 				default:
 					LOG(L_ERR,"ERROR:do_accept: unknown command "

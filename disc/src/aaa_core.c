@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.9 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: aaa_core.c,v 1.10 2003/04/11 17:48:02 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -9,16 +9,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h> /* isprint */
 #include <signal.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
+#include "mem/shm_mem.h"
 #include "diameter_api/diameter_api.h"
 #include "transport/peer.h"
 #include "transport/tcp_shell.h"
+#include "server.h"
+#include "client.h"
 #include "globals.h"
-#include "mem/shm_mem.h"
 #include "timer.h"
 #include "utils.h"
 #include "msg_queue.h"
@@ -27,6 +31,77 @@
 #include "route.h"
 
 
+#define CFG_FILE "aaa.cfg"
+
+
+static char id[]="$Id: aaa_core.c,v 1.10 2003/04/11 17:48:02 bogdan Exp $";
+static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
+static char compiled[]= __TIME__ " " __DATE__;
+static char flags[]=""
+#ifdef USE_IPV6
+"USE_IPV6 "
+#endif
+#ifdef NO_DEBUG
+"NO_DEBUG "
+#endif
+#ifdef NO_LOG
+"NO_LOG "
+#endif
+#ifdef EXTRA_DEBUG
+"EXTRA_DEBUG "
+#endif
+#ifdef DNS_IP_HACK
+"DNS_IP_HACK "
+#endif
+#ifdef SHM_MEM
+"SHM_MEM "
+#endif
+#ifdef PKG_MALLOC
+"PKG_MALLOC "
+#endif
+#ifdef VQ_MALLOC
+"VQ_MALLOC "
+#endif
+#ifdef F_MALLOC
+"F_MALLOC "
+#endif
+#ifdef DBG_QM_MALLOC
+"DBG_QM_MALLOC "
+#endif
+#ifdef FAST_LOCK
+"FAST_LOCK"
+#ifdef BUSY_WAIT
+"-BUSY_WAIT"
+#endif
+#ifdef ADAPTIVE_WAIT
+"-ADAPTIVE_WAIT"
+#endif
+#ifdef NOSMP
+"-NOSMP"
+#endif
+" "
+#endif /*FAST LOCK*/
+;
+
+
+static char help_msg[]= "\
+Usage: " NAME " -f file   \n\
+Options:\n\
+    -f file     Configuration file (default " CFG_FILE ")\n\
+    -p port     Listen on the specified port (default 1812) \n\
+    -6          Disable ipv6 \n\
+    -d          Debugging mode (multiple -d increase the level)\n\
+    -E          Log to stderr \n\
+    -V          Version number \n\
+    -h          This help message \n\
+";
+
+
+/* thread-id of the original thread */
+pthread_t main_thread;
+
+/* cfg file name*/
+static char* cfg_file=CFG_FILE;
 
 /* shared mem. size*/
 unsigned int shm_mem_size=SHM_MEM_SIZE*1024*1024;
@@ -65,10 +140,91 @@ int disable_ipv6=0;
 unsigned int do_relay = 0;
 
 
+/* my status - client, server, statefull server */
+unsigned int my_aaa_status = AAA_UNDEFINED;
+
+
+
 #define AAAID_START          "aaa://"
 #define AAAID_START_LEN      (sizeof(AAAID_START)-1)
 #define TRANSPORT_PARAM      ";transport=tcp"
 #define TRANSPORT_PARAM_LEN  (sizeof(TRANSPORT_PARAM)-1)
+
+
+static pthread_t *worker_id = 0;
+static int nr_worker_threads = 0;
+
+int (*get_dest_peers)(AAAMessage*,struct peer_chain **);
+
+
+/* 0 on success, -1 on error */
+static int process_cmd_line(int argc, char** argv)
+{
+	char c;
+	int port;
+	char* tmp;
+	
+	opterr=0;
+	while((c=getopt(argc, argv, "f:p:6VhEd"))!=-1){
+		switch(c){
+			case 'f':
+				cfg_file=optarg;
+				break;
+			case  'd':
+				debug++;
+				break;
+			case 'p':
+				port=strtol(optarg, &tmp, 10);
+				if ((tmp==0)||(*tmp)){
+					fprintf(stderr, "bad port number: -p %s\n", optarg);
+					goto error;
+				}
+				break;
+			case 'E':
+				log_stderr=1;
+				break;
+			case '6':
+				disable_ipv6=1;
+				break;
+			case 'V':
+				printf("version: %s\n", version);
+				printf("flags: %s\n", flags );
+				printf("%s\n", id);
+				printf("%s compiled on %s with %s\n", __FILE__,
+							compiled, COMPILER );
+				exit(0);
+				break;
+			case 'h':
+				printf("version: %s\n", version);
+				printf("%s", help_msg);
+				exit(0);
+				break;
+			case '?':
+				if (isprint(optopt))
+					fprintf(stderr, "Unknown option `-%c´\n", optopt);
+				else
+					fprintf(stderr, "Unknown character `\\x%x´\n", optopt);
+				goto error;
+				break;
+			case ':':
+				fprintf(stderr, "Option `-%c´ requires an argument.\n",
+						optopt);
+				goto error;
+				break;
+			default:
+				/* we should never reach this */
+				if (isprint(c))
+					fprintf(stderr, "Unknown option `-%c´\n", c);
+				else
+					fprintf(stderr, "Unknown option `-\\x%x´\n", c);
+				goto error;
+				break;
+		}
+	}
+	return 0;
+error:
+	return -1;
+}
 
 
 void init_random_generator()
@@ -140,10 +296,58 @@ int generate_aaaIdentity()
 
 
 
+int start_workers( void*(*worker)(void*), int nr_workers )
+{
+	int i;
+
+	worker_id = (pthread_t*)shm_malloc( nr_workers*sizeof(pthread_t));
+	if (!worker_id) {
+		LOG(L_ERR,"ERROR:start_workers: cannot get free memory!\n");
+		return -1;
+	}
+
+	for(i=0;i<nr_workers;i++) {
+		if (pthread_create( &worker_id[i], /*&attr*/ 0, worker, 0)!=0){
+			LOG(L_ERR,"ERROR:start_workers: cannot create worker thread\n");
+			return -1;
+		}
+		nr_worker_threads++;
+	}
+
+	return 1;
+}
+
+
+
+void stop_workers()
+{
+	int i;
+
+	if (worker_id) {
+		for(i=0;i<nr_worker_threads;i++)
+			pthread_cancel( worker_id[i]);
+		shm_free( worker_id );
+	}
+}
+
+
+
+
+
 void destroy_aaa_core()
 {
+	/* stop the worker threads */
+	stop_workers();
+
 	/* stop & destroy the modules */
 	destroy_modules();
+
+	/* destroy destination peers resolver */
+	if (my_aaa_status==AAA_CLIENT) {
+		destroy_all_peers_list();
+	} else {
+		/* something for server ???? */
+	}
 
 	/* destroy the msg queue */
 	destroy_msg_queue();
@@ -170,10 +374,11 @@ void destroy_aaa_core()
 	/* destroy route & peer lists */
 	destroy_route_lst();
 	destroy_cfg_peer_lst();
-	
+
 	/* free some globals*/
 	if (aaa_realm.s) { shm_free(aaa_realm.s); aaa_realm.s=0; }
 	if (aaa_fqdn.s) { shm_free(aaa_fqdn.s); aaa_fqdn.s=0; }
+
 	/* just for debuging */
 	shm_status();
 	shm_mem_destroy();
@@ -210,6 +415,13 @@ int init_aaa_core(char *cfg_file)
 	}
 	/* fix config stuff */
 	if (listen_port==0) listen_port=DEFAULT_LISTENING_PORT;
+	if (my_aaa_status==AAA_UNDEFINED) {
+		LOG(L_CRIT,"ERROR:init_aaa_core: mandatory param \"aaa_status\" "
+			"not found in config file\n");
+		goto error;
+	}
+	if (my_aaa_status==AAA_SERVER)
+		do_relay=1;
 
 	/* build the aaa_identity based on FQDN and port */
 	if ( generate_aaaIdentity()==-1 ) {
@@ -254,6 +466,25 @@ int init_aaa_core(char *cfg_file)
 		goto error;
 	}
 
+	/* starts the worker threads */
+	if (my_aaa_status==AAA_CLIENT) {
+		if (start_workers( client_worker, DEAFULT_WORKER_THREADS)==-1 )
+			goto error;
+	} else {
+		if (start_workers( server_worker, DEAFULT_WORKER_THREADS)==-1 )
+			goto error;
+	}
+
+	/* init the destestination peers resolver */
+	if (my_aaa_status==AAA_CLIENT) {
+		if ( init_all_peers_list()==-1 )
+			goto error;
+		get_dest_peers = get_all_peers;
+	} else {
+		/* something for server ???? */
+		get_dest_peers = get_all_peers;
+	}
+
 	return 1;
 error:
 	fprintf(stderr, "ERROR: cannot init the core\n");
@@ -263,8 +494,36 @@ error:
 
 
 
-int start_aaa_core()
+static void sig_handler(int signo)
 {
+	if ( main_thread==pthread_self() ) {
+		destroy_aaa_core();
+		exit(0);
+	}
+	return;
+}
+
+
+
+
+int main(int argc, char *argv[])
+{
+	if (process_cmd_line(argc, argv)!=0)
+		goto error;
+
+	/* to remember which one was the original thread */
+	main_thread = pthread_self();
+
+	/* install signal handler */
+	if (signal(SIGINT, sig_handler)==SIG_ERR) {
+		printf("ERROR:main: cannot install signal handler\n");
+		goto error;
+	}
+
+	/* init the aaa core */
+	if ( init_aaa_core(cfg_file)==-1 )
+		goto error;
+
 	/* start the tcp shell */
 	start_tcp_accept();
 
@@ -277,6 +536,7 @@ int start_aaa_core()
 	/* this call is just a trick to force the linker to add this function */
 	AAASendMessage(0); // !!!!!!!!!!!!!!!!!!
 
-	return 1;
+	return 0;
+error:
+	return -1;
 }
-

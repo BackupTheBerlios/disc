@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.15 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: session.h,v 1.16 2003/04/11 17:48:02 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -24,7 +24,6 @@
 	((struct session*)((char *)(_sId_) - \
 	(unsigned long)(&((struct session*)0)->sID)))
 
-#define FAKE_SESSION ((struct session*)0xFFFFFFFF)
 
 
 /* all possible states of the session state machine */
@@ -33,14 +32,6 @@ enum {
 	AAA_PENDING_STATE,
 	AAA_OPEN_STATE,
 	AAA_DISCON_STATE
-};
-
-/* possible identities for AAA parties */
-enum AAA_ENTITY {
-	AAA_CLIENT = 1,
-	AAA_SERVER = 2,
-	AAA_SERVER_STATELESS = 2,
-	AAA_SERVER_STATEFULL = 3,
 };
 
 /* all possible events for the session state machines */

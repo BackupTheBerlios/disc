@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.5 2003/04/11 00:46:57 bogdan Exp $
+ * $Id: server.c,v 1.1 2003/04/11 17:50:07 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -10,66 +10,20 @@
 #include <pthread.h>
 #include <string.h>
 #include <errno.h>
-#include "../mem/shm_mem.h"
-#include "../dprint.h"
-#include "../timer.h"
-#include "../globals.h"
-#include "../list.h"
-#include "../msg_queue.h"
-#include "../aaa_module.h"
-#include "../diameter_api/diameter_api.h"
-#include "../transport/trans.h"
-#include "../transport/peer.h"
-#include "worker.h"
+
+#include "mem/shm_mem.h"
+#include "dprint.h"
+#include "timer.h"
+#include "globals.h"
+#include "list.h"
+#include "msg_queue.h"
+#include "aaa_module.h"
+#include "diameter_api/diameter_api.h"
+#include "transport/trans.h"
+#include "transport/peer.h"
 
 #define I_AM_FOREIGN_SERVER      1
 #define I_AM_NOT_FOREIGN_SERVER  0
-
-
-static pthread_t *worker_id = 0;
-static int nr_worker_threads = 0;
-
-
-void *server_worker(void *attr);
-
-
-
-
-int start_server_workers( int nr_workers )
-{
-	int i;
-
-	worker_id = (pthread_t*)shm_malloc( nr_workers*sizeof(pthread_t));
-	if (!worker_id) {
-		LOG(L_ERR,"ERROR:build_workers: cannot get free memory!\n");
-		return -1;
-	}
-
-	for(i=0;i<nr_workers;i++) {
-		if (pthread_create( &worker_id[i], /*&attr*/ 0, &server_worker, 0)!=0){
-			LOG(L_ERR,"ERROR:build_workers: cannot create worker thread\n");
-			return -1;
-		}
-		nr_worker_threads++;
-	}
-
-	return 1;
-}
-
-
-
-
-void stop_server_workers()
-{
-	int i;
-
-	if (worker_id) {
-		for(i=0;i<nr_worker_threads;i++)
-			pthread_cancel( worker_id[i]);
-		shm_free( worker_id );
-	}
-}
-
 
 
 /* REturns   0: success
@@ -157,9 +111,9 @@ int get_req_destination( AAAMessage *msg, struct peer_chain **p_chain,
 
 
 
-int get_dest_peers( AAAMessage *msg, struct peer_chain **chaine )
+int route_local_req( AAAMessage *msg, struct peer_chain **chaine )
 {
-	LOG(L_ERR,"BUG:get_dest_peers: UNIMPLEMETED - we shouldn't get here!!\n");
+	LOG(L_ERR,"BUG:route_local_req: UNIMPLEMETED - we shouldn't get here!!\n");
 	*chaine = 0;
 	return 1;
 }
@@ -218,7 +172,6 @@ void *server_worker(void *attr)
 		/* process the message */
 		if ( is_req(msg) ) {
 			/* request*/
-			msg->no_ses = 1;
 			msg->in_peer = in_peer;
 			DBG(" ******** request received!!! \n");
 			if (msg->commandCode==274 || msg->commandCode==258 ||
