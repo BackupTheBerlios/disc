@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.11 2003/04/09 18:12:44 andrei Exp $
+dnl $Id: configure.ac,v 1.12 2003/04/09 22:22:58 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -12,6 +12,8 @@ dnl 2003-03-27  added libltdl support (andrei)
 dnl 2003-04-06  fixed sched_yield (added AC_CHECK_FUNCS) (andrei)
 dnl             added automake 1.4 backward compatibility stuff (andrei)
 dnl             added big endian check & config.cache (andrei)
+dnl 2003-04-09  added config.h generation preliminary support
+dnl             moved __CPU_... & __OS_... to CPPFLAGS (andrei)
 dnl
 dnl TODO:
 dnl -----
@@ -20,9 +22,10 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.11 2003/04/09 18:12:44 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.12 2003/04/09 22:22:58 andrei Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
+##AC_CONFIG_HEADERS([ac_config.h])
 AC_CONFIG_SUBDIRS(libltdl)
 dnl add here mipv6/urp autoconf ?
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION, 
@@ -36,9 +39,9 @@ if test "$cache_file" = /dev/null; then
 fi
 AC_CACHE_LOAD
 
-AC_DEFINE(NAME, ["]AC_PACKAGE_NAME["])
-AC_DEFINE(VERSION, ["]AC_PACKAGE_VERSION["])
-AC_DEFINE(CFG_DIR, ["/etc/aaa_client"])
+AC_DEFINE(NAME, ["]AC_PACKAGE_NAME["], [display name])
+AC_DEFINE(VERSION, ["]AC_PACKAGE_VERSION["], [display version])
+AC_DEFINE(CFG_DIR, ["/etc/aaa_client"], [built in config search path])
 
 
 dnl Command line options
@@ -56,7 +59,7 @@ if test -z "$enable_debug"; then
 	enable_debug=yes
 fi
 if test "$enable_debug" = no; then
-	AC_DEFINE(NO_DEBUG)
+	AC_DEFINE(NO_DEBUG,,[all DBG prints are disabled])
 fi
 
 AC_ARG_ENABLE(extra_debug,
@@ -66,7 +69,7 @@ if test -z "$enable_extra_debug"; then
 	enable_extra_debug=no
 fi
 if test "$enable_extra_debug" = yes; then
-	AC_DEFINE(EXTRA_DEBUG)
+	AC_DEFINE(EXTRA_DEBUG,,[extra debugging information and checks])
 fi
 
 AC_ARG_ENABLE(malloc_debug,
@@ -76,7 +79,7 @@ if test -z "$enable_malloc_debug"; then
 	enable_malloc_debug=yes
 fi
 if test "$enable_malloc_debug" = yes; then
-	AC_DEFINE(DBG_QM_MALLOC)
+	AC_DEFINE(DBG_QM_MALLOC,,[malloc debugging support])
 fi
 
 AC_ARG_ENABLE(log,
@@ -86,7 +89,7 @@ if test -z "$enable_log"; then
 	enable_log=yes
 fi
 if test "$enable_log" = no; then
-	AC_DEFINE(NO_LOG)
+	AC_DEFINE(NO_LOG,,[all LOGs are disabled, WARNING: nothing will be printed])
 fi
 
 AC_ARG_ENABLE(ipv6, 
@@ -96,7 +99,7 @@ if test -z "$enable_ipv6"; then
 	enable_ipv6=yes
 fi
 if test "$enable_ipv6" = yes; then
-	AC_DEFINE(USE_IPV6)
+	AC_DEFINE(USE_IPV6,,[compile in ipv6 support])
 fi
 
 AC_ARG_ENABLE(dns_ip_hack, 
@@ -106,16 +109,16 @@ if test -z "$enable_dns_ip_hack"; then
 	enable_dns_ip_hack=yes
 fi
 if test "$enable_dns_ip_hack" = yes; then
-	AC_DEFINE(DNS_IP_HACK)
+	AC_DEFINE(DNS_IP_HACK,,[use fast string to ip address conversion])
 fi
 
 dnl FIXME: replace the following defines as above
 
 #AC_DEFINE(PKG_MALLOC)
-AC_DEFINE(SHM_MEM)
-AC_DEFINE(SHM_MMAP)
-AC_DEFINE(ADAPTIVE_WAIT)
-AC_DEFINE(ADAPTIVE_WAIT_LOOPS, 1024)
+AC_DEFINE(SHM_MEM,,[enable shared memory support (shm_malloc)])
+AC_DEFINE(SHM_MMAP,,[use mmap to obtain shared memory (not needed for threads)])
+AC_DEFINE(ADAPTIVE_WAIT,,[fastlock: busy wait for a while and then yield])
+AC_DEFINE(ADAPTIVE_WAIT_LOOPS, 1024, [how many loops to busy wait])
 #AC_DEFINE(F_MALLOC)
 dnl FIXME: add the missing ones
 
@@ -133,10 +136,12 @@ case "${host_cpu}" in
 esac
 
 os=`echo $host_os|sed -e 'y/-./__/'`
-AC_DEFINE_UNQUOTED([ARCH], ["${cpu}"] )
-AC_DEFINE_UNQUOTED([__CPU_${cpu}])
-AC_DEFINE_UNQUOTED([OS],   ["${host_os}"])
-AC_DEFINE_UNQUOTED([__OS_${os}])
+AC_DEFINE_UNQUOTED([ARCH], ["${cpu}"], [cpu type] )
+##AC_DEFINE_UNQUOTED([__CPU_${cpu}],, [cpu type used internally])
+AC_DEFINE_UNQUOTED([OS],   ["${host_os}"], [os name])
+##AC_DEFINE_UNQUOTED([__OS_${os}],, [os name used internally])
+dnl  -D__CPU_ cannot be added to ac_config.h
+CPPFLAGS="${CPPFLAGS} -D__CPU_${cpu} -D__OS_${os}"
 
 dnl Checks for programs
 AC_PROG_CC
@@ -184,12 +189,12 @@ case "${CCNAME}" in
 esac
 
 if test "$fast_lock" = yes ; then
-	AC_DEFINE(FAST_LOCK)
+	AC_DEFINE(FAST_LOCK,,[enable fast locks])
 else
 	AC_MSG_WARN([*** disabling fast locking for $CCNAME $cpu ***])
 fi
 
-AC_DEFINE_UNQUOTED([COMPILER], ["$CC $CCVER"])
+AC_DEFINE_UNQUOTED([COMPILER], ["$CC $CCVER"], [compile name & version])
 
 dnl Endianess check
 AC_C_BIGENDIAN
@@ -227,7 +232,8 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AC_STRUCT_TM
-AC_CHECK_TYPE([union semun], AC_DEFINE(HAVE_UNION_SEMUN),,
+AC_CHECK_TYPE([union semun], AC_DEFINE(HAVE_UNION_SEMUN,,
+										[is union semun present?]),,
 				[#include <sys/sem.h> ])
 
 dnl  Checks for library functions.
@@ -259,7 +265,8 @@ fi
 
 
 dnl Checks for structure members
-AC_CHECK_MEMBERS([struct sockaddr.sa_len], AC_DEFINE([HAVE_SOCKADDR_SA_LEN]),,
+AC_CHECK_MEMBERS([struct sockaddr.sa_len], AC_DEFINE([HAVE_SOCKADDR_SA_LEN],,
+					[ does sockaddr have a sa_len member? (common on *BSDs)]),,
 [ 
   #if HAVE_SYS_TYPES_H
   #include <sys/types.h>
