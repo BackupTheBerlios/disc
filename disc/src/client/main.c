@@ -152,7 +152,7 @@ int init_client()
 	}
 
 	/* init the script */
-	if ( init_script() ) {
+	if ( init_script()==-1 ) {
 		goto error;
 	}
 
