@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.3 2003/03/11 18:06:29 bogdan Exp $
+ * $Id: diameter_types.h,v 1.4 2003/03/13 18:46:16 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -18,7 +18,7 @@
 #define MESSAGE_LENGTH_SIZE        3
 #define FLAGS_SIZE                 1
 #define COMMAND_CODE_SIZE          3
-#define VENDOR_ID_SIZE             4
+#define APPLICATION_ID_SIZE        4
 #define HOP_BY_HOP_IDENTIFIER_SIZE 4
 #define END_TO_END_IDENTIFIER_SIZE 4
 #define AVP_CODE_SIZE      4
@@ -27,7 +27,7 @@
 #define AVP_VENDOR_ID_SIZE 4
 #define AAA_MSG_HDR_SIZE  \
 	(VER_SIZE + MESSAGE_LENGTH_SIZE + FLAGS_SIZE + COMMAND_CODE_SIZE +\
-	VENDOR_ID_SIZE + HOP_BY_HOP_IDENTIFIER_SIZE + END_TO_END_IDENTIFIER_SIZE)
+	APPLICATION_ID_SIZE+HOP_BY_HOP_IDENTIFIER_SIZE+END_TO_END_IDENTIFIER_SIZE)
 
 
 
@@ -229,7 +229,7 @@ typedef struct _message_t {
 	//time_t              startTime;
 	void                *appHandle;
 	/* added */
-	str                 orig_buf;
+	void                *trans;
 } AAAMessage;
 
 

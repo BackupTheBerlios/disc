@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.6 2003/03/12 18:12:22 andrei Exp $
+ * $Id: trans.c,v 1.7 2003/03/13 18:46:37 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -136,7 +136,7 @@ void timeout_handler(unsigned int ticks, void* param)
 			//session_state_machine();
 		}else{
 			write_command( tr->peer->fd, TIMEOUT_PEER_CMD,
-				PEER_TR_TIMEOUT, tr->peer, 0);
+				PEER_TR_TIMEOUT, tr->peer, (void*)tr->info);
 		}
 		destroy_transaction( tr );
 	}

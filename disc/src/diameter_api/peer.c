@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.21 2003/03/13 13:07:55 andrei Exp $
+ * $Id: peer.c,v 1.22 2003/03/13 18:46:37 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -33,9 +33,9 @@
 
 #define PEER_TIMER_STEP  1
 #define DELETE_TIMEOUT   2
-#define RECONN_TIMEOUT   60
+#define RECONN_TIMEOUT   600
 #define WAIT_CER_TIMEOUT 5
-#define SEND_DWR_TIMEOUT 20
+#define SEND_DWR_TIMEOUT 25
 
 
 #define cheack_app_ids( _peer_ ) \
@@ -460,6 +460,7 @@ void destroy_peer( struct peer *p)
 
 int send_cer( struct peer *dst_peer)
 {
+	struct trans *tr;
 	char *ptr;
 	str cer;
 
@@ -480,7 +481,11 @@ int send_cer( struct peer *dst_peer)
 	memcpy( ptr + AVP_HDR_SIZE, &dst_peer->local_ip, sizeof(struct ip_addr) );
 
 	/* send the buffer */
-	return send_aaa_request( &cer, 0, dst_peer);
+	if ( (tr=send_aaa_request( &cer, 0, dst_peer))==0 )
+		goto error;
+	tr->info = dst_peer->conn_cnt;
+
+	return 1;
 error:
 	return -1;
 }
@@ -592,6 +597,7 @@ error:
 
 int send_dwr( struct peer *dst_peer)
 {
+	struct trans *tr;
 	char *ptr;
 	str dwr;
 
@@ -608,7 +614,11 @@ int send_dwr( struct peer *dst_peer)
 	((unsigned int*)ptr)[1] |= DW_MSG_CODE;
 
 	/* send the buffer */
-	return send_aaa_request( &dwr, 0, dst_peer);
+	if ( (tr=send_aaa_request( &dwr, 0, dst_peer))==0 )
+		goto error;
+	tr->info = dst_peer->conn_cnt;
+
+	return 1;
 error:
 	return -1;
 }
@@ -687,6 +697,7 @@ error:
 
 int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 {
+	struct trans *tr;
 	char *ptr;
 	str dpr;
 
@@ -707,7 +718,11 @@ int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 	((unsigned int*)ptr)[ AVP_HDR_SIZE>>2 ] |= htonl( disc_cause );
 
 	/* send the buffer */
-	return send_aaa_request( &dpr, 0, dst_peer);
+	if ( (tr=send_aaa_request( &dpr, 0, dst_peer))==0 )
+		goto error;
+	tr->info = dst_peer->conn_cnt;
+
+	return 1;
 error:
 	return -1;
 }
@@ -906,6 +921,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 						tcp_close( p );
 					}
 					/* update the peer */
+					p->conn_cnt++;
 					info = (struct tcp_info*)ptr;
 					p->sock = info->sock;
 					memcpy( &p->local_ip, info->local, sizeof(struct ip_addr));
@@ -929,6 +945,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					DBG("DEBUG:peer_state_machine: connect finished ->"
 						" send CER\n");
 					/* update the peer */
+					p->conn_cnt++;
 					p->flags &= !PEER_CONN_IN_PROG;
 					info = (struct tcp_info*)ptr;
 					p->sock = info->sock;
@@ -1022,6 +1039,11 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			}
 			break;
 		case PEER_TR_TIMEOUT:
+			if ((unsigned int)ptr!=p->conn_cnt++) {
+				LOG(L_WARN,"WARNING:peer_state_machine: transaction generated"
+					" from a prev. connection gave TIMEOUT -> ignored!\n");
+				break;
+			}
 			lock_get( p->mutex );
 			switch (p->state) {
 				case PEER_WAIT_DWA:

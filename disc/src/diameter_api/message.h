@@ -1,5 +1,5 @@
 /*
- * $Id: message.h,v 1.6 2003/03/13 13:07:55 andrei Exp $
+ * $Id: message.h,v 1.7 2003/03/13 18:46:37 bogdan Exp $
  *
  * 2003-02-07 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -55,7 +55,7 @@ void destroy_msg_manager();
 
 void print_aaa_message( AAAMessage *msg);
 
-int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer );
+struct trans *send_aaa_request( str *buf, struct session *ses, struct peer *p);
 
 int send_aaa_response( str *buf, struct trans *tr);
 

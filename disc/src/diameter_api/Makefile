@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 2003/03/12 18:12:22 andrei Exp $
+# $Id: Makefile,v 1.3 2003/03/13 18:46:16 bogdan Exp $
 #
 #
 # 2003-03-12  added SHM_MEM & other defines from ser;
@@ -88,9 +88,9 @@ DEFS+= -DNAME='"$(NAME)"' -DVERSION='"$(RELEASE)"' -DARCH='"$(ARCH)"' \
 	 -DOS='"$(OS)"' -DCOMPILER='"$(CC_VER)"' -D__CPU_$(ARCH)\
 	 -DSHM_MEM \
 	 -DSHM_MMAP \
-	 -DDBG_QM_MALLOC \
 	 -DADAPTIVE_WAIT -DADAPTIVE_WAIT_LOOPS=1024 \
 	 -DFAST_LOCK \
+	 -DDBG_QM_MALLOC \
 	 #-DDNS_IP_HACK \
 	 #-DF_MALLOC \
 	 #-DNO_DEBUG \

@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.c,v 1.3 2003/03/13 13:07:55 andrei Exp $
+ * $Id: hash_table.c,v 1.4 2003/03/13 18:46:16 bogdan Exp $
  *
  * 2003-01-29  created by bogdan
  * 2003-03-12  converted to use shm_malloc (andrei)
@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "dprint.h"
 #include "utils/str.h"
 #include "hash_table.h"

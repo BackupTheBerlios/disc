@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.4 2003/03/12 18:12:22 andrei Exp $
+ * $Id: avp.c,v 1.5 2003/03/13 18:46:16 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  * 2003-03-12 converted to shm_malloc/free (andrei)
@@ -511,8 +511,6 @@ AAA_AVP* clone_avp( AAA_AVP *avp , unsigned int clone_data)
 		n_avp->data.len = avp->data.len;
 		avp->free_it = 0;
 	}
-
-	/* don't clone the data -> link it */
 
 	return n_avp;
 error:

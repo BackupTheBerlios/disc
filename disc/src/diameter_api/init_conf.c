@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.9 2003/03/13 18:23:24 andrei Exp $
+ * $Id: init_conf.c,v 1.10 2003/03/13 18:46:16 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <time.h>
 #include "utils/str.h"
 #include "globals.h"
 #include "init_conf.h"
@@ -102,6 +103,7 @@ AAAReturnCode AAAClose()
 		fprintf(stderr,"ERROR:AAAClose: AAA library is not initialized\n");
 		return AAA_ERR_NOT_INITIALIZED;
 	}
+	is_lib_init = 0;
 
 	/* close all open connections */
 
@@ -129,7 +131,9 @@ AAAReturnCode AAAClose()
 	/* destroy the hash_table */
 	destroy_htable( hash_table );
 
-	is_lib_init = 0;
+	/* just for debuging */
+	shm_status();
+
 	return AAA_ERR_SUCCESS;
 }
 

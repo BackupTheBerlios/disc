@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.14 2003/03/13 13:07:55 andrei Exp $
+ * $Id: peer.h,v 1.15 2003/03/13 18:46:37 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -76,6 +76,8 @@ struct peer {
 	/* */
 	struct list_head lh;
 	unsigned int last_activ_time;
+	/* counter rhat tells how many time this peer was connected */
+	unsigned int conn_cnt;
 };
 
 
@@ -177,6 +179,7 @@ static inline struct peer* lookup_peer_by_host( str *host )
 {
 	struct list_head *lh;
 	struct peer *p;
+	struct peer *res=0;
 
 	lock_get( peer_table->mutex );
 
@@ -185,12 +188,13 @@ static inline struct peer* lookup_peer_by_host( str *host )
 		if ( host->len==p->aaa_host.len &&
 		!strncasecmp( host->s, p->aaa_host.s, host->len)) {
 			ref_peer( p );
+			res = p;
 			break;
 		}
 	}
 
 	lock_release( peer_table->mutex );
-	return p;
+	return res;
 }
 
 
@@ -199,6 +203,7 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 {
 	struct list_head *lh;
 	struct peer *p;
+	struct peer *res=0;
 
 	lock_get( peer_table->mutex );
 
@@ -207,12 +212,13 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 		if ( realm->len==p->aaa_realm.len &&
 		!strncasecmp( realm->s, p->aaa_realm.s, realm->len)) {
 			ref_peer( p );
+			res = p;
 			break;
 		}
 	}
 
 	lock_release( peer_table->mutex );
-	return p;
+	return res;
 }
 
 
@@ -221,6 +227,7 @@ static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 {
 	struct list_head *lh;
 	struct peer *p;
+	struct peer *res=0;
 
 	lock_get( peer_table->mutex );
 
@@ -228,12 +235,13 @@ static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 		p = list_entry( lh, struct peer, all_peer_lh);
 		if ( ip_addr_cmp(ip, &p->ip) ) {
 			ref_peer( p );
+			res = p;
 			break;
 		}
 	}
 
 	lock_release( peer_table->mutex );
-	return p;
+	return res;
 }
 
 

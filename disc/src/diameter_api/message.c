@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.9 2003/03/13 13:07:55 andrei Exp $
+ * $Id: message.c,v 1.10 2003/03/13 18:46:37 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include "diameter_api.h"
 #include "dprint.h"
@@ -174,13 +175,6 @@ int  accept_local_request( AAAMessage *msg )
 
 
 
-int process_buffer()
-{
-	return -1;
-}
-
-
-
 #if 0
 int process_msg( unsigned char *buf, unsigned int len, struct peer *pr)
 {
@@ -330,55 +324,53 @@ error:
 
 /* from a AAAMessage structure, a buffer to be send is build
  */
-unsigned char* build_buf_from_msg( AAAMessage *msg, unsigned int *length)
+int build_buf_from_msg( AAAMessage *msg, str *buf)
 {
-	unsigned char *buf;
 	unsigned char *p;
-	unsigned int  len;
 	unsigned int  k;
 	AAA_AVP       *avp;
 
 	/* first let's comput the length of the buffer */
-	len = AAA_MSG_HDR_SIZE; /* AAA message header size */
+	buf->len = AAA_MSG_HDR_SIZE; /* AAA message header size */
 	/* count and add the avps */
 	if (msg->avpList && msg->avpList->head) {
 		for(avp=msg->avpList->head;avp;avp=avp->next) {
-			len += AVP_HDR_SIZE + (AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0)) +
-				avp->data.len /*data*/ +
-				((avp->data.len&3)?4-(avp->data.len&3):0) /*padding*/;
+			buf->len+=AVP_HDR_SIZE+(AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0))
+				+ to_32x_len( avp->data.len ) /*data*/;
 		}
 	}
 
-	DBG("xxxx len=%d\n",len);
+	DBG("xxxx len=%d\n",buf->len);
 	/* allocate some memory */
-	buf = (unsigned char*)shm_malloc( len );
-	if (!buf) {
+	buf->s = (unsigned char*)shm_malloc( buf->len );
+	if (!buf->s) {
 		LOG(L_ERR,"ERROR:build_buf_from_msg: no more free memory!\n");
 		goto error;
 	}
-	memset(buf, 0, len);
+	memset(buf->s, 0, buf->len);
 
 	/* fill in the buffer */
-	p = buf;
+	p = buf->s;
 	/* DIAMETER HEADER */
-	/* Diameter Version */
-	(*p++) = 1;
 	/* message length */
-	set_3bytes(p,len);
-	p += 3;
-	/* flags */
-	(*p++) = (unsigned char)msg->flags;
+	((unsigned int*)p)[0] =htonl(buf->len);
+	/* Diameter Version */
+	*p = 1;
+	p += VER_SIZE + MESSAGE_LENGTH_SIZE;
 	/* command code */
-	set_3bytes(p,msg->commandCode);
-	p += 3;
+	((unsigned int*)p)[0] = htonl(msg->commandCode);
+	/* flags */
+	*p = (unsigned char)msg->flags;
+	p += FLAGS_SIZE + COMMAND_CODE_SIZE;
 	/* application-ID */
-	p +=4;
+	// ?????????
+	p += APPLICATION_ID_SIZE;
 	/* hop by hop id */
-	set_4bytes(p,msg->hopbyhopID);
-	p +=4;
+	((unsigned int*)p)[0] = msg->hopbyhopID;
+	p += HOP_BY_HOP_IDENTIFIER_SIZE;
 	/* end to end id */
-	set_4bytes(p,msg->endtoendID);
-	p +=4;
+	((unsigned int*)p)[0] = msg->endtoendID;
+	p += END_TO_END_IDENTIFIER_SIZE;
 
 	/* AVPS */
 	if (msg->avpList && msg->avpList->head) {
@@ -401,21 +393,19 @@ unsigned char* build_buf_from_msg( AAAMessage *msg, unsigned int *length)
 			}
 			/* data */
 			memcpy( p, avp->data.s, avp->data.len);
-			p += avp->data.len+((avp->data.len&3)?4-(avp->data.len&3):0);
+			p += to_32x_len( avp->data.len );
 		}
 	}
 
-	if (p-buf!=len) {
+	if ((char*)p-buf->s!=buf->len) {
 		LOG(L_ERR,"BUG: build_buf_from_msg: mismatch between len and buf!\n");
+		shm_free( buf->s );
 		goto error;
 	}
 
-	if (length)
-		*length = p-buf;
-
-	return buf;
+	return 1;
 error:
-	return 0;
+	return -1;
 }
 
 
@@ -423,7 +413,7 @@ error:
 
 /*  sends out a aaa message, within or not a session
  */
-int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
+struct trans *send_aaa_request( str *buf, struct session *ses, struct peer *p)
 {
 	unsigned int ete;
 	struct trans *tr;
@@ -431,12 +421,12 @@ int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 	str s;
 
 	/* find the destination peer */
-	if (!dst_peer) {
+	if (!p) {
 		/* try find the destination-host avp */
 	}
 
 	/* build a new transaction for this request */
-	if ((tr=create_transaction( buf, ses, dst_peer))==0) {
+	if ((tr=create_transaction( buf, ses, p))==0) {
 		LOG(L_ERR,"ERROR:send_aaa_request: cannot create a new"
 			" transaction!\n");
 		goto error;
@@ -458,9 +448,9 @@ int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 
 	/* send the request */
 	if (!ses)
-		ret = tcp_send_unsafe( dst_peer, buf->s, buf->len);
+		ret = tcp_send_unsafe( p, buf->s, buf->len);
 	else
-		ret = tcp_send( dst_peer, buf->s, buf->len);
+		ret = tcp_send( p, buf->s, buf->len);
 	/* what's the score?? */
 	if (ret==-1) {
 		LOG(L_ERR,"ERROR:send_aaa_request: tcp_send returned error!\n");
@@ -471,12 +461,12 @@ int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
 		get_ticks()+TR_TIMEOUT_TIMEOUT );
 
-	return 1;
+	return tr;
 error:
 	shm_free( buf->s );
 	if (tr)
 		destroy_transaction(tr);
-	return -1;
+	return 0;
 }
 
 
@@ -501,53 +491,6 @@ int send_aaa_response( str *buf, struct trans *tr)
 
 	return ret;
 }
-
-
-#if 0
-AAAMessage* build_rpl_from_req(AAAMessage *req, unsigned int result_code,
-																str *err_msg)
-{
-	AAAMessage *rpl=0;
-	AAA_AVP    *avp=0;
-
-	/* create the reply form request */
-	rpl = AAANewMessage( req->commandCode, req->vendorId, 0/*sessionId*/,
-			0/*extensionId*/, req);
-	if (!rpl)
-		goto error;
-
-	/* Result-Code AVP */
-	if ( create_avp( &avp, 268, 0, 0, (char*)&result_code, 4, 1)!=
-	AAA_ERR_SUCCESS)
-		goto error;
-	if ( AAAAddAVPToList( &rpl->avpList, avp, 0)!=
-	AAA_ERR_SUCCESS)
-		goto avp_error;
-
-	/* is it a protocol error code? */
-	if (result_code>=3000 && result_code<4000){
-		/* set the error bit in msg flags */
-		rpl->flags |=0x20;
-	} else {
-		if (err_msg && err_msg->s && err_msg->len) {
-			/* Error-Message AVP */
-			if ( create_avp(&avp,281,0,0,err_msg->s,err_msg->len,0)!=
-			AAA_ERR_SUCCESS)
-				goto error;
-			if (AAAAddAVPToList(&rpl->avpList,avp,rpl->avpList->tail)!=
-			AAA_ERR_SUCCESS)
-				goto avp_error;
-		}
-	}
-
-	return rpl;
-avp_error:
-	AAAFreeAVP( &avp );
-error:
-	AAAFreeMessage( &rpl );
-	return 0;
-}
-#endif
 
 
 
@@ -592,8 +535,6 @@ AAAMessage *AAANewMessage(
 			!=AAA_ERR_SUCCESS )
 				goto error;
 		}
-		/* generate an end-to-end identifier */
-		msg->endtoendID = generate_endtoendID();
 		/* add origin host AVP */
 		if (AAACreateAVP( &avp, 264, 0, 0, aaa_identity.s, aaa_identity.len)
 		!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp,
@@ -605,6 +546,8 @@ AAAMessage *AAANewMessage(
 		msg->avpList->tail)!=AAA_ERR_SUCCESS )
 			goto error;
 	} else {
+		/* link the transaction the req. belong to */
+		msg->trans = request->trans;
 		/* set the P flag as in request */
 		msg->flags |= request->flags&0x40;
 		/* copy the end-to-end id from request to response */
@@ -680,12 +623,6 @@ AAAReturnCode  AAAFreeMessage(AAAMessage **msg)
 		}
 	}
 
-	/* what about this proxyAVP ????????? */
-
-	/* free the buffer if any */
-	if ( (*msg)->orig_buf.s )
-		shm_free( (*msg)->orig_buf.s );
-
 	/* free the AAA msg */
 	shm_free(*msg);
 	msg = 0;
@@ -724,71 +661,106 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	struct peer    *dst_peer;
 	AAA_AVP        *avp;
 	unsigned int   event;
-
-	/* some checks */
-	if (!msg)
-		goto error;
+	str            buf;
 
 	ses = 0;
 	avp = 0;
 	tr  = 0;
 	dst_peer = 0;
+	buf.s =0;
+	buf.len = 0;
 
-	/* if it's a response, I have to find its transaction */
-	if ( !is_req(msg) ) {
-		/* it should have end-to-end-ID and hop-by-hop-ID set */
-		tr = transaction_lookup(msg->endtoendID, msg->hopbyhopID, 0);
-		if (!tr) {
-			LOG(L_ERR,"ERROR:AAASendMessage: cannot send a response that"
-				" doesn't belong to any transaction!\n");
-			goto error;
-		}
-		/* also get the incoming peer for its request */
-		dst_peer = tr->peer;
+	/* some checks */
+	if (!msg)
+		goto error;
+
+	if (msg->commandCode==271 || msg->commandCode==257 ||
+	msg->commandCode==280 || msg->commandCode==282) {
+		LOG(L_ERR,"ERROR:AAASendMessage: you are not ALLOWED to send this"
+			" type of message (%d) -> read the draft!!!\n",msg->commandCode);
+		goto error;
 	}
 
-	/* for the req/res that require session -> get their session for update */
-	if (msg->commandCode!=271 && msg->commandCode!=257 &&
-	msg->commandCode!=280 && msg->commandCode!=282) {
-		/* get the session-Id AVP */
+	if ( !is_req(msg) ) {
+		/* if it's a response, I already have a transaction */
+		tr = (struct trans*)msg->trans;
+		/* .....and the session */
+		ses = tr->ses;
+		/* update the peer state machine */
+		switch (msg->commandCode) {
+			case 274: /*ASA*/
+				event = AAA_ASA_SENT;
+				break;
+			case 275: /*STA*/
+				event = AAA_STA_SENT;
+				break;
+			case 258: /*RAA*/
+				event = AAA_RAA_SENT;
+				break;
+			default:
+				event = AAA_AA_SENT;
+		}
+		if (session_state_machine( ses, event)!=1)
+			goto error;
+		/* generate the buf from the message */
+		if ( build_buf_from_msg( msg, &buf)==-1 )
+			goto error;
+		/* send the response */
+		if (send_aaa_response( &buf, tr)==-1)
+			goto error;
+	} else {
+		/* where should I send this request? */
+		//dst_peer = ?????;
+		/* it's a request -> get the session-Id AVP */
 		if (!msg->avpList || !msg->avpList->head || (avp = AAAFindMatchingAVP
 		(msg->avpList,msg->avpList->head,263,0,AAA_FORWARD_SEARCH))==0) {
 			LOG(L_ERR,"ERROR:AAASendMessage: cannot find Session-ID AVP!\n");
 			goto error;
 		}
-
 		/* search the session the msg belong to by the session-ID string */
-		ses = session_lookup( hash_table, &(avp->data));
-		if (!ses) {
+		if ( (ses=session_lookup( hash_table, &(avp->data)))==0 ) {
 			LOG(L_ERR,"ERROR:AAASendMessage: you attempt to send a mesage "
 				"that doesn't belong to any session!!\n");
 			goto error;
 		}
-
 		/* update the session state */
 		switch (msg->commandCode) {
-			case 274: /*ASR or ASA*/
-				event = is_req(msg)?AAA_ASR_SENT:AAA_ASA_SENT;
+			case 274: /*ASR*/
+				event = AAA_ASR_SENT;
 				break;
-			case 275: /*STR or STA*/
-				event = is_req(msg)?AAA_STR_SENT:AAA_STA_SENT;
+			case 275: /*STR*/
+				event = AAA_STR_SENT;
 				break;
-			case 258: /*RAR or RAA*/
-				event = is_req(msg)?AAA_RAR_SENT:AAA_RAA_SENT;
+			case 258: /*RAR*/
+				event = AAA_RAR_SENT;
 				break;
 			default:
-				event = is_req(msg)?AAA_AR_SENT:AAA_AA_SENT;
+				event = AAA_AR_SENT;
 		}
 		if (session_state_machine( ses, event)!=1)
 			goto error;
+		/* generate the buf from the message */
+		if ( build_buf_from_msg( msg, &buf)==-1 )
+			goto error;
+		/* send the response */
+		if ( (tr=send_aaa_request( &buf, ses, dst_peer))==0 )
+			goto error;
+		msg->trans = tr;
 	}
 
-	/* send the message */
-	//if (send_aaa_message( msg, tr, ses , dst_peer)!=1)
-	//	goto error;
-
+	AAAFreeMessage( &msg );
 	return AAA_ERR_SUCCESS;
 error:
+	if (is_req(msg)) {
+		if (tr)
+			destroy_transaction(tr);
+		else
+			shm_free( buf.s );
+	} else {
+		destroy_transaction(tr);
+		shm_free( buf.s );
+	}
+	AAAFreeMessage( &msg );
 	return AAA_ERR_FAILURE;
 }
 
@@ -875,9 +847,9 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 	msg->commandCode = get_3bytes( ptr );
 	ptr += COMMAND_CODE_SIZE;
 
-	/* application-Id/vendor-Id */
+	/* application-Id */
 	msg->vendorId = get_4bytes( ptr );
-	ptr += VENDOR_ID_SIZE;
+	ptr += APPLICATION_ID_SIZE;
 
 	/* Hop-by-Hop-Id */
 	msg->hopbyhopID = *((unsigned int*)ptr);//get_4bytes( ptr );
@@ -937,8 +909,8 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 	}
 
 	/* link the buffer to the message */
-	msg->orig_buf.s = source;
-	msg->orig_buf.len = msg_len;
+	//msg->orig_buf.s = source;
+	//msg->orig_buf.len = msg_len;
 
 	print_aaa_message( msg );
 	return  msg;

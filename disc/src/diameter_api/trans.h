@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.4 2003/03/12 18:12:22 andrei Exp $
+ * $Id: trans.h,v 1.5 2003/03/13 18:46:37 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -26,6 +26,8 @@ struct trans {
 	struct h_link  linker;
 	/* session the request belong to - if any */
 	struct session *ses;
+	/* info - can be used for different purposes */
+	unsigned int info;
 
 	/* SERVER SIDE */
 	/* outgoing peer ID */
