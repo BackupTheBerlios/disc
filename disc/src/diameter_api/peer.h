@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.9 2003/03/11 21:14:24 bogdan Exp $
+ * $Id: peer.h,v 1.10 2003/03/11 21:34:03 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -37,10 +37,6 @@ typedef enum {
 
 /* List with all known application identifiers */
 extern unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ];
-
-
-
-
 
 
 /* peer table */
@@ -84,6 +80,8 @@ struct peer {
 	unsigned int  first_4bytes;
 	unsigned int  buf_len;
 	unsigned char *buf;
+	/* what kind of app the other peer supports */
+	unsigned int supp_app_id;
 };
 
 

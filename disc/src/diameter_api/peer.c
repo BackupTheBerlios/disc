@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.14 2003/03/11 21:18:15 bogdan Exp $
+ * $Id: peer.c,v 1.15 2003/03/11 21:34:03 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -445,12 +445,6 @@ error:
 
 
 
-int process_cer( str *buf )
-{
-	return 1;
-}
-
-
 
 int send_cea( struct trans *tr, unsigned int result_code)
 {
@@ -486,13 +480,15 @@ error:
 
 
 
-int process_cea( str *buf )
+int process_ce( struct peer *p, str *buf , int is_req)
 {
-	static unsigned int pattern = 0x0000003f;
+	static unsigned int rpl_pattern = 0x0000003f;
+	static unsigned int req_pattern = 0x0000003e;
 	unsigned int mask = 0;
 	unsigned int n;
 	char *ptr;
 	char *foo;
+	int  i;
 
 	for_all_AVPS_do_switch( buf , foo , ptr ) {
 		case 268: /* result_code */
@@ -520,14 +516,20 @@ int process_cea( str *buf )
 			set_AVP_mask( mask, 5);
 			break;
 		case 259: /*acc app id*/
-			break;
 		case 258: /*auth app id*/
+			n = ntohl( ((unsigned int *)ptr)[2] );
+			for(i=0;i<AAA_APP_MAX_ID;i++)
+				if (n==AAA_APP_ID[i]) {
+					p->supp_app_id |= (1<<i);
+					break;
+				}
+			LOG(L_WARN,"WARNING:process_cea: unknown app-id %d\n",n);
 			break;
 	}
 
-	if (pattern!=mask) {
+	if ( mask!=(is_req?req_pattern:rpl_pattern) ) {
 		LOG(L_ERR,"ERROR:process_cea: cea has missing avps(%x<>%x)!!\n",
-			pattern,mask);
+			(is_req?req_pattern:rpl_pattern),mask);
 		goto error;
 	}
 
@@ -915,7 +917,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			switch (p->state) {
 				case PEER_WAIT_CEA:
 					DBG("DEBUG:peer_state_machine: CEA received\n");
-					if ( process_cea( (str*)ptr )==-1 ) {
+					if ( process_ce( p, (str*)ptr, 0 )==-1 ) {
 						tcp_close( p );
 						reset_peer( p );
 						p->state = PEER_UNCONN;
@@ -986,8 +988,6 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					goto error;
 			}
 			break;
-
-
 		case DPR_RECEIVED:
 			lock( p->mutex );
 			switch (p->state) {
