@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.11 2003/08/25 14:52:02 bogdan Exp $
+ * $Id: sender.c,v 1.12 2004/02/24 16:00:10 cristian Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -99,8 +99,8 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	if ( !is_req(msg) ) {
 		/* it's a response */
 		if (my_aaa_status==AAA_CLIENT) {
-			LOG(L_ERR,"ERROR:AAASendMessage: AAA client does not send answers
-				!! -> read the draft!!!\n");
+			LOG(L_ERR,"ERROR:AAASendMessage: AAA client does not send answers"
+				"!! -> read the draft!!!\n");
 			goto error;
 		}
 
