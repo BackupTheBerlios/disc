@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.34 2003/04/16 20:03:40 bogdan Exp $
+ * $Id: peer.c,v 1.35 2003/04/17 15:55:25 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -527,6 +527,7 @@ static inline int safe_write(struct peer *p, char *buf, unsigned int len)
 int send_req_to_peer(struct trans *tr , struct peer *p)
 {
 	unsigned int ete;
+	str *foo;
 	str s;
 
 	lock_get( p->mutex );
@@ -554,21 +555,18 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 	add_cell_to_htable( p->trans_table, &(tr->linker) );
 	/* the hash label is used as hop-by-hop ID */
 	((unsigned int*)tr->req->s)[3] = tr->linker.label;
-	/* send it */
-	if (safe_write( p, tr->req->s, tr->req->len)!=-1) {
-		lock_release( p->mutex);
-		tr->out_peer = p;
-		tr->req = 0;
-		/* start the timeout timer */
-		add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
-			get_ticks()+TR_TIMEOUT_TIMEOUT );
-		/* success */
-		return 1;
-	}
-	lock_release( p->mutex);
-	/* write failed*/
-	remove_cell_from_htable( p->trans_table, &(tr->linker) );
-	return -1;
+	/* things that I want to remember or not */
+	foo = tr->req;
+	tr->out_peer = p;
+	tr->req = 0;
+	/* start the timeout timer */
+	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
+		get_ticks()+TR_TIMEOUT_TIMEOUT );
+	/* send it- I'm not intereseted in the return code -if it's error, the
+	 * peer will be automaticly closed by safe_write and this transaction will
+	 * give timeout */
+	safe_write( p, foo->s, foo->len);
+	return 1;
 }
 
 
