@@ -1,4 +1,4 @@
-$Id: README,v 1.5 2003/11/18 15:14:28 cco Exp $
+$Id: README,v 1.6 2003/11/18 17:10:21 cco Exp $
 
 Note: this document assumes familiarity with Diameter Base Protocol
 (RFC3588) and diameter API (as specified by
@@ -157,6 +157,10 @@ meaning of the other members of struct module_exports:
 	to a certain application)  the module knows how to process:
 	authentication (DOES_AUTH), accounting (DOES_ACCT) or both
 	(DOES_AUTH|DOES_ACCT);  
+
+every module will have to define a global variable called "exports" of
+of type struct module_exports and to initialize it as described
+previously.  	
 
 Session Management
 ------------------
