@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.17 2003/04/15 19:57:44 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.18 2003/04/16 10:58:45 bogdan Exp $
  *
  *  History:
  *  --------
@@ -93,12 +93,12 @@ inline static int do_read( struct peer *p)
 
 	//DBG(">>>>>>>>>> n=%d, errno=%d \n",n,errno);
 	if (n==0) {
-		LOG(L_INFO,"INFO:do_read: FIN received\n");
+		LOG(L_INFO,"INFO:do_read (sock=%d): FIN received\n",p->sock);
 		goto error;
 	}
 	if ( n==-1 && errno!=EINTR && errno!=EAGAIN ) {
-		LOG(L_ERR,"ERROR:do_read: n=%d , errno=%d (%s)\n",
-			n, errno, strerror(errno));
+		LOG(L_ERR,"ERROR:do_read (sock=%d): n=%d , errno=%d (%s)\n",
+			p->sock, n, errno, strerror(errno));
 		goto error;
 	}
 
@@ -399,6 +399,7 @@ void *do_receive(void *arg)
 				}
 			}
 		}
+		//DBG(">>>>>>>> after processing nready=%d\n",nready);
 
 	}/*while*/
 

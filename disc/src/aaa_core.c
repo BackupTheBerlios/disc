@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.13 2003/04/14 15:52:08 andrei Exp $
+ * $Id: aaa_core.c,v 1.14 2003/04/16 10:58:45 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -34,7 +34,7 @@
 #define CFG_FILE "aaa.cfg"
 
 
-static char id[]="$Id: aaa_core.c,v 1.13 2003/04/14 15:52:08 andrei Exp $";
+static char id[]="$Id: aaa_core.c,v 1.14 2003/04/16 10:58:45 bogdan Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
@@ -489,7 +489,7 @@ int init_aaa_core(char *cfg_file)
 			goto error;
 	}
 
-	/* init the destestination peers resolver */
+	/* init the destination peers resolver */
 	if (my_aaa_status==AAA_CLIENT) {
 		send_local_request = client_send_local_req;
 	} else {
@@ -509,8 +509,31 @@ error:
 static void sig_handler(int signo)
 {
 	if ( main_thread==pthread_self() ) {
-		destroy_aaa_core();
-		exit(0);
+		/* I'am the main thread */
+		switch (signo) {
+			case 0: break; /* do nothing*/
+			case SIGPIPE:
+				LOG(L_WARN, "WARNING: SIGPIPE received and ignored\n");
+				break;
+			case SIGINT:
+			case SIGTERM:
+				if (signo==SIGINT)
+					DBG("SIGINT received, program terminates\n");
+				else
+					DBG("SIGTERM received, program terminates\n");
+				destroy_aaa_core();
+				exit(0);
+				break;
+			case SIGHUP: /* ignoring it*/
+				DBG("SIGHUP received, ignoring it\n");
+				break;
+			case SIGUSR1:
+				LOG(memlog, "Memory status (shm):\n");
+				shm_status();
+				break;
+			default:
+				LOG(L_CRIT, "WARNING: unhandled signal %d\n", signo);
+		}
 	}
 	return;
 }
@@ -528,7 +551,27 @@ int main(int argc, char *argv[])
 
 	/* install signal handler */
 	if (signal(SIGINT, sig_handler)==SIG_ERR) {
-		printf("ERROR:main: cannot install signal handler\n");
+		printf("ERROR:main: cannot install SIGINT signal handler\n");
+		goto error;
+	}
+	if (signal(SIGPIPE, sig_handler) == SIG_ERR ) {
+		printf("ERROR:main: cannot install SIGPIPE signal handler\n");
+		goto error;
+	}
+	if (signal(SIGUSR1, sig_handler)  == SIG_ERR ) {
+		printf("ERROR:main: cannot install SIGUSR1 signal handler\n");
+		goto error;
+	}
+	if (signal(SIGTERM , sig_handler)  == SIG_ERR ) {
+		printf("ERROR:main: cannot install SIGTERM signal handler\n");
+		goto error;
+	}
+	if (signal(SIGHUP , sig_handler)  == SIG_ERR ) {
+		printf("ERROR:main: cannot install SIGHUP signal handler\n");
+		goto error;
+	}
+	if (signal(SIGUSR2 , sig_handler)  == SIG_ERR ) {
+		printf("ERROR:main: cannot install SIGUSR2 signal handler\n");
 		goto error;
 	}
 

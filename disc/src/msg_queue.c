@@ -1,5 +1,5 @@
 /*
- * $Id: msg_queue.c,v 1.3 2003/04/14 19:23:17 bogdan Exp $
+ * $Id: msg_queue.c,v 1.4 2003/04/16 10:58:45 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -85,12 +85,12 @@ int put_in_queue( str *buf, struct peer *p)
 		return -1;
 	}
 
-	lock_get( msg_lock );
+	/*lock_get( msg_lock );
 	cur_queued_size += buf->len;
 	if (max_queued_size<cur_queued_size) max_queued_size=cur_queued_size;
 	cur_queued_units++;
 	if (max_queued_units<cur_queued_units) max_queued_units=cur_queued_units;
-	lock_release( msg_lock );
+	lock_release( msg_lock );*/
 
 	return 1;
 }
@@ -111,10 +111,10 @@ int get_from_queue(str *buf, struct peer **p)
 	buf->len = qu.buf.len;
 	*p = qu.p;
 
-	lock_get( msg_lock );
+	/*lock_get( msg_lock );
 	cur_queued_size -= buf->len;
 	cur_queued_units--;
-	lock_release( msg_lock );
+	lock_release( msg_lock );*/
 
 
 	return 1;
