@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_api.h,v 1.3 2003/03/19 16:55:49 ilk Exp $
+ * $Id: diameter_api.h,v 1.4 2003/03/26 17:58:38 bogdan Exp $
  *
  * 2002-10-04 created by illya (komarov@fokus.gmd.de)
  *
@@ -52,8 +52,7 @@ AAAReturnCode AAARegisterExtension(
 AAAReturnCode AAAStartSession(
 		AAASessionId **sessionId,
 		AAAApplicationId appHandle,
-		char *userName,
-		AAACallback abortCallback);
+		void *contect);
 
 /*  AAAReturnCode AAARegisterPeerSession(AAASessionId **sessionId,
 				                               AAAApplicationId *appHandle,   				
@@ -91,9 +90,8 @@ boolean_t AAAGetCommandCode(char *commandName,
 
 AAAMessage *AAANewMessage(
 		AAACommandCode commandCode,
-		AAAVendorId vendorId,
+		AAAApplicationId appId,
 		AAASessionId *sessionId,
-		AAAExtensionId extensionId,
 		AAAMessage *request);
 
 AAAReturnCode AAAFreeMessage(
@@ -125,7 +123,7 @@ AAAReturnCode AAACreateAndAddAVPToList(
 		size_t length);
 
 AAAReturnCode AAAAddAVPToList(
-		AAA_AVP_LIST **avpList,
+		AAA_AVP_LIST *avpList,
 		AAA_AVP *avp,
 		AAA_AVP *position);
 

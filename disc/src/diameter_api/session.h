@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.6 2003/03/18 18:09:44 bogdan Exp $
+ * $Id: session.h,v 1.7 2003/03/26 17:58:38 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -78,8 +78,10 @@ struct session {
 	/* AAA info */
 	unsigned short peer_identity;        /* is it a client, server ....? */
 	str sID;                             /* session-ID as string */
-	/* callbacks */
-	AAACallback abort_callback;
+	/* context  */
+	void  *context;
+	AAAApplicationRef app_ref;
+	/* infos */
 	unsigned int session_timeout;
 	unsigned int request_timeout;
 	unsigned int state;

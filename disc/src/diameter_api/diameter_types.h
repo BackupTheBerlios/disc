@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.11 2003/03/18 18:09:44 bogdan Exp $
+ * $Id: diameter_types.h,v 1.12 2003/03/26 17:58:38 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -61,10 +61,10 @@ typedef unsigned int    AAAVendorId;
 typedef unsigned int    AAAExtensionId;
 typedef unsigned int    AAA_AVPCode;
 typedef unsigned int    AAAValue;
+typedef unsigned int    AAAApplicationId;
 typedef void            AAAServer;
 typedef str             AAASessionId;
-typedef unsigned int    AAAMsgIdentifier;
-typedef void*           AAAApplicationId;
+typedef void*           AAAApplicationRef;
 typedef uint8_t         AAAMsgFlag;
 
 
@@ -179,6 +179,41 @@ typedef enum {
 } AAAResultCode;
 
 
+typedef enum {
+	AVP_User_Name                     =    1,
+	AVP_Class                         =   25,
+	AVP_Session_Timeout               =   27,
+	AVP_Proxy_State                   =   33,
+	AVP_Host_IP_Address               =  257,
+	AVP_Auth_Aplication_Id            =  258,
+	AVP_Vendor_Specific_Application_Id=  260,
+	AVP_Redirect_Max_Cache_Time       =  262,
+	AVP_Session_Id                    =  263,
+	AVP_Origin_Host                   =  264,
+	AVP_Supported_Vendor_Id           =  265,
+	AVP_Vendor_Id                     =  266,
+	AVP_Result_Code                   =  268,
+	AVP_Product_Name                  =  269,
+	AVP_Session_Binding               =  270,
+	AVP_Disconnect_Cause              =  273,
+	AVP_Auth_Request_Type             =  274,
+	AVP_Auth_Grace_Period             =  276,
+	AVP_Auth_Session_State            =  277,
+	AVP_Origin_State_Id               =  278,
+	AVP_Proxy_Host                    =  280,
+	AVP_Error_Message                 =  281,
+	AVP_Record_Route                  =  282,
+	AVP_Destination_Realm             =  283,
+	AVP_Proxy_Info                    =  284,
+	AVP_Re_Auth_Request_Type          =  285,
+	AVP_Authorization_Lifetime        =  291,
+	AVP_Redirect_Host                 =  292,
+	AVP_Destination_Host              =  293,
+	AVP_Termination_Cause             =  295,
+	AVP_Origin_Realm                  =  296,
+}AAA_AVPCodeNr;
+
+
 /*   The following type allows the client to specify which direction to
  *   search for an AVP in the AVP list: */
 typedef enum {
@@ -245,25 +280,22 @@ typedef struct _avp_list_t {
 typedef struct _message_t {
 	AAAMsgFlag          flags;
 	AAACommandCode      commandCode;
-	AAAVendorId         vendorId;
-	//AAAResultCode       resultCode;
-	//IP_ADDR             originator;
-	//IP_ADDR             sender;
-	AAA_AVP_LIST        *avpList;
-	AAA_AVP             *proxyAVP;
-	AAAMsgIdentifier    endtoendID;
-	AAAMsgIdentifier    hopbyhopID;
-	//time_t              secondsTillExpire;
-	//time_t              startTime;
-	void                *appHandle;
-	/* added */
-	void                *trans;
+	AAAApplicationId    applicationId;
+	AAA_AVP             *sessionId;
+	AAA_AVP             *orig_host;
+	AAA_AVP             *orig_realm;
+	AAA_AVP             *dest_host;
+	AAA_AVP             *dest_realm;
+	AAA_AVP             *res_code;
+	AAA_AVP_LIST        avpList;
 	str                 buf;
+	void                *intern;
 } AAAMessage;
 
 
 
-typedef AAAReturnCode (*AAACallback)(AAAMessage *message);
+typedef AAAReturnCode (*AAACallback)(AAAMessage *incoming_msg, void *context,
+												AAAMessage **outgoing_msg);
 
 
 #endif

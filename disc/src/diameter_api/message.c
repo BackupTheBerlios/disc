@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.15 2003/03/18 18:09:44 bogdan Exp $
+ * $Id: message.c,v 1.16 2003/03/26 17:58:38 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -104,7 +104,7 @@ void destroy_msg_manager()
 }
 
 
-
+#if 0
 inline static AAAMsgIdentifier generate_endtoendID()
 {
 	unsigned int id;
@@ -113,13 +113,13 @@ inline static AAAMsgIdentifier generate_endtoendID()
 	lock_release( msg_mgr->end_to_end_lock );
 	return id;
 }
-
+#endif
 
 
 
 /************************** MESSAGE FUNCTIONS ********************************/
 
-
+#if 0
 int is_req_local(AAAMessage *msg, int *only_realm)
 {
 	AAA_AVP *avp;
@@ -175,7 +175,7 @@ int  accept_local_request( AAAMessage *msg )
 
 
 
-#if 0
+
 int process_msg( unsigned char *buf, unsigned int len, struct peer *pr)
 {
 	AAAMessage     *msg;
@@ -333,11 +333,9 @@ int build_buf_from_msg( AAAMessage *msg, str *buf)
 	/* first let's comput the length of the buffer */
 	buf->len = AAA_MSG_HDR_SIZE; /* AAA message header size */
 	/* count and add the avps */
-	if (msg->avpList && msg->avpList->head) {
-		for(avp=msg->avpList->head;avp;avp=avp->next) {
-			buf->len+=AVP_HDR_SIZE+(AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0))
-				+ to_32x_len( avp->data.len ) /*data*/;
-		}
+	for(avp=msg->avpList.head;avp;avp=avp->next) {
+		buf->len+=AVP_HDR_SIZE+(AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0))
+			+ to_32x_len( avp->data.len ) /*data*/;
 	}
 
 	DBG("xxxx len=%d\n",buf->len);
@@ -366,35 +364,33 @@ int build_buf_from_msg( AAAMessage *msg, str *buf)
 	// ?????????
 	p += APPLICATION_ID_SIZE;
 	/* hop by hop id */
-	((unsigned int*)p)[0] = msg->hopbyhopID;
+	//((unsigned int*)p)[0] = msg->hopbyhopID;
 	p += HOP_BY_HOP_IDENTIFIER_SIZE;
 	/* end to end id */
-	((unsigned int*)p)[0] = msg->endtoendID;
+	//((unsigned int*)p)[0] = msg->endtoendID;
 	p += END_TO_END_IDENTIFIER_SIZE;
 
 	/* AVPS */
-	if (msg->avpList && msg->avpList->head) {
-		for(avp=msg->avpList->head;avp;avp=avp->next) {
-			/* AVP HEADER */
-			/* avp code */
-			set_4bytes(p,avp->code);
+	for(avp=msg->avpList.head;avp;avp=avp->next) {
+		/* AVP HEADER */
+		/* avp code */
+		set_4bytes(p,avp->code);
+		p +=4;
+		/* flags */
+		(*p++) = (unsigned char)avp->flags;
+		/* avp length */
+		k = AVP_HDR_SIZE + AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0) +
+			avp->data.len;
+		set_3bytes(p,k);
+		p += 3;
+		/* vendor id */
+		if ((avp->flags&0x80)!=0) {
+			set_4bytes(p,avp->vendorId);
 			p +=4;
-			/* flags */
-			(*p++) = (unsigned char)avp->flags;
-			/* avp length */
-			k = AVP_HDR_SIZE + AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0) +
-				avp->data.len;
-			set_3bytes(p,k);
-			p += 3;
-			/* vendor id */
-			if ((avp->flags&0x80)!=0) {
-				set_4bytes(p,avp->vendorId);
-				p +=4;
-			}
-			/* data */
-			memcpy( p, avp->data.s, avp->data.len);
-			p += to_32x_len( avp->data.len );
 		}
+		/* data */
+		memcpy( p, avp->data.s, avp->data.len);
+		p += to_32x_len( avp->data.len );
 	}
 
 	if ((char*)p-buf->s!=buf->len) {
@@ -501,16 +497,22 @@ int send_aaa_response( str *buf, struct trans *tr)
  */
 AAAMessage *AAANewMessage(
 	AAACommandCode commandCode,
-	AAAVendorId vendorId,
+	AAAApplicationId applicationId,
 	AAASessionId *sessionId,
-	AAAExtensionId extensionId,
 	AAAMessage *request)
 {
-	AAAMessage *msg;
-	AAA_AVP    *avp;
-	AAA_AVP    *avp_t;
+	AAAMessage   *msg;
+	AAA_AVP      *avp;
+	AAA_AVP      *avp_t;
+	struct trans *tr;
+	unsigned int code;
 
 	msg = 0;
+
+	if (!sessionId) {
+		LOG(L_ERR,"ERROR:AAANewMessage: param session-ID received null!!\n");
+		goto error;
+	}
 
 	/* allocated a new AAAMessage structure a set it to 0 */
 	msg = (AAAMessage*)shm_malloc(sizeof(AAAMessage));
@@ -522,73 +524,72 @@ AAAMessage *AAANewMessage(
 
 	/* command code */
 	msg->commandCode = commandCode;
-	/* vendor ID */
-	msg->vendorId = vendorId;
+	/* application ID */
+	msg->applicationId = applicationId;
+
+	/* add session ID */
+	avp = 0;
+	if ( create_avp( &avp, 263, 0, 0, sessionId->s, sessionId->len, 0)
+	!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp, 0)
+	!=AAA_ERR_SUCCESS ) {
+		LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add Session-Id avp\n");
+		if (avp) AAAFreeAVP( &avp );
+		goto error;
+	}
+	msg->sessionId = avp;
+	/* add origin host AVP */
+	avp = 0;
+	if (create_avp( &avp, 264, 0, 0, aaa_identity.s, aaa_identity.len, 0)
+	!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp,
+	msg->avpList.tail)!=AAA_ERR_SUCCESS ) {
+		LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add Origin-Host avp\n");
+		if (avp) AAAFreeAVP( &avp );
+		goto error;
+	}
+	msg->orig_host = avp;
+	/* add origin realm AVP */
+	avp = 0;
+	if (create_avp( &avp, 296, 0, 0, aaa_realm.s, aaa_realm.len, 0)
+	!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp,
+	msg->avpList.tail)!=AAA_ERR_SUCCESS ) {
+		LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add Origin-Realm avp\n");
+		if (avp) AAAFreeAVP( &avp );
+		goto error;
+	}
+	msg->orig_realm = avp;
 
 	if (!request) {
 		/* it's a new request -> set the flag */
 		msg->flags = 0x80;
-		/* add session ID */
-		if (sessionId) {
-			if (AAACreateAVP( &avp, 263, 0, 0, sessionId->s, sessionId->len)
-			!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp, 0)
-			!=AAA_ERR_SUCCESS )
-				goto error;
-		}
-		/* add origin host AVP */
-		if (AAACreateAVP( &avp, 264, 0, 0, aaa_identity.s, aaa_identity.len)
-		!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp,
-		msg->avpList?msg->avpList->tail:0)!=AAA_ERR_SUCCESS )
-			goto error;
-		/* add origin realm AVP */
-		if (AAACreateAVP( &avp, 296, 0, 0, aaa_realm.s, aaa_realm.len)
-		!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp,
-		msg->avpList->tail)!=AAA_ERR_SUCCESS )
-			goto error;
+		/* keep track of the session -> SendMessage will need it! */
+		msg->intern = sessionId;
 	} else {
 		/* link the transaction the req. belong to */
-		msg->trans = request->trans;
+		msg->intern = request->intern;
+		tr = (struct trans*)request->intern;
 		/* set the P flag as in request */
 		msg->flags |= request->flags&0x40;
-		/* copy the end-to-end id from request to response */
-		msg->endtoendID = request->endtoendID;
-		/* copy the hop-by-hop id from request to response */
-		msg->hopbyhopID = request->hopbyhopID;
-		/* look into request for a session ID avp */
-		if (request->avpList && request->avpList->head)
-			avp = AAAFindMatchingAVP(request->avpList,request->avpList->head,
-			263,0,AAA_FORWARD_SEARCH);
-		if (avp) {
-			/* clone the AVP from request... */
-			if ( (avp=clone_avp(avp,0))==0) {
-				LOG(L_ERR,"ERROR:AAANewMessage: cannot clone "
-					"session-Id avp!!\n");
-				goto error;
-			}
-			/* ...and insert it into response */
-			AAAAddAVPToList( &(msg->avpList), avp, 0);
-		} else {
-			/* create a new session-Id avp */
-			if (sessionId && (AAACreateAVP( &avp, 263, 0, 0, sessionId->s,
-			sessionId->len)!=AAA_ERR_SUCCESS || AAAAddAVPToList
-			( &(msg->avpList), avp, 0)!=AAA_ERR_SUCCESS) )
-				goto error;
-		}
-		/* add origin host AVP */
-		if (AAACreateAVP( &avp, 264, 0, 0, aaa_identity.s, aaa_identity.len)
+
+		/* add an success result-code avp ;-))) */
+		avp = 0;
+		code = AAA_SUCCESS;
+		if (create_avp(&avp,AVP_Result_Code,0,0,(char*)&code,sizeof(code),1)
 		!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp,
-		(msg->avpList)?(msg->avpList->tail):0)!=AAA_ERR_SUCCESS )
+		msg->avpList.tail)!=AAA_ERR_SUCCESS ) {
+			LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add "
+				"Result-Code avp\n");
+			if (avp) AAAFreeAVP( &avp );
 			goto error;
+		}
+		msg->res_code = avp;
+
 		/* mirror all the proxy-info avp in the same order */
-		if (request->avpList && request->avpList->head) {
-			avp_t = request->avpList->head;
-			while ( (avp_t=AAAFindMatchingAVP
-			(request->avpList,avp_t,284,0,AAA_FORWARD_SEARCH))!=0 ) {
-				if ( (avp=clone_avp(avp_t,0))==0 || AAAAddAVPToList
-				( &(msg->avpList), avp,msg->avpList?msg->avpList->tail:0)!=
-				AAA_ERR_SUCCESS )
-					goto error;
-			}
+		avp_t = request->avpList.head;
+		while ( (avp_t=AAAFindMatchingAVP
+		(&(request->avpList),avp_t,284,0,AAA_FORWARD_SEARCH))!=0 ) {
+			if ( (avp=clone_avp(avp_t,0))==0 || AAAAddAVPToList
+			( &(msg->avpList), avp, msg->avpList.tail)!=AAA_ERR_SUCCESS )
+				goto error;
 		}
 	}
 
@@ -613,14 +614,12 @@ AAAReturnCode  AAAFreeMessage(AAAMessage **msg)
 		goto done;
 
 	/* free the avp list */
-	if ( (*msg)->avpList ) {
-		avp = (*msg)->avpList->head;
-		while (avp) {
-			avp_t = avp;
-			avp = avp->next;
-			/*free the avp*/
-			AAAFreeAVP(&avp_t);
-		}
+	avp = (*msg)->avpList.head;
+	while (avp) {
+		avp_t = avp;
+		avp = avp->next;
+		/*free the avp*/
+		AAAFreeAVP(&avp_t);
 	}
 
 	/* free the AAA msg */
@@ -633,13 +632,18 @@ done:
 
 
 
-/** This function decapsulates an encapsulated AVP, and populates the
-   list with the correct pointers. */
-/*AAAResultCode  AAASetMessageResultCode(
+/* Sets tthe proper result_code into the Result-Code AVP; ths avp must already
+ * exists into the reply messge */
+AAAResultCode  AAASetMessageResultCode(
 	AAAMessage *message,
 	AAAResultCode resultCode)
 {
-}*/
+	if ( !is_req(message) && message->res_code) {
+		*((unsigned int*)(message->res_code->data.s)) = htonl(resultCode);
+		return AAA_ERR_SUCCESS;
+	}
+	return AAA_ERR_FAILURE;
+}
 
 
 
@@ -681,11 +685,11 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	}
 
 	if ( !is_req(msg) ) {
-		/* if it's a response, I already have a transaction */
-		tr = (struct trans*)msg->trans;
-		/* .....and the session */
+		/* if it's a response, I already have a transaction for it */
+		tr = (struct trans*)msg->intern;
+		/* ....and the session */
 		ses = tr->ses;
-		/* update the peer state machine */
+		/* update the session state machine */
 		switch (msg->commandCode) {
 			case 274: /*ASA*/
 				event = AAA_ASA_SENT;
@@ -710,18 +714,8 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	} else {
 		/* where should I send this request? */
 		//dst_peer = ?????;
-		/* it's a request -> get the session-Id AVP */
-		if (!msg->avpList || !msg->avpList->head || (avp = AAAFindMatchingAVP
-		(msg->avpList,msg->avpList->head,263,0,AAA_FORWARD_SEARCH))==0) {
-			LOG(L_ERR,"ERROR:AAASendMessage: cannot find Session-ID AVP!\n");
-			goto error;
-		}
-		/* search the session the msg belong to by the session-ID string */
-	//	if ( (ses=session_lookup( hash_table, &(avp->data)))==0 ) {
-	//		LOG(L_ERR,"ERROR:AAASendMessage: you attempt to send a mesage "
-	//			"that doesn't belong to any session!!\n");
-	//		goto error;
-	//	}
+		/* it's a request -> get its session */
+		ses = (struct session*)msg->intern;
 		/* update the session state */
 		switch (msg->commandCode) {
 			case 274: /*ASR*/
@@ -744,7 +738,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		/* send the response */
 		if ( (tr=send_aaa_request( &buf, ses, dst_peer))==0 )
 			goto error;
-		msg->trans = tr;
+		msg->intern = tr;
 	}
 
 	AAAFreeMessage( &msg );
@@ -799,8 +793,6 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 	unsigned int  avp_vendorID;
 	unsigned int  avp_data_len;
 
-	//int AVPHeaderLength = AVP_CODE_SIZE+AVP_FLAGS_SIZE+AVP_LENGTH_SIZE;
-
 	/* check the params */
 	if( !source || !sourceLen || sourceLen<AAA_MSG_HDR_SIZE) {
 		LOG(L_ERR,"ERROR:AAATranslateMessage: invalid buffered received!\n");
@@ -847,15 +839,13 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 	ptr += COMMAND_CODE_SIZE;
 
 	/* application-Id */
-	msg->vendorId = get_4bytes( ptr );
+	msg->applicationId = get_4bytes( ptr );
 	ptr += APPLICATION_ID_SIZE;
 
 	/* Hop-by-Hop-Id */
-	msg->hopbyhopID = *((unsigned int*)ptr);
 	ptr += HOP_BY_HOP_IDENTIFIER_SIZE;
 
 	/* End-to-End-Id */
-	msg->endtoendID = *((unsigned int*)ptr);
 	ptr += END_TO_END_IDENTIFIER_SIZE;
 
 	/* start decoding the AVPS */
@@ -903,8 +893,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 
 		ptr += to_32x_len( avp_data_len );
 		/* link the avp into aaa message to the end */
-		AAAAddAVPToList( &(msg->avpList), avp,
-			(msg->avpList)?(msg->avpList->tail):0);
+		AAAAddAVPToList( &(msg->avpList), avp, msg->avpList.tail);
 	}
 
 	/* link the buffer to the message */
@@ -934,12 +923,10 @@ void print_aaa_message( AAAMessage *msg)
 	DBG("\tFlags = %x\n",msg->flags);
 
 	/*print the AVPs */
-	if (msg->avpList) {
-		avp = msg->avpList->head;
-		while (avp) {
-			AAAConvertAVPToString(avp,buf,1024);
-			DBG("\n%s\n",buf);
-			avp=avp->next;
-		}
+	avp = msg->avpList.head;
+	while (avp) {
+		AAAConvertAVPToString(avp,buf,1024);
+		DBG("\n%s\n",buf);
+		avp=avp->next;
 	}
 }

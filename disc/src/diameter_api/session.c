@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.8 2003/03/25 12:54:02 bogdan Exp $
+ * $Id: session.c,v 1.9 2003/03/26 17:58:38 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -436,18 +436,18 @@ error:
 
 
 AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
-		AAAApplicationId appHandle, char *userName, AAACallback abortCallback)
+								AAAApplicationRef appReference, void *context)
 {
 	struct session  *session;
 	char            *p;
 
-	if (!sessionId || !userName || !appHandle) {
+	if (!sessionId || !appReference) {
 		LOG(L_ERR,"ERROR:AAAStartSession: invalid params received!\n");
 		goto error;
 	}
 
 	/* build a new session structure */
-	session = create_session( AAA_CLIENT );
+	session = create_session( AAA_SERVER );
 	if (!session)
 		goto error;
 
@@ -475,7 +475,8 @@ AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 	session->sID.len = p - session->sID.s;
 
 	/* link info into the session */
-	session->abort_callback = abortCallback;
+	session->context = context;
+	session->app_ref = appReference;
 
 	/* return the session-ID */
 	*sessionId = &(session->sID);

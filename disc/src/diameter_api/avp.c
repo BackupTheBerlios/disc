@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.6 2003/03/14 18:29:11 bogdan Exp $
+ * $Id: avp.c,v 1.7 2003/03/26 17:58:38 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  * 2003-03-12 converted to shm_malloc/free (andrei)
@@ -78,7 +78,7 @@ AAAReturnCode  create_avp(
 	AAA_AVPCode code,
 	AAA_AVPFlag flags,
 	AAAVendorId vendorId,
-	char *data,
+	char   *data,
 	size_t length,
 	unsigned int free_it)
 {
@@ -119,7 +119,7 @@ AAAReturnCode  AAACreateAVP(
 	AAA_AVPCode code,
 	AAA_AVPFlag flags,
 	AAAVendorId vendorId,
-	char *data,
+	char   *data,
 	size_t length )
 {
 	char *p=0;
@@ -183,40 +183,30 @@ AAAReturnCode AAACreateAndAddAVPToList(
 
 /* Insert the AVP avp into this avpList after position */
 AAAReturnCode  AAAAddAVPToList(
-	AAA_AVP_LIST **avpList,
+	AAA_AVP_LIST *avpList,
 	AAA_AVP *avp,
 	AAA_AVP *position)
 {
 	AAA_AVP *avp_t;
 
-	if ( !avpList || !avp || (!*avpList && position) ) {
+	if ( !avpList || !avp ) {
 		LOG(L_ERR,"ERROR:AAAAddAVPToList: param avpList or avp passed null"
 			" or *avpList=NULL and position!=NULL !!\n");
 		return AAA_ERR_PARAMETER;
 	}
 
-	/* do we have to create a new list? */
-	if (*avpList==0) {
-		*avpList = (AAA_AVP_LIST*)shm_malloc(sizeof(AAA_AVP_LIST));
-		if (*avpList==0) {
-			LOG(L_ERR,"ERROR: AAACreateAVP: no more free memory!\n");
-			return AAA_ERR_NOMEM;
-		}
-		(*avpList)->tail = (*avpList)->head = 0;
-	}
-
 	if (!position) {
 		/* insert at the begining */
-		avp->next = (*avpList)->head;
+		avp->next = avpList->head;
 		avp->prev = 0;
-		(*avpList)->head = avp;
+		avpList->head = avp;
 		if (avp->next)
 			avp->next->prev = avp;
 		else
-			(*avpList)->tail = avp;
+			avpList->tail = avp;
 	} else {
 		/* look after avp from position */
-		for(avp_t=(*avpList)->head;avp_t&&avp_t!=position;avp_t=avp_t->next);
+		for(avp_t=avpList->head;avp_t&&avp_t!=position;avp_t=avp_t->next);
 		if (!avp_t) {
 			LOG(L_ERR,"ERROR: AAACreateAVP: the \"position\" avp is not in"
 				"\"avpList\" list!!\n");
@@ -228,7 +218,7 @@ AAAReturnCode  AAAAddAVPToList(
 		if (avp->next)
 			avp->next->prev = avp;
 		else
-			(*avpList)->tail = avp;
+			avpList->tail = avp;
 		avp->prev = position;
 	}
 
