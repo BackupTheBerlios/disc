@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.8 2003/03/17 19:10:55 bogdan Exp $
+# $Id: Makefile,v 1.9 2003/03/18 16:00:19 andrei Exp $
 #
 #
 # 2003-03-12  added SHM_MEM & other defines from ser;
@@ -148,7 +148,7 @@ endif
 
 %.d: %.c $(ALLDEP)
 	@set -e; $(MKDEP) $(DEFS) $< \
-	|  sed 's#\($*\)\.o[ :]*#\1.o $@ : #g' > $@; \
+	|  sed 's#\(\($*D)\)\?$(*F)\)\.o[ :]*#$*.o $@ : #g' > $@; \
 	[ -s $@ ] || rm -f $@
 
 
