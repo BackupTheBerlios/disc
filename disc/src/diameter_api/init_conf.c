@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.15 2003/03/14 18:29:41 bogdan Exp $
+ * $Id: init_conf.c,v 1.16 2003/03/14 20:32:10 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -12,9 +12,6 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <time.h>
 #include "../str.h"
 #include "../globals.h"
@@ -23,8 +20,6 @@
 #include "../dprint.h"
 #include "../transport/common.h"
 #include "../hash_table.h"
-#include "../timer.h"
-#include "../sh_mutex.h"
 #include "../transport/trans.h"
 #include "../transport/peer.h"
 #include "session.h"
@@ -42,13 +37,8 @@ static char *config_filename = 0;
 
 #define VENDOR_ID  0x0000caca
 #define DEFAULT_LISTENING_PORT 1812
-#define SHM_MEM_SIZE 1
 
 /* external vars */
-unsigned int shm_mem_size=SHM_MEM_SIZE*1024*1024; /* shared mem. size*/
-int memlog=L_DBG;                     /* shm_mallocs log level */
-int debug=9;                          /* debuging level */
-int log_stderr=1;                     /* use std error fro loging? */
 struct h_table *hash_table;           /* hash table for sessions and trans */
 struct p_table *peer_table;           /* table with peers */
 str aaa_identity= {0, 0};             /* aaa identity */
@@ -76,30 +66,6 @@ struct cfg_def cfg_ids[]={
 };
 
 
-
-void init_random_generator()
-{
-	unsigned int seed;
-	int fd;
-
-	/* init the random number generater by choosing a proper seed; first
-	 * we try to read it from /dev/random; if it doesn't exist use a
-	 * combination of current time and pid */
-	seed=0;
-	if ((fd=open("/dev/random", O_RDONLY))!=-1) {
-		while(seed==0&&read(fd,(void*)&seed, sizeof(seed))==-1&&errno==EINTR);
-		if (seed==0) {
-			LOG(L_WARN,"WARNING:init_session_manager: could not read from"
-				" /dev/random (%d)\n",errno);
-		}
-		close(fd);
-	}else{
-		LOG(L_WARN,"WARNING:init_session_manager: could not open "
-			"/dev/random (%d)\n",errno);
-	}
-	seed+=getpid()+time(0);
-	srand(seed);
-}
 
 
 
@@ -144,9 +110,6 @@ AAAReturnCode AAAClose()
 	if (config_filename)
 		shm_free(config_filename);
 
-	/* stop the timer */
-	destroy_timer();
-
 	/* stop the socket layer (kill all threads) */
 	terminate_tcp_shell();
 
@@ -159,18 +122,6 @@ AAAReturnCode AAAClose()
 	/* stop session manager */
 	shutdown_session_manager();
 
-	/* stop the transaction manager */
-	destroy_trans_manager();
-
-	/* destroy the shared mutexes */
-	destroy_shared_mutexes();
-
-	/* destroy the hash_table */
-	destroy_htable( hash_table );
-
-	/* just for debuging */
-	shm_status();
-
 	return AAA_ERR_SUCCESS;
 }
 
@@ -179,24 +130,12 @@ AAAReturnCode AAAClose()
 AAAReturnCode AAAOpen(char *configFileName)
 {
 	str peer;
-	void* shm_mempool;
 
 	/* check if the lib is already init */
 	if (is_lib_init) {
 		LOG(L_ERR,"ERROR:AAAOpen: library already initialized!!\n");
 		return AAA_ERR_ALREADY_INIT;
 	}
-
-	/* init mallocs */
-	shm_mempool=malloc(shm_mem_size);
-	if (shm_mempool==0){
-		LOG(L_CRIT,"ERROR:AAAOpen: intial malloc failed\n");
-		return AAA_ERR_NOMEM;
-	};
-	if (shm_mem_init_mallocs(shm_mempool, shm_mem_size)<0){
-		LOG(L_CRIT,"ERROR:AAAOpen: could not intialize shm. mallocs\n");
-		return AAA_ERR_NOMEM;
-	};
 
 	/* read the config file */
 	if ( read_config_file(configFileName)!=1)
@@ -209,18 +148,6 @@ AAAReturnCode AAAOpen(char *configFileName)
 		goto error_config;
 	}
 	strcpy( config_filename, configFileName);
-
-	/* init the hash_table */
-	if ( (hash_table=build_htable())==0)
-		goto mem_error;
-
-	/* init the shared mutexes */
-	if ( (init_shared_mutexes())==0)
-		goto mem_error;
-
-	/* init the transaction manager */
-	if (init_trans_manager()==-1)
-		goto mem_error;
 
 	/* init the session manager */
 	if (init_session_manager()==-1)
@@ -237,9 +164,6 @@ AAAReturnCode AAAOpen(char *configFileName)
 	/* init the socket layer */
 	if (init_tcp_shell()==-1)
 		goto mem_error;
-
-	/* start the timer */
-	init_timer();
 
 	/* add the peers from config file */
 	//..................

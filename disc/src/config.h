@@ -1,5 +1,5 @@
 /*
- * $Id: config.h,v 1.1 2003/03/14 16:54:07 bogdan Exp $
+ * $Id: config.h,v 1.2 2003/03/14 20:32:10 bogdan Exp $
  */
 /* History:
  * --------
@@ -12,7 +12,6 @@
 
 #define SHM_MEM_SIZE 1 /* in MB */
 #define DEFAULT_LISTENING_PORT   1812
-#define VENDOR_ID   0x0000caca
 
 #endif
 

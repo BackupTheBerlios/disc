@@ -7,9 +7,8 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "ip_addr.h"
 #include "../list.h"
-//#include "../globals.h"
+#include "ip_addr.h"
 #include "peer.h"
 
 

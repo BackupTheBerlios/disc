@@ -1,5 +1,5 @@
 /*
- * $Id: globals.h,v 1.1 2003/03/14 18:08:12 bogdan Exp $
+ * $Id: globals.h,v 1.2 2003/03/14 20:32:10 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -20,7 +20,7 @@ extern int debug;
 extern int log_stderr;
 
 /* listening port for aaa connections */
-unsigned int listen_port;
+extern unsigned int listen_port;
 
 /* aaa_identity string */
 extern str aaa_identity;
