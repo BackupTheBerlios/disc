@@ -1,8 +1,14 @@
-$Id: README,v 1.4 2003/10/24 20:15:14 cco Exp $
+$Id: README,v 1.5 2003/11/18 15:14:28 cco Exp $
 
+Note: this document assumes familiarity with Diameter Base Protocol
+(RFC3588) and diameter API (as specified by
+draft-ietf-aaa-diameter-api-03.txt)
 
-DISC (DIameter Server Client) is an AAA diameter implementation. DISC can be configured to act as a diameter server or a diameter client.
-DISC enables a flexible plug-in model for new applications. Third parties can easily link their plug-ins with the server or client code and provide thereby adavanced and customized services.
+disc (DIameter Server Client) is an AAA diameter implementation. 
+disc can be configured to act as a diameter server or a diameter client.
+disc enables a flexible plug-in model for new applications. Third parties 
+can easily link their plug-ins with the server or client code and provide 
+thereby advanced and customised services.
 
 For more information see INSTALL and the example configurations in src/*.cfg.
 
@@ -63,10 +69,27 @@ fqdn of the host)
 
 note that in the case of the server every next hop MUST be defined as a peer.
 
+Architecture
+------------
+disc is comprised of an core (which compiles to an elf executable image)
+and of several dynamically loaded modules (.so libraries).
+the core provides the following functionalities:
+	
+	o  peer connectivity management, diameter realm-based routing of AAA
+	commands, basic error/exception handling, AAA session management.
+	(features described in RFC3588)
 
-Writing Modules / Diameter API
-------------------------------
+	o  diameter API (as specified by draft-ietf-aaa-diameter-api-03.txt)
 
+	o  an interface which gives the possibility of extending its features
+	by writing new modules. this is described below. 
+
+the modules are supposed to implement the behaviour of newly defined AAA
+applications (EAP, mobile-ipv6 application for AAA, mobile-ipv4
+application for AAA)
+
+Writing Modules
+---------------
 AAA application specific support in disc is implemented by means of
 custom modules. 
 
@@ -110,29 +133,60 @@ a module has to implement the following functions:
 	timeout. 
 	when either of the two appears and the module has to do with it (i.e. it
 	has created this session or transaction), then this function will be
-	called. the "flags" will tell you what kind of timeout has occured:
+	called. the "flags" will tell you what kind of timeout has occurred:
 	flags==ANSWER_TIMEOUT_EVENT means a transaction timed out, whereas
 	flags==SESSION_TIMEOUT_EVENT means the end of a session.
 	the parameter "session" points to the actual value of the AAA session id, 
 	and "context" points to the arbitrary context related to this
 	session. 
 
+meaning of the other members of struct module_exports:
+
+	o  char *name - the name of the module;
+
+	o  unsigned int mod_type - can be either AAA_CLIENT or AAA_SERVER
+	depending on whether the module is supposed to be run by disc in 
+	client mode or in server mode;
+
+	o  unsigned int app_id - the AAA application for which this module is
+	intended. any incoming AAA command having Application-ID field in
+	the Diameter Header set to the value of app_id will be delivered to
+	this module;
+
+	o  unsigned int flags - specifies what kind of commands (pertaining 
+	to a certain application)  the module knows how to process:
+	authentication (DOES_AUTH), accounting (DOES_ACCT) or both
+	(DOES_AUTH|DOES_ACCT);  
+
+Session Management
+------------------
+the core provides also AAA session management. a module has to
+initialize a new session by using: AAAStartSession(). the function takes
+three params:
+
+	o  AAASessionId **sessionId - here it will return a pointer to 
+	the newly created session;
+
+	o  AAAApplicationRef appReference - a reference to the exports data
+	structure of the calling module;
+
+	o  void *context - an arbitrary context belonging to this session.
+
+one can specify how long a session is supposed to take by using
+AAASessionTimerStart(). when a session expires, the module will receive
+an indication in the mod_tout function (see also the section about
+Writing Modules).
+	
+Diameter API
+------------
 for implementing disc modules one can rely on the diameter API functions
-already provided by disc. for that one needs to include 
+already provided by the core. for that one needs to include 
 src/diameter_api/diameter_api.h. the implementation of this API is based
 on draft-ietf-aaa-diameter-api-03; however NOT all the functions
 specified there are implemented and the implementation is NOT provided
 (at least for the time being) as an separate library.
 
 
-three example modules are provided:
+modules are provided:
 
 1.  src/client/modules/print
-
-2.  src/client/modules/mipv6 - a module implementing loosely the 
-(AAA client part of) mipv6 AAA application as specified in
-<draft-le-aaa-diameter-mobileipv6-03.txt> 
-
-3.  src/server/modules/mipv6_server - a module implementing loosely the (AAA
-server part of) mipv6  AAA application as specified in
-<draft-le-aaa-diameter-mobileipv6-03.txt>
