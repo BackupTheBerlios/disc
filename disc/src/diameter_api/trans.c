@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.3 2003/03/10 19:17:32 bogdan Exp $
+ * $Id: trans.c,v 1.4 2003/03/10 23:04:34 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -57,8 +57,7 @@ void destroy_trans_manager()
 
 
 
-struct trans* create_transaction( AAAMessage *msg, struct session *ses,
-										struct peer *pr, unsigned char flag )
+struct trans* create_transaction(str *buf,struct session *ses,struct peer *p)
 {
 	struct trans *t;
 
@@ -73,20 +72,12 @@ struct trans* create_transaction( AAAMessage *msg, struct session *ses,
 	t->ses = ses;
 	/* init the timer_link for timeout */
 	t->timeout.payload = t;
-	/* link request and peer */
-	if (flag&TR_INCOMING_REQ) {
-		/* link the incoming request */
-		t->in_req = msg;
-		/* link the incoming peer */
-		atomic_inc( &(pr->ref_cnt) );
-		t->in_peer = pr;
-	} else {
-		/* link the outgoing request */
-		t->out_req = msg;
-		/* link the outgoing peer */
-		atomic_inc( &(pr->ref_cnt) );
-		t->out_peer = pr;
-	}
+	/* link the outging request */
+	t->req.s = buf->s;
+	t->req.len = buf->len;
+	/* link the outgoing peer */
+	atomic_inc( &(p->ref_cnt) );
+	t->peer = p;
 
 	return t;
 error:
@@ -105,19 +96,15 @@ void destroy_transaction( void *vp)
 	}
 
 	/* unref the peers */
-	if (t->out_peer)
-		atomic_dec( &(t->out_peer->ref_cnt) );
-	if (t->in_peer)
-		atomic_dec( &(t->in_peer->ref_cnt) );
+	if (t->peer)
+		atomic_dec( &(t->peer->ref_cnt) );
 
 	/* unlink the transaction from hash_table */
 	remove_cell_from_htable( hash_table, (struct h_link*)t );
 
 	/* free the messages */
-	if (t->in_req)
-		AAAFreeMessage( &(t->in_req) );
-	if (t->out_req)
-		AAAFreeMessage( &(t->out_req) );
+	if (t->req.s)
+		free( t->req.s );
 	/* timer */
 	if (t->timeout.timer_list)
 		rmv_from_timer_list( &(t->timeout) );
@@ -145,9 +132,8 @@ void timeout_handler(unsigned int ticks, void* param)
 		if (tr->ses) {
 			//session_state_machine();
 		}else{
-			write_command( tr->out_peer->fd, TIMEOUT_PEER_CMD,
-				PEER_TR_TIMEOUT, tr->out_peer, 0);
-			//peer_state_machine( tr->out_peer, PEER_TIMEOUT, 0);
+			write_command( tr->peer->fd, TIMEOUT_PEER_CMD,
+				PEER_TR_TIMEOUT, tr->peer, 0);
 		}
 		destroy_transaction( tr );
 	}

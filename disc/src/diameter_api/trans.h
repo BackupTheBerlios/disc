@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: trans.h,v 1.2 2003/03/10 23:04:34 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -27,23 +27,17 @@ struct trans {
 	/* session the request belong to - if any */
 	struct session *ses;
 
-	/* CLIENT SIDE */
-	/* incoming peer ID */
-	struct peer *in_peer;
-	/* incoming request */
-	AAAMessage *in_req;
-
 	/* SERVER SIDE */
 	/* outgoing peer ID */
-	struct peer *out_peer;
+	struct peer *peer;
 	/* outgoing request */
-	AAAMessage *out_req;
+	str req;
 	/* timeout timer */
 	struct timer_link timeout;
 };
 
-#define TR_INCOMING_REQ  1<<0
-#define TR_OUTGOING_REQ  1<<1
+#define TRANS_SEVER   1<<0
+#define TRANS_CLIENT  1<<1
 
 
 #define TR_TIMEOUT_TIMEOUT   5
@@ -59,8 +53,7 @@ int init_trans_manager();
 void destroy_trans_manager();
 
 
-struct trans* create_transaction(AAAMessage*, struct session*, struct peer*,
-															unsigned char);
+struct trans* create_transaction(str*, struct session*, struct peer*);
 
 
 void destroy_transaction( void* );

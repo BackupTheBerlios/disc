@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.9 2003/03/10 21:08:06 bogdan Exp $
+ * $Id: peer.c,v 1.10 2003/03/10 23:04:34 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -405,7 +405,7 @@ int send_cer( struct peer *dst_peer)
 
 
 	/* send the buffer */
-	return send_aaa_buffer( &cer, 0, dst_peer);
+	return send_aaa_request( &cer, 0, dst_peer);
 error:
 	return -1;
 }
@@ -418,11 +418,11 @@ int send_cea( struct trans *tr, unsigned int result_code, str *error_msg,
 	AAAMessage   *cea_msg;
 
 	cea_msg = 0;
-	if (!tr || !tr->in_req || !tr->in_peer)
-		goto error;
+	//if (!tr || !tr->req || !tr->peer)
+	//	goto error;
 
 	/* build a CEA */
-	cea_msg = build_rpl_from_req(tr->in_req, result_code, error_msg);
+//	cea_msg = build_rpl_from_req(tr->in_req, result_code, error_msg);
 	if (!cea_msg)
 		goto error;
 
@@ -434,7 +434,7 @@ int send_cea( struct trans *tr, unsigned int result_code, str *error_msg,
 	}
 
 	/* send the message */
-	send_aaa_message( cea_msg, tr, 0, tr->in_peer);
+	//send_aaa_message( cea_msg, tr, 0, tr->peer);
 
 	return 1;
 error:
@@ -476,7 +476,7 @@ int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 	}
 
 	/* send the message */
-	send_aaa_message( dpr_msg, 0, 0, dst_peer);
+	//send_aaa_message( dpr_msg, 0, 0, dst_peer);
 
 	return 1;
 error:
@@ -492,16 +492,16 @@ int send_dpa( struct trans *tr, unsigned int result_code, str *error_msg)
 	AAAMessage   *dpa_msg;
 
 	dpa_msg = 0;
-	if (!tr || tr->in_req || tr->in_peer)
-		goto error;
+	//if (!tr || tr->in_req || tr->in_peer)
+	//	goto error;
 
 	/* build a CEA */
-	dpa_msg = build_rpl_from_req(tr->in_req, result_code, error_msg);
+	//dpa_msg = build_rpl_from_req(tr->in_req, result_code, error_msg);
 	if (!dpa_msg)
 		goto error;
 
 	/* send the message */
-	send_aaa_message( dpa_msg, tr, 0, tr->in_peer);
+	//send_aaa_message( dpa_msg, tr, 0, tr->peer);
 
 	return 1;
 error:

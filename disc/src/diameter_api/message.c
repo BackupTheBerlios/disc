@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.3 2003/03/10 21:08:06 bogdan Exp $
+ * $Id: message.c,v 1.4 2003/03/10 23:04:34 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -182,6 +182,7 @@ int process_msg( unsigned char *buf, unsigned int len, struct peer *pr)
 	unsigned int   event;
 	int            only_realm;
 	int            is_local;
+	str            str_buf;
 
 	msg = 0;
 	tr  = 0;
@@ -208,8 +209,8 @@ int process_msg( unsigned char *buf, unsigned int len, struct peer *pr)
 		/* stop the timeout timer */
 		//..............................
 		/* is a local response? */
-		if (!tr->in_req) {
-			/* there is no incoming request->it's a local response */
+		if (tr->ses) {
+			/* it has a session-> it's a local response */
 			event = 0;
 			switch (msg->commandCode) {
 				case 257: /* peer event CEA */
@@ -253,7 +254,9 @@ int process_msg( unsigned char *buf, unsigned int len, struct peer *pr)
 		destroy_transaction( tr );
 	} else {
 		/* it's a request -> make a transaction for it */
-		tr = create_transaction( msg, 0/*ses*/, pr, TR_INCOMING_REQ);
+		str_buf.s   = buf;
+		str_buf.len = len;
+		tr = create_transaction( &str_buf, 0/*ses*/, pr);
 		if (!tr)
 			goto error;
 		/* is it a local one or not? */
@@ -408,126 +411,84 @@ error:
 
 
 
+
 /*  sends out a aaa message, within or not a session
  */
-int send_aaa_message( AAAMessage *msg, struct trans *tr, struct session *ses,
-														struct peer *dst_peer )
+int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer )
 {
-	unsigned char *buf;
-	unsigned int  len;
+	struct trans *tr;
 	int ret;
 	str s;
-
-	buf = 0;
 
 	/* find the destination peer */
 	if (!dst_peer) {
 		/* try find the destination-host avp */
 	}
 
-	/* if the message is a request... */
-	if ( is_req(msg) ) {
-		tr = 0;
-		/* build a transaction for it */
-		if ((tr=create_transaction( msg, ses, dst_peer, TR_OUTGOING_REQ))==0) {
-			LOG(L_ERR,"ERROR:send_aaa_message: cannot create a new"
-				" transaction!\n");
-			goto error;
-		}
-		/* link the transaction into the hash table ; use end-to-end-ID for
-		 * calculating the hash_code */
-		s.s = (char*)&(msg->endtoendID);
-		s.len = sizeof(msg->endtoendID);
-		tr->linker.hash_code = hash( &s );
-		tr->linker.type = TRANSACTION_CELL_TYPE;
-		add_cell_to_htable( hash_table, (struct h_link*)tr );
-		/* the hash label is used as hop-by-hop ID */
-		msg->hopbyhopID = tr->linker.label;
-	} else {
-		/* the message is a reply -> sen it to the peer where req came from */
-		dst_peer = tr->in_peer;
+	/* build a new transaction for this request */
+	if ((tr=create_transaction( buf, ses, dst_peer))==0) {
+		LOG(L_ERR,"ERROR:send_aaa_request: cannot create a new"
+			" transaction!\n");
+		goto error;
 	}
 
-	/* build the buffer */
-	buf = build_buf_from_msg( msg, &len);
-	if (!buf)
+	/* link the transaction into the hash table ; use end-to-end-ID for
+	 * calculating the hash_code */
+	s.s = buf->s + AAA_MSG_HDR_SIZE - END_TO_END_IDENTIFIER_SIZE ;
+	s.len = END_TO_END_IDENTIFIER_SIZE;
+	tr->linker.hash_code = hash( &s );
+	tr->linker.type = TRANSACTION_CELL_TYPE;
+	add_cell_to_htable( hash_table, (struct h_link*)tr );
+	/* the hash label is used as hop-by-hop ID */
+	((unsigned int*)buf->s)[3] = tr->linker.label;
+
+	DBG("send_aaa_request: sending req.....\n");
+	/* send the request */
+	if (!ses)
+		ret = tcp_send_unsafe( dst_peer, buf->s, buf->len);
+	else
+		ret = tcp_send( dst_peer, buf->s, buf->len);
+	/* what's the score?? */
+	if (ret==-1) {
+		LOG(L_ERR,"ERROR:send_aaa_request: tcp_send returned error!\n");
 		goto error;
+	}
+	DBG("success!\n");
+
+	/* start the timeout timer */
+	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
+		get_ticks()+TR_TIMEOUT_TIMEOUT );
+
+	return 1;
+error:
+	if (tr)
+		destroy_transaction(tr);
+	return -1;
+}
+
+
+
+int send_aaa_response( str *buf, struct trans *tr)
+{
+	int ret;
 
 	/* send the message */
-	if (msg->commandCode==257||msg->commandCode==280||msg->commandCode==282)
-		ret = tcp_send_unsafe( dst_peer, buf, len);
+	if (tr->ses)
+		ret = tcp_send_unsafe( tr->peer, buf->s, buf->len);
 	else
-		ret = tcp_send( dst_peer, buf, len);
+		ret = tcp_send( tr->peer, buf->s, buf->len);
+	/* what's the score?? */
 	if (ret==-1) {
-		LOG(L_ERR,"ERROR:send_aaa_message: tcp_send returned error!\n");
-		goto error;
+		LOG(L_ERR,"ERROR:send_aaa_response: tcp_send returned error!\n");
 	}
 
-	if ( is_req(msg) ) {
-		/* if request -> start the timeout timer */
-		add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
-			get_ticks()+TR_TIMEOUT_TIMEOUT );
-	} else {
-		/* if response, destroy everything */
-		/* destroy the transaction; this will destroy also the msg */
-		destroy_transaction( tr );
-	}
-
-	free(buf);
-	return 1;
-error:
-	if (buf)
-		free(buf);
-	if (tr)
-		destroy_transaction(tr);
-	return -1;
+	/* destroy everything */
+	destroy_transaction( tr );
+	return ret;
 }
 
 
-
-int send_aaa_buffer( str *buf, struct trans *tr, struct peer *dst_peer)
-{
-	unsigned char is_reply=0;
-
-	if (tr==0) {
-		/* it's a request -> build a transaction for it */
-		if ((tr=create_transaction( 0, 0, dst_peer, TR_OUTGOING_REQ))==0) {
-			LOG(L_ERR,"ERROR:send_aaa_buffer: cannot create a new"
-				" transaction!\n");
-			goto error;
-		}
-		tr->linker.label = generate_endtoendID();
-		((unsigned int*)buf->s)[3] = tr->linker.label;
-		((unsigned int*)buf->s)[4] = generate_endtoendID()&rand();
-	} else {
-		/* it's a reply */
-		is_reply = 1;
-		dst_peer = tr->in_peer;
-	}
-
-	if (tcp_send_unsafe( dst_peer, buf->s, buf->len)==-1) {
-		LOG(L_ERR,"ERROR:send_aaa_buffer: tcp_send_unsafew failed!\n");
-		goto error;
-	}
-
-	if ( !is_reply ) {
-		/* start the timeout timer */
-		add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
-			get_ticks()+TR_TIMEOUT_TIMEOUT );
-	} else {
-		/* if response, destroy everything */
-		destroy_transaction( tr );
-	}
-
-	return 1;
-error:
-	if (tr)
-		destroy_transaction(tr);
-	return -1;
-}
-
-
-
+#if 0
 AAAMessage* build_rpl_from_req(AAAMessage *req, unsigned int result_code,
 																str *err_msg)
 {
@@ -571,7 +532,7 @@ error:
 	AAAFreeMessage( &rpl );
 	return 0;
 }
-
+#endif
 
 
 
@@ -768,7 +729,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 			goto error;
 		}
 		/* also get the incoming peer for its request */
-		dst_peer = tr->in_peer;
+		dst_peer = tr->peer;
 	}
 
 	/* for the req/res that require session -> get their session for update */
@@ -808,8 +769,8 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	}
 
 	/* send the message */
-	if (send_aaa_message( msg, tr, ses , dst_peer)!=1)
-		goto error;
+	//if (send_aaa_message( msg, tr, ses , dst_peer)!=1)
+	//	goto error;
 
 	return AAA_ERR_SUCCESS;
 error:
@@ -892,7 +853,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 	}
 
 	/* command flags */
-	msg->flags = (unsigned char)*ptr;
+	msg->flags = *ptr;
 	ptr += FLAGS_SIZE;
 
 	/* command code */
@@ -904,11 +865,11 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 	ptr += VENDOR_ID_SIZE;
 
 	/* Hop-by-Hop-Id */
-	msg->hopbyhopID = get_4bytes( ptr );
+	msg->hopbyhopID = *((unsigned int*)ptr);//get_4bytes( ptr );
 	ptr += HOP_BY_HOP_IDENTIFIER_SIZE;
 
 	/* End-to-End-Id */
-	msg->endtoendID = get_4bytes( ptr );
+	msg->endtoendID = *((unsigned int*)ptr);//get_4bytes( ptr );
 	ptr += END_TO_END_IDENTIFIER_SIZE;
 
 	/* start decoding the AVPS */

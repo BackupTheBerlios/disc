@@ -1,5 +1,5 @@
 /*
- * $Id: message.h,v 1.3 2003/03/10 21:08:06 bogdan Exp $
+ * $Id: message.h,v 1.4 2003/03/10 23:04:34 bogdan Exp $
  *
  * 2003-02-07 created by bogdan
  *
@@ -34,10 +34,9 @@ void destroy_msg_manager();
 
 void print_aaa_message( AAAMessage *msg);
 
-int send_aaa_message( AAAMessage* , struct trans* , struct session* ,
-														struct peer*);
+int send_aaa_request( str *buf, struct session *ses, struct peer *dst_peer );
 
-int send_aaa_buffer( str *buf, struct trans *tr, struct peer *dst_peer);
+int send_aaa_response( str *buf, struct trans *tr);
 
 AAAMessage* build_rpl_from_req(AAAMessage *req, unsigned int result_code,
 														str *err_msg);
