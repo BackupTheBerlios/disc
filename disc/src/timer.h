@@ -1,5 +1,5 @@
 /*
- * $Id: timer.h,v 1.1 2003/03/14 16:25:10 bogdan Exp $
+ * $Id: timer.h,v 1.2 2003/03/14 16:54:07 bogdan Exp $
  *
  */
 
@@ -8,7 +8,7 @@
 #ifndef _AAA_DIAMETER_TIMER_H
 #define _AAA_DIAMETER_TIMER_H
 
-#include "utils/aaa_lock.h"
+#include "aaa_lock.h"
 #include "locking.h"
 
 

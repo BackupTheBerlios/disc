@@ -1,5 +1,5 @@
 /*
- * $Id: config.h,v 1.4 2003/03/13 19:16:07 bogdan Exp $
+ * $Id: config.h,v 1.1 2003/03/14 16:54:07 bogdan Exp $
  */
 /* History:
  * --------

@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.1 2003/03/14 16:25:10 bogdan Exp $
+ * $Id: timer.c,v 1.2 2003/03/14 16:54:07 bogdan Exp $
  *
  * 
  *  2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "dprint.h"
-#include "utils/aaa_lock.h"
+#include "aaa_lock.h"
 #include "timer.h"
 
 #include "mem/shm_mem.h"
