@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.35 2003/04/17 15:55:25 bogdan Exp $
+ * $Id: peer.c,v 1.36 2003/04/17 16:10:53 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -566,6 +566,7 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 	 * peer will be automaticly closed by safe_write and this transaction will
 	 * give timeout */
 	safe_write( p, foo->s, foo->len);
+	lock_release( p->mutex);
 	return 1;
 }
 
