@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.13 2003/03/11 21:14:24 bogdan Exp $
+ * $Id: peer.c,v 1.14 2003/03/11 21:18:15 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -31,8 +31,6 @@
 #define RECONN_TIMEOUT   30
 #define WAIT_CER_TIMEOUT 5
 
-#define to_32x_len( _len_ ) \
-	( (_len_)+(((_len_)&3)?4-((_len_)&3):0) )
 
 
 unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ] = {
@@ -490,7 +488,7 @@ error:
 
 int process_cea( str *buf )
 {
-	static unsigned int pattern = 0x0000001f;
+	static unsigned int pattern = 0x0000003f;
 	unsigned int mask = 0;
 	unsigned int n;
 	char *ptr;
@@ -500,7 +498,6 @@ int process_cea( str *buf )
 		case 268: /* result_code */
 			set_AVP_mask( mask, 0);
 			n = ntohl( ((unsigned int *)ptr)[2] );
-			DBG(">>>> code= %d\n",n);
 			if (n!=AAA_SUCCESS) {
 				LOG(L_ERR,"ERROR:process_cea: CEA has a non-success "
 					"code : %d\n",n);
@@ -509,34 +506,24 @@ int process_cea( str *buf )
 			break;
 		case 264: /* orig host */
 			set_AVP_mask( mask, 1);
-			DBG(" got orig host\n");
 			break;
 		case 296: /* orig realm */
 			set_AVP_mask( mask, 2);
-			DBG(" got orig realm\n");
 			break;
 		case 257: /* host ip address */
 			set_AVP_mask( mask, 3);
-			DBG(" got host ip address\n");
 			break;
 		case 266: /* vendor ID */
 			set_AVP_mask( mask, 4);
-			DBG(" got vendor ID\n");
 			break;
 		case 269: /*product name */
 			set_AVP_mask( mask, 5);
-			DBG(" got product name\n");
 			break;
 		case 259: /*acc app id*/
-			DBG(" got acc app id\n");
 			break;
 		case 258: /*auth app id*/
-			DBG(" got auth app id\n");
 			break;
-		default:
-			DBG(" got uninteresting\n");
 	}
-	DBG(">>>>done\n");
 
 	if (pattern!=mask) {
 		LOG(L_ERR,"ERROR:process_cea: cea has missing avps(%x<>%x)!!\n",

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.8 2003/03/11 17:59:52 bogdan Exp $
+ * $Id: peer.h,v 1.9 2003/03/11 21:14:24 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -146,7 +146,7 @@ void init_all_peers();
 
 int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *info);
 
-void dispatch_message( struct peer *p, unsigned char *buf, unsigned int len);
+void dispatch_message( struct peer *p, str *buf);
 
 /* increments the ref_counter of the peer */
 void static inline ref_peer(struct peer *p)
