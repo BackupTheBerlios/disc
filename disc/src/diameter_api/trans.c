@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.4 2003/03/10 23:04:34 bogdan Exp $
+ * $Id: trans.c,v 1.5 2003/03/11 18:00:29 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -57,7 +57,7 @@ void destroy_trans_manager()
 
 
 
-struct trans* create_transaction(str *buf,struct session *ses,struct peer *p)
+struct trans* create_transaction(str *buf, struct session *ses, struct peer *p)
 {
 	struct trans *t;
 

@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.7 2003/03/10 19:17:32 bogdan Exp $
+ * $Id: peer.h,v 1.8 2003/03/11 17:59:52 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -24,6 +24,24 @@ struct peer;
 
 #define PEER_TO_DESTROY    1<<0
 #define PEER_CONN_IN_PROG  1<<1
+
+/* List with FLAGS coresponding to all known application identifiers */
+typedef enum {
+	AAA_APP_RELAY                = 0,
+	AAA_APP_DIAMETER_COMMON_MSG  = 1,
+	AAA_APP_NASREQ               = 2,
+	AAA_APP_MOBILE_IP            = 3,
+	AAA_APP_DIAMETER_BASE_ACC    = 4,
+	AAA_APP_MAX_ID
+}AAA_APP_IDS;
+
+/* List with all known application identifiers */
+extern unsigned int AAA_APP_ID[ AAA_APP_MAX_ID ];
+
+
+
+
+
 
 /* peer table */
 extern struct p_table *peer_table;
@@ -93,12 +111,14 @@ enum AAA_PEER_EVENT {
 	TCP_CLOSE,          /*  4 */
 	CER_RECEIVED,       /*  5 */
 	CEA_RECEIVED,       /*  6 */
-	DPR_RECEIVED,       /*  7 */
-	DPA_RECEIVED,       /*  8 */
-	PEER_HANGUP,        /*  9 */
-	PEER_TR_TIMEOUT,    /* 10 */
-	PEER_CER_TIMEOUT,   /* 11 */
-	PEER_RECONN_TIMEOUT /* 12 */
+	DWR_RECEIVED,       /*  7 */
+	DWA_RECEIVED,       /*  8 */
+	DPR_RECEIVED,       /*  9 */
+	DPA_RECEIVED,       /* 10 */
+	PEER_HANGUP,        /* 11 */
+	PEER_TR_TIMEOUT,    /* 12 */
+	PEER_CER_TIMEOUT,   /* 13 */
+	PEER_RECONN_TIMEOUT /* 14 */
 };
 
 
@@ -107,6 +127,7 @@ enum AAA_PEER_STATE {
 	PEER_CONN,
 	PEER_WAIT_CER,
 	PEER_WAIT_CEA,
+	PEER_WAIT_DWA,
 	PEER_WAIT_DPA
 };
 
@@ -124,6 +145,8 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 void init_all_peers();
 
 int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *info);
+
+void dispatch_message( struct peer *p, unsigned char *buf, unsigned int len);
 
 /* increments the ref_counter of the peer */
 void static inline ref_peer(struct peer *p)
