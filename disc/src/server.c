@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.9 2003/04/18 17:38:19 bogdan Exp $
+ * $Id: server.c,v 1.10 2003/04/18 20:40:45 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -113,7 +113,7 @@ static inline void process_incoming_request(AAAMessage *msg,struct peer *in_p )
 		}
 		/* check the dest-host */
 		if (msg->dest_host->data.len==aaa_identity.len &&
-		!strncmp(msg->dest_host->data.s, aaa_identity.s, aaa_identity.len) ) {
+		!strncasecmp(msg->dest_host->data.s,aaa_identity.s,aaa_identity.len)) {
 			/* I'm the destination host -> do I support the application ? */
 			if ( (mod=find_module(msg->applicationId))!=0 ) {
 				/* process the request localy */
@@ -154,7 +154,7 @@ static inline void process_incoming_request(AAAMessage *msg,struct peer *in_p )
 			msg->dest_realm->data.len,msg->dest_realm->data.s);
 	/* do routing based on destination-realm AVP */
 	if (msg->dest_realm->data.len==aaa_realm.len &&
-	!strncmp(msg->dest_realm->data.s, aaa_realm.s, aaa_realm.len) ) {
+	!strncasecmp(msg->dest_realm->data.s, aaa_realm.s, aaa_realm.len) ) {
 		/* I'm the destination realm */
 		/* do I support the requested app_id? */
 		if ( (mod=find_module(msg->applicationId))!=0) {
