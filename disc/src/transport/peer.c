@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.38 2003/04/18 16:17:59 bogdan Exp $
+ * $Id: peer.c,v 1.39 2003/04/18 17:38:19 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -30,9 +30,8 @@
 
 
 #define PEER_TIMER_STEP  1
-#define DELETE_TIMEOUT   2
-#define RECONN_TIMEOUT   600
-#define WAIT_CER_TIMEOUT 5
+#define RECONN_TIMEOUT   60*2
+#define WAIT_CER_TIMEOUT 10
 #define SEND_DWR_TIMEOUT 35
 
 #define MAX_APPID_PER_PEER 64
@@ -502,11 +501,12 @@ static inline int safe_write(struct peer *p, char *buf, unsigned int len)
 {
 	int n;
 
+	/*
 	for(n=0;n<len;n++) {
-		DBG(" %x",buf[n]);
-		if ((n&7)==0)
+		DBG(" %02x",(unsigned char)buf[n]);
+		if ((n&15)==0)
 			DBG("\n");
-	}
+	}*/
 
 	while( (n=write(p->sock,buf,len))==-1 ) {
 		if (errno==EINTR)
@@ -565,9 +565,9 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 	foo = tr->req;
 	tr->out_peer = p;
 	tr->req = 0;
-	/* transaction will be ref from to places - from timer list and
-	 * from hash tabel*/
-	atomic_set( &tr->ref_cnt, 2);
+	/* transaction will be on more ref from timer list; the ref from this
+	 * thread will be inherided by hash tabel */
+	atomic_inc( &tr->ref_cnt );
 	/* start the timeout timer */
 	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
 		get_ticks()+TR_TIMEOUT_TIMEOUT );
@@ -612,7 +612,7 @@ inline int internal_send_request( str *buf, struct peer *p)
 	if ((tr=create_transaction( 0, 0, peer_trans_timeout_f))==0) {
 		LOG(L_ERR,"ERROR:internal_send_request: cannot create a new"
 			" transaction!\n");
-		goto error;
+		return -1;
 	}
 	tr->info = p->conn_cnt;
 	tr->out_peer = p;
@@ -629,19 +629,17 @@ inline int internal_send_request( str *buf, struct peer *p)
 	/* the hash label is used as hop-by-hop ID */
 	((unsigned int*)buf->s)[3] = tr->linker.label;
 
-	/* send the request */
-	if ( safe_write( p, buf->s, buf->len)==-1 )
-		goto error;
-
+	/* transaction will be on more ref from timer list; the ref from this
+	 * thread will be inherided by hash tabel */
+	atomic_inc( &tr->ref_cnt );
 	/* start the timeout timer */
 	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
 		get_ticks()+TR_TIMEOUT_TIMEOUT );
 
+	/* send the request */
+	safe_write( p, buf->s, buf->len);
+
 	return 1;
-error:
-	if (tr)
-		destroy_transaction(tr);
-	return -1;
 }
 
 
@@ -1150,8 +1148,8 @@ void dispatch_message( struct peer *p, str *buf)
 inline void reset_peer( struct peer *p)
 {
 	/* if it's in a timer list -> remove it */
-	if (p->tl.timer_list)
-		rmv_from_timer_list( &(p->tl) );
+	rmv_from_timer_list( &(p->tl), wait_cer_timer );
+	rmv_from_timer_list( &(p->tl), reconn_timer );
 
 	/* reset the socket */
 	p->sock = -1;
@@ -1217,9 +1215,8 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: accepting connection\n");
 					/* if peer in reconn timer list-> take it out*/
-					if (p->tl.timer_list==reconn_timer)
-						rmv_from_timer_list( &(p->tl) );
-					else if (p->flags&PEER_CONN_IN_PROG) {
+					rmv_from_timer_list( &(p->tl), reconn_timer );
+					if (p->flags&PEER_CONN_IN_PROG) {
 						tcp_close( p );
 					}
 					/* update the peer */
@@ -1393,8 +1390,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			switch (p->state) {
 				case PEER_WAIT_CER:
 					/* if peer in wait_cer timer list-> take it out */
-					if (p->tl.timer_list==wait_cer_timer)
-						rmv_from_timer_list( &(p->tl) );
+					rmv_from_timer_list( &(p->tl), wait_cer_timer );
 				case PEER_WAIT_CEA:
 					DBG("DEBUG:peer_state_machine: CER received -> "
 						"sending CEA\n");
@@ -1569,24 +1565,6 @@ void peer_timer_handler(unsigned int ticks, void* param)
 	struct list_head  *lh;
 	struct list_head  *foo;
 	struct peer *p;
-
-#if 0
-	/* DELETE TIMER LIST */
-	/* get the expired peers */
-	tl = get_expired_from_timer_list( del_timer, ticks);
-	/* process the peers */
-	while (tl) {
-		p  = tl->payload;
-		tl = tl->next_tl;
-		/* is the peer ref-ed anymore? */
-		if ( atomic_read(&p->ref_cnt)==0 ) {
-			/* delete the peer ???? */
-		} else {
-			/* put it back into the timer list */
-			add_to_timer_list( &p->tl, del_timer, ticks+DELETE_TIMEOUT );
-		}
-	}
-#endif
 
 	/* RECONN TIME LIST */
 	tl = get_expired_from_timer_list( reconn_timer, ticks);

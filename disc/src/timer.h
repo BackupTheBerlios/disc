@@ -1,5 +1,5 @@
 /*
- * $Id: timer.h,v 1.4 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: timer.h,v 1.5 2003/04/18 17:38:19 bogdan Exp $
  *
  */
 
@@ -77,7 +77,7 @@ int add_to_timer_list( struct timer_link*, struct timer* ,unsigned int);
 
 int insert_into_timer_list( struct timer_link*, struct timer* ,unsigned int);
 
-int rmv_from_timer_list( struct timer_link* );
+int rmv_from_timer_list( struct timer_link*, struct timer* t_list  );
 
 struct timer_link* get_expired_from_timer_list( struct timer*, unsigned int );
 

@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.20 2003/04/15 15:09:04 bogdan Exp $
+ * $Id: session.c,v 1.21 2003/04/18 17:38:19 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -314,7 +314,7 @@ void destroy_session( struct session *ses)
 		if ( ses->sID.s)
 			shm_free( ses->sID.s );
 		if ( ses->tl.timer_list )
-			rmv_from_timer_list( &(ses->tl) );
+			rmv_from_timer_list( &(ses->tl), ses_mgr.ses_timer );
 		shm_free(ses);
 	}
 }
@@ -621,7 +621,7 @@ AAAReturnCode AAASessionTimerStop( AAASessionId *sessionId )
 	ses = sId2session( sessionId );
 
 	/* remove the sessoin from timer list */
-	rmv_from_timer_list( &(ses->tl) );
+	rmv_from_timer_list( &(ses->tl), ses_mgr.ses_timer );
 
 	return AAA_ERR_SUCCESS;
 }

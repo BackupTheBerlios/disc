@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.8 2003/04/15 15:09:04 bogdan Exp $
+ * $Id: server.c,v 1.9 2003/04/18 17:38:19 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -245,8 +245,6 @@ void *server_worker(void *attr)
 				AAAFreeMessage( &msg  );
 				continue;
 			}
-			/* stop the transaction timeout */
-			rmv_from_timer_list( &(tr->timeout) );
 			/* process the reply */
 			if (tr->in_peer) {
 					DBG(" ******** doing downstream forward!!! \n");

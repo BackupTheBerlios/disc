@@ -1,5 +1,5 @@
 /*
- * $Id: client.c,v 1.2 2003/04/12 20:53:50 bogdan Exp $
+ * $Id: client.c,v 1.3 2003/04/18 17:38:19 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -75,7 +75,7 @@ void *client_worker(void *attr)
 			}
 			/* remember the session! - I will need it later */
 			ses = tr->ses;
-			/* destroy the transaction (also the timeout timer will be stop) */
+			/* destroy the transaction */
 			destroy_transaction( tr );
 
 			/* parse the message */

@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.14 2003/04/15 15:09:04 bogdan Exp $
+ * $Id: trans.h,v 1.15 2003/04/18 17:38:19 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -12,6 +12,7 @@
 #include "../dprint.h"
 #include "../hash_table.h"
 #include "../timer.h"
+#include "../counter.h"
 
 struct trans;
 
@@ -21,6 +22,8 @@ struct trans;
 
 struct trans {
 	struct h_link  linker;
+	/* ref counter */
+	atomic_cnt ref_cnt;
 	/* session the request belong to - if any */
 	struct session *ses;
 	/* the incoming hop-by-hop-Id - used only when forwarding*/
@@ -46,11 +49,8 @@ struct trans {
 #define TRANS_CLIENT  1<<1
 
 
-#define TR_TIMEOUT_TIMEOUT   5
+#define TR_TIMEOUT_TIMEOUT   10
 extern struct timer *tr_timeout_timer;
-
-
-extern struct timer *tr_timer;
 
 
 int init_trans_manager();
@@ -73,13 +73,13 @@ void destroy_transaction( struct trans* );
 	} while(0)
 
 
-
 /* search a transaction into the hash table based on endtoendID and hopbyhopID
  */
 inline static struct trans* transaction_lookup(struct peer *p,
 							unsigned int endtoendID, unsigned int hopbyhopID)
 {
 	struct h_link *linker;
+	struct trans  *tr;
 	str           s;
 	unsigned int  hash_code;
 
@@ -87,8 +87,12 @@ inline static struct trans* transaction_lookup(struct peer *p,
 	s.len = sizeof(endtoendID);
 	hash_code = hash( &s , p->trans_table->hash_size );
 	linker = cell_lookup_and_remove( p->trans_table, hash_code, hopbyhopID);
-	if (linker)
-		return get_hlink_payload( linker, struct trans, linker );
+	if (linker) {
+		tr = get_hlink_payload( linker, struct trans, linker );
+		if (rmv_from_timer_list( &(tr->timeout), tr_timeout_timer )!=-1)
+			atomic_dec( &(tr->ref_cnt) );
+		return tr;
+	}
 	return 0;
 }
 

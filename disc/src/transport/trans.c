@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.10 2003/04/15 17:43:57 bogdan Exp $
+ * $Id: trans.c,v 1.11 2003/04/18 17:38:19 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -73,6 +73,9 @@ struct trans* create_transaction( str *buf, struct peer *in_peer,
 	/* link the incoming peer */
 	t->in_peer = in_peer;
 
+	/* only one ref from the thread that build the transaction */
+	atomic_set( &t->ref_cnt, 1);
+
 	/* timeout handler */
 	t->timeout_f = timeout_f;
 
@@ -91,12 +94,14 @@ void destroy_transaction( struct trans *tr )
 		return;
 	}
 
-	/* timer */
-	if (tr->timeout.timer_list)
-		rmv_from_timer_list( &(tr->timeout) );
-
-	/* free the structure */
-	shm_free(tr);
+	if ( atomic_dec_and_test( &tr->ref_cnt ) ) {
+		/* transaction is no longer referenceted by anyone -> it's save to
+		 * destroy it */
+		shm_free(tr);
+	} else {
+		LOG(L_WARN,"WARNING:destroy_transaction: transaction still "
+			"referenceted - destroy aborted!\n");
+	}
 }
 
 
@@ -121,11 +126,18 @@ void timeout_handler(unsigned int ticks, void* param)
 				"between trasaction timeout and incoming reply -> timeout "
 				"drop\n");
 			continue;
+		} else {
+			/* I successfuly removed the transaction from both timer list and
+			 * hash table -> I will inherit the reference from timer list and
+			 * loose the one from hash_table */
+			atomic_dec( &tr->ref_cnt );
 		}
 
 		/* process the transaction */
 		if (tr->timeout_f)
 			tr->timeout_f( tr );
+
+		/* destroy the transaction */
 		destroy_transaction( tr );
 	}
 

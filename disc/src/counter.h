@@ -1,5 +1,5 @@
 /*
- * $Id: counter.h,v 1.1 2003/03/14 15:57:16 bogdan Exp $
+ * $Id: counter.h,v 1.2 2003/04/18 17:38:19 bogdan Exp $
  *
  * 2003-02-19 added by bogdan
  *
@@ -26,6 +26,16 @@ typedef struct { volatile int value; } atomic_cnt;
  * useful range of an atomic_t is only 24 bits.
  */ 
 #define atomic_read(c)		((c)->value)
+
+/**
+ * atomic_set - set atomic variable
+ * @v: pointer of type atomic_t
+ * @i: required value
+ *
+ * Atomically sets the value of @v to @i.  Note that the guaranteed
+ * useful range of an atomic_t is only 24 bits.
+ */
+#define atomic_set(c,i)     (((c)->value) = (i))
 
 /**
  * atomic_inc - increment atomic variable

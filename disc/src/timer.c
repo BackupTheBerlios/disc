@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.7 2003/04/15 18:17:14 bogdan Exp $
+ * $Id: timer.c,v 1.8 2003/04/18 17:38:19 bogdan Exp $
  *
  * 
  *  2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -215,13 +215,11 @@ int insert_into_timer_list( struct timer_link* t_link, struct timer* t_list,
 
 
 
-int rmv_from_timer_list( struct timer_link* tl )
+int rmv_from_timer_list( struct timer_link* tl, struct timer* t_list )
 {
-	gen_lock_t *foo;
-
-	if (is_in_timer_list( tl )) {
-		/* lock the list */
-		lock_get(tl->timer_list->mutex);
+	/* lock the list */
+	lock_get( t_list->mutex );
+	if ( tl->timer_list==t_list ) {
 		/* remove it */
 		tl->prev_tl->next_tl = tl->next_tl;
 		tl->next_tl->prev_tl = tl->prev_tl;
@@ -229,11 +227,11 @@ int rmv_from_timer_list( struct timer_link* tl )
 		tl->prev_tl = 0;
 		/* unlock the list */
 		DBG("DEBUG: rmv_from_timer_list[%p]: %p\n",tl->timer_list,tl);
-		foo = tl->timer_list->mutex;
 		tl->timer_list = 0;
-		lock_release( foo );
+		lock_release( t_list->mutex );
 		return 1;
 	}
+	lock_release( t_list->mutex );
 	return -1;
 }
 
