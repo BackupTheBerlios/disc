@@ -1,5 +1,5 @@
 /*
- * $Id: config.h,v 1.3 2003/03/28 19:06:54 andrei Exp $
+ * $Id: config.h,v 1.4 2003/04/08 13:29:28 bogdan Exp $
  */
 /* History:
  * --------
@@ -12,7 +12,17 @@
 #define MODULE_SEARCH_PATH "client/modules"
 
 #define SHM_MEM_SIZE 1 /* in MB */
+
+/* default listening port for tcp */
 #define DEFAULT_LISTENING_PORT   1812
+
+/* number of thash entries per table for the transaction hash_table */
+#define DEFAULT_TRANS_HASH_SIZE   256
+
+/* default number of receiving thread for tcp */
+#define DEFAULT_TCP_RECEIVE_THREADS 4
+
+#define VENDOR_ID   0x0000caca
 
 #endif
 

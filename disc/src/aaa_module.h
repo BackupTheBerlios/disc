@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.h,v 1.8 2003/04/08 12:08:19 bogdan Exp $
+ * $Id: aaa_module.h,v 1.9 2003/04/08 13:29:28 bogdan Exp $
  */
 /* History:
  * --------
@@ -34,6 +34,7 @@ struct aaa_module{
 	char* path;
 	void* handle;
 	struct module_exports* exports;
+	int is_init;
 	struct aaa_module* next;
 };
 

@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.8 2003/04/08 12:08:19 bogdan Exp $
+ * $Id: aaa_module.c,v 1.9 2003/04/08 13:29:28 bogdan Exp $
  */
 /*
  * History:
@@ -113,6 +113,7 @@ int load_module(char* name)
 	mod->path=name;
 	mod->handle=handle;
 	mod->exports=e;
+	mod->is_init=0;
 	mod->next=0;
 	for (m=&modules; *m; m=&(*m)->next){
 		if ((*m)->handle==mod->handle){
@@ -153,12 +154,15 @@ int init_modules()
 	struct aaa_module* a;
 	
 	for (a=modules; a; a=a->next){
-		if((a->exports)&&(a->exports->mod_init))
+		if((a->exports)&&(a->exports->mod_init)) {
 			if(a->exports->mod_init()!=0){
 				LOG(L_CRIT, "ERROR: init_modules: module %s failed to "
 						"initialize\n", a->exports->name);
 				return -1;
+			} else {
+				a->is_init = 1;
 			}
+		}
 	}
 	return 0;
 }
@@ -168,10 +172,14 @@ int init_modules()
 void destroy_modules()
 {
 	struct aaa_module* a;
+	struct aaa_module* b;
 	
-	for (a=modules; a; a=a->next) {
-		if ((a->exports)&&(a->exports->mod_destroy))
+	for (a=modules; a; ) {
+		b = a->next;
+		if ((a->exports)&&(a->exports->mod_destroy)&&(a->is_init))
 			a->exports->mod_destroy();
+		shm_free( a );
+		a = b;
 	}
 	modules=0;
 }
