@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.25 2003/04/22 19:58:41 andrei Exp $
+ * $Id: session.c,v 1.26 2003/06/03 10:21:45 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -425,8 +425,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 								"session -> destroy session\n");
 							lock_release( ses->mutex );
 							destroy_session( ses );
-							return 1;
-							break;
+							goto abort;
 						default:
 							lock_release( ses->mutex );
 							error_code = 1;
@@ -447,8 +446,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 								"session -> destroy session\n");
 							lock_release( ses->mutex );
 							destroy_session( ses );
-							return 1;
-							break;
+							goto abort;
 						default:
 							lock_release( ses->mutex );
 							error_code = 1;
@@ -470,8 +468,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 								"session -> destroy session\n");
 							lock_release( ses->mutex );
 							destroy_session( ses );
-							return 1;
-							break;
+							goto abort;
 						default:
 							lock_release( ses->mutex );
 							error_code = 1;
@@ -576,6 +573,8 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 		ses,ses->state);
 
 	return 1;
+abort:
+	return 0;
 error:
 	LOG(L_ERR,"ERROR:session_state_machine: %s : session=%p, peer_identity=%d,"
 		" state=%d, event=%d\n",err_msg[error_code],

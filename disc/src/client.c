@@ -1,5 +1,5 @@
 /*
- * $Id: client.c,v 1.5 2003/04/22 19:58:41 andrei Exp $
+ * $Id: client.c,v 1.6 2003/06/03 10:23:33 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  *
@@ -82,7 +82,7 @@ void *client_worker(void *attr)
 				" - UNIMPLEMENTED!!\n");
 			shm_free( buf.s );
 		} else {
-			/* response -> performe transaction lookup and remove it from 
+			/* response -> performe transaction lookup and remove it from
 			 * hash table */
 			tr = transaction_lookup( peer,
 				((unsigned int*)buf.s)[4], ((unsigned int*)buf.s)[3]);
@@ -103,8 +103,9 @@ void *client_worker(void *attr)
 				LOG(L_ERR,"ERROR:client_worker: error parsing message!\n");
 				shm_free( buf.s );
 				/* I notify the module by sending a ANSWER_TIMEOUT_EVENT */
-				((struct module_exports*)ses->app_ref)->
-					mod_tout( ANSWER_TIMEOUT_EVENT, &ses->sID, ses->context);
+				if (session_state_machine(ses,AAA_SESSION_REQ_TIMEOUT,0)==1)
+					((struct module_exports*)ses->app_ref)->
+						mod_tout(ANSWER_TIMEOUT_EVENT,&ses->sID,ses->context);
 				continue;
 			}
 			msg->sId = &(ses->sID);
@@ -117,8 +118,8 @@ void *client_worker(void *attr)
 					" - UNIMPLEMENTED!!\n");
 			} else {
 				/* it's an auth answer -> change the state */
-				if (session_state_machine( ses, AAA_AA_RECEIVED, msg)!=-1) {
-					/* message was accepted by the session state machine -> 
+				if (session_state_machine( ses, AAA_AA_RECEIVED, msg)==1) {
+					/* message was accepted by the session state machine ->
 					 * call the handler */
 					((struct module_exports*)ses->app_ref)->
 						mod_msg( msg, ses->context);

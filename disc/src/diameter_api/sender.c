@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.9 2003/04/22 19:58:41 andrei Exp $
+ * $Id: sender.c,v 1.10 2003/06/03 10:21:45 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -54,10 +54,11 @@ extern int (*send_local_request)(AAAMessage*, struct trans*);
 
 
 static void ses_trans_timeout_f( struct trans *tr ) {
-	session_state_machine( tr->ses, AAA_SESSION_REQ_TIMEOUT, 0);
-	/* run the timeout handler */
-	((struct module_exports*)tr->ses->app_ref)->mod_tout(
-		ANSWER_TIMEOUT_EVENT, &(tr->ses->sID), tr->ses->context);
+	if (session_state_machine( tr->ses, AAA_SESSION_REQ_TIMEOUT, 0)==1) {
+		/* run the timeout handler */
+		((struct module_exports*)tr->ses->app_ref)->mod_tout(
+			ANSWER_TIMEOUT_EVENT, &(tr->ses->sID), tr->ses->context);
+	}
 }
 
 
