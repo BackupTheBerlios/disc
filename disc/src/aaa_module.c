@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.2 2003/03/28 19:21:27 andrei Exp $
+ * $Id: aaa_module.c,v 1.3 2003/03/28 20:00:37 andrei Exp $
  */
 /*
  * History:
@@ -66,7 +66,7 @@ int load_module(char* name)
 	/* get module struct */
 	e=(struct module_exports*)lt_dlsym(handle, "exports");
 	error_msg=(char*)lt_dlerror();
-	if (error_msg!=0){
+	if (e==0){
 		LOG(L_CRIT, "ERROR: load_module: symbol not found <%s>: %s\n",
 				name, error_msg);
 		goto error;

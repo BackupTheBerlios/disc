@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.h,v 1.1 2003/03/28 19:06:54 andrei Exp $
+ * $Id: aaa_module.h,v 1.2 2003/03/28 20:00:37 andrei Exp $
  */
 /* History:
  * --------
@@ -32,5 +32,11 @@ struct aaa_module{
 
 
 extern struct aaa_module* modules; /* global module list */
+
+
+int init_module_loading();
+int load_module(char*);
+int init_modules();
+void destroy_modules();
 
 #endif /*aaa_module_h*/

@@ -15,6 +15,7 @@
 #include "../script.h"
 #include "../transport/peer.h"
 #include "../transport/tcp_shell.h"
+#include "../aaa_module.h"
 
 
 
@@ -112,7 +113,7 @@ int init_client()
 	/* init mallocs */
 	shm_mempool=malloc(shm_mem_size);
 	if (shm_mempool==0){
-		LOG(L_CRIT,"ERROR:AAAOpen: intial malloc failed\n");
+		LOG(L_CRIT,"ERROR:AAAOpen: initial malloc failed\n");
 		goto error;
 	};
 	if (shm_mem_init_mallocs(shm_mempool, shm_mem_size)<0){
@@ -166,6 +167,13 @@ int init_client()
 	/* start the timer */
 	init_timer();
 
+	/* init modules loading */
+	init_module_loading();
+	/* load a module */
+	load_module("client/modules/print/print");
+	init_modules();
+	
+
 	return 1;
 error:
 	printf("ERROR: cannot init the client\n");
@@ -177,6 +185,8 @@ error:
 
 void close_client()
 {
+	/* destroy the modules */
+	destroy_modules();
 	/* stop the timer */
 	destroy_timer();
 

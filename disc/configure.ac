@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.3 2003/03/27 15:17:54 andrei Exp $
+dnl $Id: configure.ac,v 1.4 2003/03/28 20:00:37 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl
@@ -11,7 +11,7 @@ dnl 2003-03-27  added libltdl support (andrei)
 
 
 AC_PREREQ(2.54)
-AC_REVISION($Id: configure.ac,v 1.3 2003/03/27 15:17:54 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.4 2003/03/28 20:00:37 andrei Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 AC_CONFIG_SUBDIRS(libltdl)
@@ -235,4 +235,7 @@ AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
 
 AC_OUTPUT(Makefile src/Makefile src/client/Makefile src/diameter_api/Makefile
-			src/mem/Makefile src/transport/Makefile)
+			src/mem/Makefile src/transport/Makefile
+			src/client/modules/Makefile
+			src/client/modules/print/Makefile
+			)
