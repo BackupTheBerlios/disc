@@ -1,8 +1,43 @@
-$Id: README,v 1.1 2003/04/21 21:09:26 andrei Exp $
+$Id: README,v 1.2 2003/04/22 21:32:27 cco Exp $
 
 
 DISC (DIameter Server Client) is an AAA diameter implementation. DISC can be configured to act as a diameter server or a diameter client.
 DISC enables a flexible plug-in model for new applications. Third parties can easily link their plug-ins with the server or client code and provide thereby adavanced and customized services.
 
 For more information see INSTALL and the example configurations in src/*.cfg.
+
+Configuration files
+--------------------
+
+default location for this files is {INSTALL_PATH}/etc/disc/. (default
+{INSTALL_PATH} is /usr/local/) default filename 
+(i.e. the one loaded when no -f option is specified) is "disc.cfg". two 
+examples are provided: aaa_server.cfg and aaa_client.cfg. 
+the configuration files have the format:
+
+	config_option = value
+
+disc will run as a server when: 
+
+	aaa_status = AAA_SERVER 
+
+and as a client when:
+
+	aaa_status = AAA_CLIENT
+
+for both of them you will have to define: its own realm (aaa_realm), 
+its fqdn (aaa_fqdn) its peers. peers are defined like:
+
+peer = aaa_identity alias
+(example: peer  aaa://lugduf.mobis.fokus.gmd.de:1812;transport=tcp  lugduf)
+
+for the server you have to define the routing table. this is done by saying
+which is the next hop for a certain domain. a route in the routing table
+for the realm mobis.ip6 is:
+
+route mobis.ip6   lugduf 
+
+(assuming that lugduf was declared as an alias before. or is the actual 
+fqdn of the host)
+note that a next hop MUST be defined as a peer.
 
