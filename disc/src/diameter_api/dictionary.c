@@ -1,6 +1,6 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- * $Id: dictionary.c,v 1.18 2003/10/22 18:57:12 cco Exp $
+ * $Id: dictionary.c,v 1.19 2003/11/17 15:00:05 cco Exp $
  *
  * Copyright (C) 2002-2003 Fhg Fokus
  *
@@ -191,10 +191,14 @@ AAAFindDictionaryEntry(
 		return AAA_ERR_SUCCESS;
 }
 
-AAAReturnCode AAAFindValue(  char* vendorName,
-										char* avpName,
-										char** valueName,
-										AAAValue* value){
+AAAReturnCode 
+AAAFindValue(  
+		char* vendorName,
+		char* avpName,
+		char** valueName,
+		AAAValue* value
+		)
+{
 	char* charEntry[4];
 	char vendorVal[]="VALUE";
 	charEntry[0]=vendorVal;
@@ -215,7 +219,12 @@ AAAReturnCode AAAFindValue(  char* vendorName,
 	return AAA_ERR_SUCCESS;
 }
 
-int findEntry( char** extEntry, int sizeOfEntry){
+int 
+findEntry( 
+		char** extEntry, 
+		int sizeOfEntry
+		)
+{
 	int match=0;
 	char *entry[sizeOfEntry];
 	int i;
@@ -264,7 +273,9 @@ int findEntry( char** extEntry, int sizeOfEntry){
 	}
 	return match;
 }
-int findWord( char* word){
+
+int 
+findWord( char* word){
 	char num=0;
 	int match = 0;
 	int i;
