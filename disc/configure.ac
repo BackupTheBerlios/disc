@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.17 2003/04/22 13:01:33 andrei Exp $
+dnl $Id: configure.ac,v 1.18 2003/04/22 13:14:28 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -23,7 +23,7 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.17 2003/04/22 13:01:33 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.18 2003/04/22 13:14:28 andrei Exp $)
 AC_INIT(disc, 0.1.0)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 ##AC_CONFIG_HEADERS([ac_config.h])
@@ -162,7 +162,7 @@ if test "$with_mipv6_client_module" = yes; then
 	client_modules="$client_modules mipv6"
 	ssl_check=yes
 dnl add here mipv6/urp autoconf ?
-dnl AC_CONFIG_SUBDIRS(src/client/modules/mipv6/urp-0.0.3)
+    AC_CONFIG_SUBDIRS(src/client/modules/mipv6/urp-0.0.3)
 fi
 
 dnl FIXME: replace the following defines as above
