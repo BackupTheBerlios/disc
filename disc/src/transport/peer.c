@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.36 2003/04/17 16:10:53 bogdan Exp $
+ * $Id: peer.c,v 1.37 2003/04/18 16:17:16 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -502,6 +502,12 @@ static inline int safe_write(struct peer *p, char *buf, unsigned int len)
 {
 	int n;
 
+	for(n=0;n<len;n++) {
+		DBG(" %x",buf[n]);
+		if (n&7==0)
+			DBG("\n");
+	}
+
 	while( (n=write(p->sock,buf,len))==-1 ) {
 		if (errno==EINTR)
 			continue;
@@ -559,6 +565,9 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 	foo = tr->req;
 	tr->out_peer = p;
 	tr->req = 0;
+	/* transaction will be ref from to places - from timer list and
+	 * from hash tabel*/
+	atomic_set( &tr->ref_cnt, 2);
 	/* start the timeout timer */
 	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
 		get_ticks()+TR_TIMEOUT_TIMEOUT );
