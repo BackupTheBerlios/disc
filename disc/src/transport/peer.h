@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.19 2003/04/15 11:44:35 bogdan Exp $
+ * $Id: peer.h,v 1.20 2003/04/16 17:31:52 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -124,6 +124,7 @@ enum AAA_PEER_EVENT {
 enum AAA_PEER_STATE {
 	PEER_UNCONN,
 	PEER_CONN,
+	PEER_ERROR,
 	PEER_WAIT_CER,
 	PEER_WAIT_CEA,
 	PEER_WAIT_DWA,
@@ -151,6 +152,7 @@ extern struct p_table *peer_table;
 
 #define close_peer( _peer_ ) \
 	do {\
+		DBG("********** sending close command\n");\
 		write_command( (_peer_)->fd, CLOSE_CMD, 0, _peer_, 0);\
 	}while(0)
 

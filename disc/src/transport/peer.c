@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.32 2003/04/16 10:58:45 bogdan Exp $
+ * $Id: peer.c,v 1.33 2003/04/16 17:31:52 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -507,6 +507,7 @@ static inline int safe_write(struct peer *p, char *buf, unsigned int len)
 			continue;
 		LOG(L_ERR,"ERROR:safe_write: write returned error: %s\n",
 			strerror(errno));
+		p->state = PEER_ERROR;
 		close_peer( p );
 		return -1;
 	}
@@ -514,6 +515,7 @@ static inline int safe_write(struct peer *p, char *buf, unsigned int len)
 	if (n!=len) {
 		LOG(L_CRIT,"ERROR:safe_write: BUG!!! write gave no error but wrote"
 			" less than asked\n");
+		p->state = PEER_ERROR;
 		close_peer( p );
 	}
 	return 1;
@@ -618,11 +620,8 @@ inline int internal_send_request( str *buf, struct peer *p)
 	((unsigned int*)buf->s)[3] = tr->linker.label;
 
 	/* send the request */
-	if ( safe_write( p, buf->s, buf->len)==-1 ) {
-		LOG(L_ERR,"ERROR:internal_send_request: tcp_send_unsafe returned"
-			" error!\n");
+	if ( safe_write( p, buf->s, buf->len)==-1 )
 		goto error;
-	}
 
 	/* start the timeout timer */
 	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
@@ -1091,6 +1090,8 @@ void dispatch_message( struct peer *p, str *buf)
 
 	/* reset the inactivity time */
 	p->last_activ_time = get_ticks();
+	DBG(">>>>> new lat_activ_time %d\n",p->last_activ_time);
+
 	/* get message code */
 	code = ((unsigned int*)buf->s)[1]&MASK_MSG_CODE;
 	/* check the message code */
@@ -1146,8 +1147,8 @@ inline void reset_peer( struct peer *p)
 	/* reset the socket */
 	p->sock = -1;
 
-	/* reset the PEER_CONN_IN_PROG flag */
-	p->flags &= !PEER_CONN_IN_PROG;
+	/* reset the all flag  except PEER_TO_DESTROY */
+	p->flags &= PEER_TO_DESTROY;
 
 	/* put the peer in timer list for reconnection  */
 	if (!p->flags&PEER_TO_DESTROY)
@@ -1608,6 +1609,7 @@ void peer_timer_handler(unsigned int ticks, void* param)
 		list_for_each_safe( lh, foo, &(activ_peers.lh)) {
 			p  = list_entry( lh , struct peer , lh);
 			if (p->last_activ_time+SEND_DWR_TIMEOUT<=ticks) {
+				DBG(">>>>> inactivity since %d\n",p->last_activ_time);
 				/* remove it from the list */
 				list_del_zero( lh );
 				/* send command to peer */

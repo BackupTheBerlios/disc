@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.18 2003/04/16 10:58:45 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.19 2003/04/16 17:31:52 bogdan Exp $
  *
  *  History:
  *  --------
@@ -296,7 +296,9 @@ void *do_receive(void *arg)
 	while(1) {
 		ret_rd_set = tinfo->rd_set;
 		ret_wr_set = tinfo->wr_set;
+		DBG("************* before select\n");
 		nready = select( FD_SETSIZE+1, &ret_rd_set, &ret_wr_set, 0, 0);
+		DBG("************* after select (%d)\n",nready);
 
 		if (nready == -1) {
 			if (errno == EINTR) {
@@ -399,7 +401,6 @@ void *do_receive(void *arg)
 				}
 			}
 		}
-		//DBG(">>>>>>>> after processing nready=%d\n",nready);
 
 	}/*while*/
 
