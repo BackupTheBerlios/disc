@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.6 2003/04/06 14:12:20 andrei Exp $
+dnl $Id: configure.ac,v 1.7 2003/04/06 22:09:16 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -11,7 +11,7 @@ dnl 2003-03-26  fixed "./" path for cc*.sh (andrei)
 dnl 2003-03-27  added libltdl support (andrei)
 dnl 2003-04-06  fixed sched_yield (added AC_CHECK_FUNCS) (andrei)
 dnl             added automake 1.4 backward compatibility stuff (andrei)
-dnl
+dnl             added big endian check & config.cache (andrei)
 dnl
 dnl TODO:
 dnl -----
@@ -20,7 +20,7 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.6 2003/04/06 14:12:20 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.7 2003/04/06 22:09:16 andrei Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 AC_CONFIG_SUBDIRS(libltdl)
@@ -28,6 +28,12 @@ AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION,
 					[nostdinc dist-bzip2 dist-shar dist-zip dist-tarZ])
 # AM_MAINTAINER_MODE
 
+dnl use a default cache file (autoconf2 uses /dev/null by default)
+if test "$cache_file" = /dev/null; then
+	cache_file="config.cache"
+	# WARNING: a cache file is valid only for one compiler a.s.o
+fi
+AC_CACHE_LOAD
 
 dnl FIXME:
 AC_DEFINE(NAME, ["]AC_PACKAGE_NAME["])
@@ -168,6 +174,9 @@ else
 fi
 
 AC_DEFINE_UNQUOTED([COMPILER], ["$CC $CCVER"])
+
+dnl Endianess check
+AC_C_BIGENDIAN
 
 
 dnl Checks for libraries (warning for HAVE_* run AC_CHECK_FUNCTION)

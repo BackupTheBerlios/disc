@@ -1,5 +1,5 @@
 #! /bin/sh
 
-# $Id: rebuild,v 1.2 2003/04/04 17:44:47 andrei Exp $
+# $Id: rebuild,v 1.3 2003/04/06 22:09:16 andrei Exp $
 #
-automake --foreign && autoconf && ./configure
+aclocal && automake --foreign && autoconf && ./configure

@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.9 2003/04/02 19:00:35 andrei Exp $
+## $Id: Makefile.am,v 1.10 2003/04/06 22:09:16 andrei Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -28,8 +28,8 @@ EXTRA_DIST=		server
 aaa_client_LDADD =  mem/libmem.la \
 					transport/libtransport.la client/libclient.la \
 					@LIBLTDL@
-aaa_client_LDFLAGS = -export-dynamic
-
 # @LIBADD_DL@ # not needed for newer libtool version (>=1.4)
+aaa_client_LDFLAGS = -export-dynamic -pthread
+
 
 
