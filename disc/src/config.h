@@ -1,5 +1,5 @@
 /*
- * $Id: config.h,v 1.5 2003/04/11 17:48:02 bogdan Exp $
+ * $Id: config.h,v 1.6 2003/04/14 14:36:38 andrei Exp $
  */
 /* History:
  * --------
@@ -24,6 +24,8 @@
 
 /* default number of working threads */
 #define DEAFULT_WORKER_THREADS  4
+
+#define MAX_REALM_LEN 128
 
 
 #define VENDOR_ID   0x0000caca

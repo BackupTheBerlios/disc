@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.c,v 1.4 2003/04/09 18:49:16 andrei Exp $
+ * $Id: cfg_parser.c,v 1.5 2003/04/14 14:36:38 andrei Exp $
  *
  * configuration parser
  *
@@ -181,7 +181,7 @@ int cfg_getstr(char* p, str* r)
 	r->s=(char*)shm_malloc(len+1);
 	if (r->s==0) return -4; /* mem. alloc. error */
 	memcpy(r->s, s, len);
-	r->s[len]=0; /* null terminate, just in case */
+	r->s[len]=0; /* null terminate, we are counting on this :-) */
 	r->len=len;
 	return 0;
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: route.c,v 1.8 2003/04/14 13:09:45 bogdan Exp $
+ * $Id: route.c,v 1.9 2003/04/14 14:36:38 andrei Exp $
  */
 /*
  * History:
@@ -9,6 +9,7 @@
  */
 
 
+#include "config.h"
 #include "globals.h"
 #include "route.h"
 #include "dprint.h"
@@ -149,22 +150,28 @@ error_client:
 
 /* returns the first match peer list or 0 on error */
 /* WARNING: all this must be null terminated */
-struct peer_entry* route_dest(str* realm)
+struct peer_entry* route_dest(str* dst_realm)
 {
 	struct route_entry* re;
+	char realm [MAX_REALM_LEN+1]; /* needed for null termination*/
 	
-
+	if (dst_realm->len>MAX_REALM_LEN){
+		LOG(L_ERR,"ERROR: route_dest: realm too big (%d)\n", dst_realm->len);
+		return 0;
+	}
+	memcpy(realm, dst_realm->s, dst_realm->len);
+	realm[dst_realm->len]=0; /* null terminate  */
+		
 	for (re=route_lst; re; re=re->next){
 		/*FNM_CASEFOLD | FNM_EXTMATCH - GNU extensions*/ 
-		if (fnmatch(re->realm.s, realm->s, 0)==0){
+		if (fnmatch(re->realm.s, realm, 0)==0){ /* re->realm.s is 0 terminated*/
 			/*match */
-			DBG("route_dest: match on <%.*s> (<%.*s>)\n",
-				re->realm.len, re->realm.s, realm->len, realm->s);
+			DBG("route_dest: match on <%s> (<%s>)\n",
+				re->realm.s, realm);
 			return re->peer_l;
 		}
 	}
-	DBG("WARNING: route_dest: no route found for <%.*s>\n",
-		realm->len, realm->s);
+	DBG("WARNING: route_dest: no route found for <%s>\n", realm);
 	
 	return 0;
 }
@@ -202,7 +209,7 @@ int do_route(AAAMessage *msg, struct peer *in_p)
 	/* cleanup */
 	destroy_transaction(tr);
 noroute:
-	LOG(L_WARN, "WARNING: do_route: dropping message, no peers/route found\n");
+	LOG(L_ERR, "ERROR: do_route: dropping message, no peers/route found\n");
 	return -1;
 end:
 	return 1;
