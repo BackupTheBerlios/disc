@@ -1,5 +1,5 @@
 /*
- * $Id: avp.h,v 1.2 2003/03/11 20:52:13 bogdan Exp $
+ * $Id: avp.h,v 1.3 2003/03/11 21:14:24 bogdan Exp $
  *
  * 2003-02-04 created by bogdan
  *
@@ -17,7 +17,8 @@
 #define for_all_AVPS_do_switch( _buf_ , _foo_ , _ptr_ ) \
 	for( (_ptr_) =  (_buf_)->s + AAA_MSG_HDR_SIZE, (_foo_)=(_ptr_) ;\
 	(_ptr_) < (_buf_)->s+(_buf_)->len ;\
-	(_ptr_) = (_foo_)+(ntohl( ((unsigned int *)(_foo_))[1] )&0x00ffffff) ) \
+	(_ptr_) = (_foo_)+(ntohl( ((unsigned int *)(_foo_))[1] )&0x00ffffff),\
+	(_foo_) = (_ptr_) ) \
 		switch( ntohl( ((unsigned int *)(_ptr_))[0] ) )
 
 #define set_AVP_mask( _mask_, _pos_) \
