@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.c,v 1.3 2003/04/09 16:34:44 andrei Exp $
+ * $Id: cfg_parser.c,v 1.4 2003/04/09 18:49:16 andrei Exp $
  *
  * configuration parser
  *
@@ -61,9 +61,8 @@ int cfg_parse_line(char* line, struct cfg_line* cl)
 	t=tmp;
 	tmp=eat_space_end(tmp,end);
 	if (end_test(tmp, end)) goto error;
-	if (*tmp!='=') goto error;
+	if (*tmp=='=') {cl->has_equal=1; tmp++;};
 	*t=0; /* zero terminate*/
-	tmp++;
 	
 	for (r=0; r<CFG_TOKENS; r++){
 		tmp=eat_space_end(tmp,end);
@@ -198,6 +197,10 @@ int cfg_run_def(struct cfg_line *cl)
 		if (strcasecmp(cl->id, def->name)==0){
 			switch(def->type){
 				case INT_VAL:
+					if (cl->has_equal==0){
+						LOG(L_CRIT, "missing '=' ?\n");
+						return -2;
+					}
 					if (cl->token_no>1){
 						LOG(L_CRIT, "single int value expected -- "
 								"too many tokens\n");
@@ -207,6 +210,10 @@ int cfg_run_def(struct cfg_line *cl)
 					else return cfg_getint(cl->value[0], def->value);
 					break;
 				case STR_VAL:
+					if (cl->has_equal==0){
+						LOG(L_CRIT, "missing '=' ?\n");
+						return -2;
+					}
 					if (cl->token_no>1){
 						LOG(L_CRIT, "single string value expected -- "
 								"too many tokens\n");

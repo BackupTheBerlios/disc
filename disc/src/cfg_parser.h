@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.h,v 1.3 2003/04/08 18:59:52 andrei Exp $
+ * $Id: cfg_parser.h,v 1.4 2003/04/09 18:49:16 andrei Exp $
  */
 /*
  * History:
@@ -22,7 +22,7 @@
 
 #define MAX_LINE_SIZE 800
 
-#define CFG_TOKENS 10 /* max numbers of tokens on a line */
+#define CFG_TOKENS 100 /* max numbers of tokens on a line */
 
 enum cfg_errors { CFG_OK=0, CFG_ERR=-1, CFG_PARAM_ERR=-2, CFG_RUN_ERR=-3,
                   CFG_MEM_ERR };
@@ -30,6 +30,7 @@ enum cfg_errors { CFG_OK=0, CFG_ERR=-1, CFG_PARAM_ERR=-2, CFG_RUN_ERR=-3,
 struct cfg_line{
 	int type;
 	char* id;
+	int has_equal; /* 1 if line is id = something */
 	char* value[CFG_TOKENS];
 	int token_no; /* number of value token parsed */
 };

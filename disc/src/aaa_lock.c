@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_lock.c,v 1.2 2003/03/14 16:44:33 bogdan Exp $
+ * $Id: aaa_lock.c,v 1.3 2003/04/09 18:49:16 andrei Exp $
  *
  * 2003-01-29  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -43,9 +43,11 @@ void destroy_locks( gen_lock_t *locks, int n)
 	int i;
 
 	/* destroy the mutexs */
-	for(i=0;i<n;i++)
-		lock_destroy( &locks[i] );
+	if (locks){
+		for(i=0;i<n;i++)
+			lock_destroy( &locks[i] );
 
-	/* free the memory zone */
-	shm_free( (void*)locks );
+		/* free the memory zone */
+		if (locks) shm_free( (void*)locks );
+	}
 }

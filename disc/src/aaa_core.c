@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.7 2003/04/09 18:12:44 andrei Exp $
+ * $Id: aaa_core.c,v 1.8 2003/04/09 18:49:16 andrei Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -174,7 +174,6 @@ void destroy_aaa_core()
 	/* free some globals*/
 	if (aaa_realm.s) { shm_free(aaa_realm.s); aaa_realm.s=0; }
 	if (aaa_fqdn.s) { shm_free(aaa_fqdn.s); aaa_fqdn.s=0; }
-	if (module_path.s) { shm_free(module_path.s); module_path.s=0; }
 	/* just for debuging */
 	shm_status();
 	shm_mem_destroy();
