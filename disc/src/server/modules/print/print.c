@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.4 2003/04/14 14:06:45 bogdan Exp $
+ * $Id: print.c,v 1.5 2003/04/14 14:56:00 bogdan Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -29,7 +29,7 @@ struct module_exports exports = {
 	"print",
 	AAA_SERVER,
 	4,
-	DOES_AUTH | DOES_ACCT | RUN_ON_REPLY_IF_FOREIGN_SERVER,
+	DOES_AUTH | DOES_ACCT | RUN_ON_REPLIES,
 	0, /* no  mod params */
 	
 	mod_init,
@@ -68,6 +68,9 @@ int mod_msg(AAAMessage *msg, void *context)
 		AAASetMessageResultCode( ans, 2001);
 		AAASendMessage( ans );
 		AAAFreeMessage( &ans );
+	} else {
+		DBG(" print module: got a answer (I'am FA!) - do nothing \n");
+
 	}
 	return 1;
 }

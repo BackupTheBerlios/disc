@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.6 2003/04/14 14:06:45 bogdan Exp $
+ * $Id: server.c,v 1.7 2003/04/14 14:56:00 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -85,7 +85,7 @@ static inline int forward_request( AAAMessage *msg, struct peer *in_p,
 	tr = create_transaction( &(msg->buf), in_p);
 	if (!tr)
 		return -1;
-	update_forward_transaction_from_msg( tr , msg , in_p );
+	update_forward_transaction_from_msg( tr , msg );
 	/* send it out */
 	if ( send_req_to_peer( tr, out_p)==-1) {
 		LOG(L_ERR,"ERROR:forwar_request: unable to forward request\n");
@@ -253,15 +253,11 @@ void *server_worker(void *attr)
 				/* I have to forward the reply downstream */
 				msg->hopbyhopId = tr->orig_hopbyhopId;
 				((unsigned int*)msg->buf.s)[3] = tr->orig_hopbyhopId;
-				/* am I Foreign server for this reply? */
-				if (tr->info==I_AM_FOREIGN_SERVER) {
-					mod = find_module(msg->applicationId);
-					if (mod &&
-					mod->exports->flags&RUN_ON_REPLY_IF_FOREIGN_SERVER) {
-						DBG(" ******* running module (%p) for reply "
-							"(I am foreign server)\n",mod);
-						mod->exports->mod_msg( msg, 0);
-					}
+				/* is there some module interested in this reply ? */
+				mod = find_module(msg->applicationId);
+				if (mod && mod->exports->flags&RUN_ON_REPLIES) {
+					DBG(" ******* running module (%p) for reply \n",mod);
+					mod->exports->mod_msg( msg, 0);
 				}
 				/* send the rely */
 				if (send_res_to_peer( &msg->buf, tr->in_peer)==-1) {
