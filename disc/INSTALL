@@ -1,0 +1,24 @@
+#$Id: INSTALL,v 1.1 2003/03/27 15:17:54 andrei Exp $
+
+Compilation
+-----------
+
+./configure ; make
+
+(if you want to regenerate configure.in and all the Makefile.in you should
+ run first ./bootstrap but you need decently recent versions of autoconf, 
+ automake & libtool)
+
+
+Installation
+------------
+
+make install
+
+
+Other usefull targets
+---------------------
+
+make dist-gzip     - tar.gz  archive
+make dist-bzip2    - tar.bz2 archive
+make distclean     - cleans everything configure generated

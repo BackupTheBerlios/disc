@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.1 2003/03/24 18:45:10 andrei Exp $
+## $Id: Makefile.am,v 1.2 2003/03/27 15:17:54 andrei Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -11,6 +11,8 @@
 @SET_MAKE@
 
 SUBDIRS = diameter_api transport mem client
+
+INCLUDES = @INCLTDL@
 
 bin_PROGRAMS = aaa_client
 aaa_client_SOURCES = aaa_lock.c dprint.c hash_table.c sh_mutex.c \
@@ -24,6 +26,8 @@ aaa_client_SOURCES = aaa_lock.c dprint.c hash_table.c sh_mutex.c \
 EXTRA_DIST=		server
 
 aaa_client_LDADD = diameter_api/libdiameter_api.la mem/libmem.la \
-					transport/libtransport.la client/libclient.la
+					transport/libtransport.la client/libclient.la \
+					@LIBLTDL@
+# @LIBADD_DL@ # not needed for newer libtool version (>=1.4)
 
 

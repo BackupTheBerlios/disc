@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.2 2003/03/26 17:59:28 andrei Exp $
+dnl $Id: configure.ac,v 1.3 2003/03/27 15:17:54 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl
@@ -7,12 +7,14 @@ dnl History:
 dnl --------
 dnl 2003-03-24  created by andrei
 dnl 2003-03-26  fixed "./" path for cc*.sh (andrei)
+dnl 2003-03-27  added libltdl support (andrei)
 
 
 AC_PREREQ(2.54)
-AC_REVISION($Id: configure.ac,v 1.2 2003/03/26 17:59:28 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.3 2003/03/27 15:17:54 andrei Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
+AC_CONFIG_SUBDIRS(libltdl)
 AM_INIT_AUTOMAKE([nostdinc dist-bzip2 dist-shar dist-zip dist-tarZ])
 AM_MAINTAINER_MODE
 
@@ -115,6 +117,9 @@ AC_PROG_CC
 AM_PROG_LEX
 #AC_DECL_YYTEXT
 AC_PROG_YACC
+dnl libtool & libltdl
+AC_LIBTOOL_DLOPEN
+AC_LIBLTDL_CONVENIENCE
 AC_PROG_LIBTOOL
 AC_PROG_MAKE_SET
 AC_PROG_INSTALL
@@ -225,6 +230,9 @@ AC_CHECK_MEMBERS([struct sockaddr.sa_len], AC_DEFINE([HAVE_SOCKADDR_SA_LEN]),,
  ]
 )
 
+dnl substitutions
+AC_SUBST(INCLTDL)
+AC_SUBST(LIBLTDL)
 
 AC_OUTPUT(Makefile src/Makefile src/client/Makefile src/diameter_api/Makefile
 			src/mem/Makefile src/transport/Makefile)

@@ -9,4 +9,4 @@
 
 @SET_MAKE@
 
-SUBDIRS = src
+SUBDIRS = libltdl src

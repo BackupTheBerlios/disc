@@ -1,5 +1,5 @@
 #! /bin/sh
 
-# $Id: bootstrap,v 1.1 2003/03/24 18:45:10 andrei Exp $
+# $Id: bootstrap,v 1.2 2003/03/27 15:17:54 andrei Exp $
 #
-aclocal && libtoolize --force --copy && automake --foreign --add-missing --copy && autoconf
+aclocal && libtoolize --force --copy --ltdl && automake --foreign --add-missing --copy && autoconf
