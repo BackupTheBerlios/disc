@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.6 2003/04/02 15:05:13 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.7 2003/04/06 01:18:13 bogdan Exp $
  *
  *  History:
  *  --------
@@ -353,10 +353,10 @@ void *do_receive(void *arg)
 				DBG("DEBUG:do_receive: connect done on socket %d\n",p->sock);
 				FD_CLR( p->sock, &tinfo->wr_set);
 				length = sizeof(option);
-				if (getsockopt( p->sock, SOL_SOCKET, SO_ERROR, &option,
-				&length)==-1 || option!=0 ) {
-					LOG(L_ERR,"ERROR:do_receive: getsockopt=%s ; res=%d\n",
-						strerror(errno),option);
+				if ((ncmd=getsockopt( p->sock, SOL_SOCKET, SO_ERROR, &option,
+				&length))==-1 || option!=0 ) {
+					LOG(L_ERR,"ERROR:do_receive: getsockopt=%d ; res=%d\n",
+						ncmd, option);
 					close( p->sock );
 					peer_state_machine( p, TCP_CONN_FAILED, 0);
 				} else {

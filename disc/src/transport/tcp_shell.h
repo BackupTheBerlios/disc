@@ -1,4 +1,10 @@
-
+/*
+ * $Id: tcp_shell.h,v 1.4 2003/04/06 01:18:13 bogdan Exp $
+ *
+ *  History:
+ *  --------
+ *  2003-03-07  created by bogdan
+ */
 
 
 #ifndef _TCP_SHELL_COMMON_H_
@@ -7,6 +13,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "../list.h"
 #include "ip_addr.h"
 #include "peer.h"

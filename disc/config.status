@@ -464,13 +464,13 @@ s,@INSTALL_DATA@,${INSTALL} -m 644,;t t
 s,@CYGPATH_W@,echo,;t t
 s,@PACKAGE@,aaa_client,;t t
 s,@VERSION@,0.0.1,;t t
-s,@ACLOCAL@,${SHELL} /tmp/aaa_server/missing --run aclocal-1.7,;t t
-s,@AUTOCONF@,${SHELL} /tmp/aaa_server/missing --run autoconf,;t t
-s,@AUTOMAKE@,${SHELL} /tmp/aaa_server/missing --run automake-1.7,;t t
-s,@AUTOHEADER@,${SHELL} /tmp/aaa_server/missing --run autoheader,;t t
-s,@MAKEINFO@,${SHELL} /tmp/aaa_server/missing --run makeinfo,;t t
-s,@AMTAR@,${SHELL} /tmp/aaa_server/missing --run tar,;t t
-s,@install_sh@,/tmp/aaa_server/install-sh,;t t
+s,@ACLOCAL@,${SHELL} /home/bogdan/work/aaa/aaa_server/missing --run aclocal-1.7,;t t
+s,@AUTOCONF@,${SHELL} /home/bogdan/work/aaa/aaa_server/missing --run autoconf,;t t
+s,@AUTOMAKE@,${SHELL} /home/bogdan/work/aaa/aaa_server/missing --run automake-1.7,;t t
+s,@AUTOHEADER@,${SHELL} /home/bogdan/work/aaa/aaa_server/missing --run autoheader,;t t
+s,@MAKEINFO@,${SHELL} /home/bogdan/work/aaa/aaa_server/missing --run makeinfo,;t t
+s,@AMTAR@,${SHELL} /home/bogdan/work/aaa/aaa_server/missing --run tar,;t t
+s,@install_sh@,/home/bogdan/work/aaa/aaa_server/install-sh,;t t
 s,@STRIP@,strip,;t t
 s,@ac_ct_STRIP@,strip,;t t
 s,@INSTALL_STRIP_PROGRAM@,${SHELL} $(install_sh) -c -s,;t t
