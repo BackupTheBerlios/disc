@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_lock.c,v 1.1 2003/03/14 15:57:16 bogdan Exp $
+ * $Id: aaa_lock.c,v 1.2 2003/03/14 16:44:33 bogdan Exp $
  *
  * 2003-01-29  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include "aaa_lock.h"
 
-#include "../mem/shm_mem.h"
+#include "mem/shm_mem.h"
 
 
 gen_lock_t* create_locks(int n)

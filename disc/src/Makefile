@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.3 2003/03/14 16:04:03 bogdan Exp $
+# $Id: Makefile,v 1.4 2003/03/14 16:44:33 bogdan Exp $
 #
 #
 # 2003-03-12  added SHM_MEM & other defines from ser;
@@ -22,7 +22,7 @@ ARCH = $(shell uname -m |sed -e s/i.86/i386/ -e s/sun4u/sparc64/  \
 
 #defines
 ALLDEP=Makefile
-BIN=main
+BIN=client
 CFLAGS=
 LIBS= -lpthread -lresolv
 LDFLAGS=
@@ -115,8 +115,9 @@ LD= $(CC)
 MKDEP=$(CC) -MM
 
 #sources
-sources=$(filter-out $(auto_gen), $(wildcard *.c) $(wildcard utils/*.c) \
-		$(wildcard tcp_shell/*.c) $(wildcard mem/*.c) ) $(auto_gen)
+sources=$(filter-out $(auto_gen), $(wildcard *.c) $(wildcard dameter_api/*.c) \
+		$(wildcard transport/*.c) $(wildcard mem/*.c) $(wildcard client/*.c)  ) \
+		$(auto_gen)
 objs=$(sources:.c=.o)
 depends=$(sources:.c=.d)
 
