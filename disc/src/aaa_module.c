@@ -1,10 +1,11 @@
 /*
- * $Id: aaa_module.c,v 1.3 2003/03/28 20:00:37 andrei Exp $
+ * $Id: aaa_module.c,v 1.4 2003/04/02 19:00:35 andrei Exp $
  */
 /*
  * History:
  * --------
  *  2003-03-27  created by andrei
+ *  2003-04-02  LTDL_SET_PRELOADED_SYMBOLS added (andrei)
  */
 
 #include <ltdl.h>
@@ -21,20 +22,29 @@ struct aaa_module* modules=0;
 int init_module_loading()
 {
 	int ret;
+	static int initialised=0;
+	
+	if (initialised){
+		LOG(L_CRIT, "BUG: init_module_loading: already intialised\n");
+		return -1;
+	}
+	/* make sure preloaded modules are initialised */
+	/*LTDL_SET_PRELOADED_SYMBOLS();*/
 	ret=lt_dlinit();
 	
 	if (ret){
-		LOG(L_CRIT, "ERROR: init_moduled: lt_dlinit failed: %s\n",
+		LOG(L_CRIT, "ERROR: init_module_loading: lt_dlinit failed: %s\n",
 				lt_dlerror());
 		goto error;
 	}
 	
 	ret=lt_dlsetsearchpath(MODULE_SEARCH_PATH);
 	if (ret){
-		LOG(L_CRIT, "ERROR: init_moduled: lt_dlinit failed: %s\n",
+		LOG(L_CRIT, "ERROR: init_module_loading: lt_dlinit failed: %s\n",
 				lt_dlerror());
 		goto error;
 	}
+	initialised++;
 	return ret;
 error:
 	lt_dlexit();

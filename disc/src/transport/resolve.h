@@ -1,5 +1,5 @@
 /*
- * $Id: resolve.h,v 1.2 2003/04/02 15:05:13 bogdan Exp $
+ * $Id: resolve.h,v 1.3 2003/04/02 19:00:35 andrei Exp $
  *
  * resolver related functions
  */
@@ -167,7 +167,6 @@ error_char:
 	return 0;
 }
 #endif
-#define HAVE_GETHOSTBYNAME2
 
 /* gethostbyname wrappers
  * use this, someday they will use a local cache */

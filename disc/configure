@@ -1916,7 +1916,7 @@ if test "${enable_ipv6+set}" = set; then
 
 fi;
 if test -z "$enable_ipv6"; then
-	enable_ipv6=no
+	enable_ipv6=yes
 fi
 if test "$enable_ipv6" = yes; then
 	cat >>confdefs.h <<\_ACEOF
