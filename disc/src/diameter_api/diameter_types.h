@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.14 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: diameter_types.h,v 1.15 2003/04/04 11:26:37 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -62,9 +62,10 @@ typedef unsigned int    AAAExtensionId;
 typedef unsigned int    AAA_AVPCode;
 typedef unsigned int    AAAValue;
 typedef unsigned int    AAAApplicationId;
+typedef void*           AAAApplicationRef;
 typedef void            AAAServer;
 typedef str             AAASessionId;
-typedef void*           AAAApplicationRef;
+typedef uint32_t        AAAMsgIdentifier;
 typedef uint8_t         AAAMsgFlag;
 
 
@@ -281,6 +282,9 @@ typedef struct _message_t {
 	AAAMsgFlag          flags;
 	AAACommandCode      commandCode;
 	AAAApplicationId    applicationId;
+	AAAMsgIdentifier    endtoendId;
+	AAAMsgIdentifier    hopbyhopId;
+	AAASessionId        *sId;
 	AAA_AVP             *sessionId;
 	AAA_AVP             *orig_host;
 	AAA_AVP             *orig_realm;
@@ -291,13 +295,12 @@ typedef struct _message_t {
 	AAA_AVP_LIST        avpList;
 	str                 buf;
 	void                *peers;
-	void                *intern;
+	void                *trans;
 } AAAMessage;
 
 
 
-typedef AAAReturnCode (*AAACallback)(AAAMessage *incoming_msg, void *context,
-												AAAMessage **outgoing_msg);
+typedef AAAReturnCode (*AAACallback)(AAAMessage *msg, void *context);
 
 
 #endif

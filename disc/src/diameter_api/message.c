@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.22 2003/04/01 12:03:16 bogdan Exp $
+ * $Id: message.c,v 1.23 2003/04/04 11:26:37 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -424,7 +424,7 @@ int send_request( AAAMessage *msg)
 
 	/* build a new transaction for this request */
 	if (( tr = create_transaction( &(msg->buf),
-	(struct session*)msg->intern/*ses*/, 0/*no peeer yest*/))==0 ) {
+	sId2session(msg->sId)/*ses*/, 0/*no peeer yest*/))==0 ) {
 		LOG(L_ERR,"ERROR:send_aaa_request: cannot create a new"
 			" transaction!\n");
 		goto error;
@@ -478,17 +478,17 @@ int send_aaa_response( AAAMessage *msg)
 		goto error;
 
 	/* copy the end-to-end id and hop-by-hop id */
-	req = &(((struct trans*)msg->intern)->req);
+	req = &(((struct trans*)msg->trans)->req);
 	((unsigned int*)msg->buf.s)[3] = ((unsigned int*)req->s)[3];
 	((unsigned int*)msg->buf.s)[4] = ((unsigned int*)req->s)[4];
 
 	/* send the message */
-	if (send_res_to_peer(&(msg->buf),((struct trans*)msg->intern)->peer)==-1) {
+	if (send_res_to_peer(&(msg->buf),((struct trans*)msg->trans)->peer)==-1) {
 		LOG(L_ERR,"ERROR:send_aaa_response: send returned error!\n");
 	}
 
 	/* destroy everything */
-	destroy_transaction( (struct trans*)msg->intern );
+	destroy_transaction( (struct trans*)msg->trans );
 	shm_free( msg->buf.s );
 
 	return 1;
@@ -575,12 +575,11 @@ AAAMessage *AAANewMessage(
 		/* it's a new request -> set the flag */
 		msg->flags = 0x80;
 		/* keep track of the session -> SendMessage will need it! */
-		msg->intern = (struct session*)((char*)(sessionId)-
-			(unsigned long)(&((struct session*)0)->sID));
+		msg->sId = sessionId;
 	} else {
 		/* link the transaction the req. belong to */
-		msg->intern = request->intern;
-		tr = (struct trans*)request->intern;
+		msg->trans = request->trans;
+		tr = (struct trans*)request->trans;
 		/* set the P flag as in request */
 		msg->flags |= request->flags&0x40;
 
@@ -695,7 +694,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 
 	if ( !is_req(msg) ) {
 		/* if it's a response, I already have a transaction for it */
-		tr = (struct trans*)msg->intern;
+		tr = (struct trans*)msg->trans;
 		/* ....and the session */
 		ses = tr->ses;
 		/* update the session state machine */
@@ -722,8 +721,8 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		//	goto error;
 	} else {
 		/* it's a request -> get its session */
-		ses = (struct session*)msg->intern;
-		/* where     should I send this request? */
+		ses = sId2session( msg->sId );
+		/* where should I send this request? */
 		pc = 0;
 		ret = get_dest_peers( msg, &pc );
 		if (ret!=1 || pc==0) {
@@ -843,9 +842,11 @@ AAAMessage* AAATranslateMessage( unsigned char* source, size_t sourceLen )
 	ptr += APPLICATION_ID_SIZE;
 
 	/* Hop-by-Hop-Id */
+	msg->hopbyhopId = *((unsigned int*)ptr);
 	ptr += HOP_BY_HOP_IDENTIFIER_SIZE;
 
 	/* End-to-End-Id */
+	msg->endtoendId = *((unsigned int*)ptr);
 	ptr += END_TO_END_IDENTIFIER_SIZE;
 
 	/* start decoding the AVPS */
