@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.8 2003/03/10 19:17:32 bogdan Exp $
+ * $Id: peer.c,v 1.9 2003/03/10 21:08:06 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -181,8 +181,9 @@ int build_msg_buffers(struct p_table *table)
 	ptr = table->std_req.s;
 	memset( ptr, 0, table->std_req.len);
 	/* diameter header */
-	*ptr = 1;
-	((unsigned int*)ptr)[2] = htonl( vendor_id );
+	ptr[0] = 0x01;
+	ptr[4] = 0x80;
+	//((unsigned int*)ptr)[2] = htonl( vendor_id );
 	ptr += AAA_MSG_HDR_SIZE;
 	/* origin host AVP */
 	((unsigned int*)ptr)[0] = htonl(264);
@@ -200,18 +201,19 @@ int build_msg_buffers(struct p_table *table)
 	ptr += to_32x_len(aaa_realm.len);
 
 	/* standard answer */
-	table->std_req.len = AAA_MSG_HDR_SIZE +            /* header */
+	table->std_ans.len = AAA_MSG_HDR_SIZE +            /* header */
 		AVP_HDR_SIZE + 4 +                             /* result-code  */
 		AVP_HDR_SIZE + to_32x_len(aaa_identity.len) +  /* origin-host  */
 		AVP_HDR_SIZE + to_32x_len(aaa_realm.len);      /* origin-realm */
-	table->std_req.s = malloc( table->std_req.len );
-	if (!table->std_req.s)
+	table->std_ans.s = malloc( table->std_ans.len );
+	if (!table->std_ans.s)
 		goto error;
-	ptr = table->std_req.s;
-	memset( ptr, 0, table->std_req.len);
+	ptr = table->std_ans.s;
+	memset( ptr, 0, table->std_ans.len);
 	/* diameter header */
-	*ptr = 1;
-	((unsigned int*)ptr)[2] = htonl( vendor_id );
+	ptr[0] = 0x01;
+	ptr[4] = 0x00;
+	//((unsigned int*)ptr)[2] = htonl( vendor_id );
 	ptr += AAA_MSG_HDR_SIZE;
 	/* result code AVP */
 	((unsigned int*)ptr)[0] = htonl(268);
@@ -232,7 +234,6 @@ int build_msg_buffers(struct p_table *table)
 	ptr += AVP_HDR_SIZE;
 	memcpy( ptr, aaa_realm.s, aaa_realm.len);
 	ptr += to_32x_len(aaa_realm.len);
-
 
 	/* CE avps IPv4 */
 	table->ce_avp_ipv4.len =
@@ -272,7 +273,17 @@ int build_msg_buffers(struct p_table *table)
 	ptr += 4;
 
 	/* CE avps IPv6 */
-	//str ce_avp_ipv6;
+	table->ce_avp_ipv6.len = table->ce_avp_ipv4.len + 12;
+	table->ce_avp_ipv6.s = malloc( table->ce_avp_ipv6.len );
+	if (!table->ce_avp_ipv6.s)
+		goto error;
+	ptr = table->ce_avp_ipv6.s;
+	memset( ptr, 0, table->ce_avp_ipv6.len);
+	/* copy */
+	memcpy( ptr, table->ce_avp_ipv4.s, AVP_HDR_SIZE + 4);
+	ptr += AVP_HDR_SIZE + 16;
+	memcpy( ptr, table->ce_avp_ipv4.s+AVP_HDR_SIZE+4,
+		table->ce_avp_ipv4.len-AVP_HDR_SIZE-4);
 
 	/* DPR avp */
 	table->dpr_avp.len = AVP_HDR_SIZE + 4; /* disconnect cause  */
@@ -363,6 +374,7 @@ error:
 
 
 
+
 void destroy_peer( struct peer *p)
 {
 }
@@ -370,79 +382,31 @@ void destroy_peer( struct peer *p)
 
 
 
-inline int add_ce_avps(AAA_AVP_LIST **avp_list ,struct ip_addr *my_ip)
-{
-	AAA_AVP      *avp;
-
-	/* Host-IP-Addres AVP */
-	if ( create_avp( &avp, 257, 0, 0,
-#ifdef USE_IPV6
-	my_ip->u.addr, my_ip->len,
-#else
-	(char*)&my_ip->s_addr, 4,
-#endif
-	0)!=AAA_ERR_SUCCESS)
-		goto error;
-	if ( AAAAddAVPToList( avp_list, avp, (*avp_list)->tail )!=
-	AAA_ERR_SUCCESS)
-		goto avp_error;
-
-	/* Vendor-Id AVP */
-	if ( create_avp( &avp, 266, 0, 0, (char*)&vendor_id, 4, 0)!=
-	AAA_ERR_SUCCESS)
-		goto error;
-	if ( AAAAddAVPToList( avp_list, avp, (*avp_list)->tail )!=
-	AAA_ERR_SUCCESS)
-		goto avp_error;
-
-	/* Product-Name AVP */
-	if ( create_avp( &avp, 269, 0, 0, product_name.s, product_name.len, 0)!=
-	AAA_ERR_SUCCESS)
-		goto error;
-	if ( AAAAddAVPToList( avp_list, avp, (*avp_list)->tail )!=
-	AAA_ERR_SUCCESS)
-		goto avp_error;
-
-	/* other avps ??  */
-	//.........................
-
-	return 1;
-avp_error:
-	AAAFreeAVP( &avp );
-error:
-	return -1;
-}
-
-
-
 int send_cer( struct peer *dst_peer)
 {
-	AAAMessage   *cer_msg;
+	char *ptr;
+	str cer;
 
-	cer_msg = 0;
-
-	if (!dst_peer)
+	cer.len = peer_table->std_req.len + peer_table->ce_avp_ipv4.len;
+	cer.s = malloc( cer.len );
+	if (!cer.s) {
+		LOG(L_ERR,"ERROR:send_cer: no more free memory\n");
 		goto error;
+	}
+	ptr = cer.s;
+	/**/
+	memcpy( ptr, peer_table->std_req.s, peer_table->std_req.len );
+	((unsigned int*)ptr)[0] |= htonl( cer.len );
+	((unsigned int*)ptr)[1] |= htonl( 257 );
+	ptr += peer_table->std_req.len;
+	/**/
+	memcpy( ptr, peer_table->ce_avp_ipv4.s, peer_table->ce_avp_ipv4.len );
+	memcpy( ptr + AVP_HDR_SIZE, &dst_peer->local_ip, sizeof(struct ip_addr) );
 
-	/* build a CER */
 
-	/* create a new request template */
-	cer_msg = AAANewMessage( 257, vendor_id, 0/*sessionId*/, 
-			0/*extensionId*/, 0/*request*/);
-	if (!cer_msg)
-		goto error;
-
-	/* add CE specific avps */
-	if (add_ce_avps( &cer_msg->avpList, &dst_peer->local_ip)==-1)
-		goto error;
-
-	/* send the message */
-	send_aaa_message( cer_msg, 0, 0, dst_peer);
-
-	return 1;
+	/* send the buffer */
+	return send_aaa_buffer( &cer, 0, dst_peer);
 error:
-	if (cer_msg)
-		AAAFreeMessage( &cer_msg );
 	return -1;
 }
 
@@ -465,8 +429,8 @@ int send_cea( struct trans *tr, unsigned int result_code, str *error_msg,
 	/* is it a protocol error code? */
 	if (result_code<3000 || result_code>=4000){
 		/* add CE specific avps */
-		if (add_ce_avps( &cea_msg->avpList, my_ip)==-1)
-			goto error;
+		//if (add_ce_avps( &cea_msg->avpList, my_ip)==-1)
+		//	goto error;
 	}
 
 	/* send the message */
@@ -623,7 +587,8 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			lock( p->mutex );
 			switch (p->state) {
 				case PEER_UNCONN:
-					DBG("DEBUG:peer_state_machine: connect finished\n");
+					DBG("DEBUG:peer_state_machine: connect finished ->"
+						" send CER\n");
 					/* update the peer */
 					p->flags &= !PEER_CONN_IN_PROG;
 					info = (struct tcp_info*)ptr;

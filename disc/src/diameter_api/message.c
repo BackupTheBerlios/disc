@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.2 2003/03/10 19:17:32 bogdan Exp $
+ * $Id: message.c,v 1.3 2003/03/10 21:08:06 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -102,7 +102,7 @@ void destroy_msg_manager()
 
 
 
-inline AAAMsgIdentifier generate_endtoendID()
+inline static AAAMsgIdentifier generate_endtoendID()
 {
 	unsigned int id;
 	lock( msg_mgr->end_to_end_lock );
@@ -110,6 +110,7 @@ inline AAAMsgIdentifier generate_endtoendID()
 	unlock( msg_mgr->end_to_end_lock );
 	return id;
 }
+
 
 
 
@@ -424,7 +425,7 @@ int send_aaa_message( AAAMessage *msg, struct trans *tr, struct session *ses,
 		/* try find the destination-host avp */
 	}
 
-	/* if the mesasge is a request... */
+	/* if the message is a request... */
 	if ( is_req(msg) ) {
 		tr = 0;
 		/* build a transaction for it */
@@ -440,7 +441,7 @@ int send_aaa_message( AAAMessage *msg, struct trans *tr, struct session *ses,
 		tr->linker.hash_code = hash( &s );
 		tr->linker.type = TRANSACTION_CELL_TYPE;
 		add_cell_to_htable( hash_table, (struct h_link*)tr );
-		/* the hash label is used as ho-by-hob ID */
+		/* the hash label is used as hop-by-hop ID */
 		msg->hopbyhopID = tr->linker.label;
 	} else {
 		/* the message is a reply -> sen it to the peer where req came from */
@@ -477,6 +478,49 @@ int send_aaa_message( AAAMessage *msg, struct trans *tr, struct session *ses,
 error:
 	if (buf)
 		free(buf);
+	if (tr)
+		destroy_transaction(tr);
+	return -1;
+}
+
+
+
+int send_aaa_buffer( str *buf, struct trans *tr, struct peer *dst_peer)
+{
+	unsigned char is_reply=0;
+
+	if (tr==0) {
+		/* it's a request -> build a transaction for it */
+		if ((tr=create_transaction( 0, 0, dst_peer, TR_OUTGOING_REQ))==0) {
+			LOG(L_ERR,"ERROR:send_aaa_buffer: cannot create a new"
+				" transaction!\n");
+			goto error;
+		}
+		tr->linker.label = generate_endtoendID();
+		((unsigned int*)buf->s)[3] = tr->linker.label;
+		((unsigned int*)buf->s)[4] = generate_endtoendID()&rand();
+	} else {
+		/* it's a reply */
+		is_reply = 1;
+		dst_peer = tr->in_peer;
+	}
+
+	if (tcp_send_unsafe( dst_peer, buf->s, buf->len)==-1) {
+		LOG(L_ERR,"ERROR:send_aaa_buffer: tcp_send_unsafew failed!\n");
+		goto error;
+	}
+
+	if ( !is_reply ) {
+		/* start the timeout timer */
+		add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
+			get_ticks()+TR_TIMEOUT_TIMEOUT );
+	} else {
+		/* if response, destroy everything */
+		destroy_transaction( tr );
+	}
+
+	return 1;
+error:
 	if (tr)
 		destroy_transaction(tr);
 	return -1;
