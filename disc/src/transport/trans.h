@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.9 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: trans.h,v 1.10 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -26,10 +26,10 @@ struct trans {
 	/* info - can be used for different purposes */
 	unsigned int info;
 
-	/* outgoing request peer */
+	/* request peer */
 	struct peer *peer;
-	/* outgoing request buffer */
-	str req;
+	/* request buffer */
+	str *req;
 	/* timeout timer */
 	struct timer_link timeout;
 };
@@ -54,7 +54,7 @@ void destroy_trans_manager();
 struct trans* create_transaction( str*, struct session*, struct peer*);
 
 
-void destroy_transaction( void* );
+void destroy_transaction( struct trans* );
 
 
 /* search a transaction into the hash table based on endtoendID and hopbyhopID
@@ -69,37 +69,9 @@ inline static struct trans* transaction_lookup(struct peer *p,
 	s.s = (char*)&endtoendID;
 	s.len = sizeof(endtoendID);
 	hash_code = hash( &s , p->trans_table->hash_size );
-	linker = cell_lookup( p->trans_table, hash_code, hopbyhopID);
-	if (linker) {
-		remove_cell_from_htable( p->trans_table, linker );
-		return ((struct trans*)((char *)(linker) -
-			(unsigned long)(&((struct trans*)0)->linker)));
-	}
-	return 0;
-}
-
-
-/* search a transaction into the hash table based on endtoendID and hopbyhopID
- */
-inline static struct trans* transaction_lookup_safe(struct peer *p,
-							unsigned int endtoendID, unsigned int hopbyhopID)
-{
-	struct h_link *linker;
-	str           s;
-	unsigned int  hash_code;
-
-	s.s = (char*)&endtoendID;
-	s.len = sizeof(endtoendID);
-	hash_code = hash( &s , p->trans_table->hash_size );
-	lock_get( p->mutex );
-	linker = cell_lookup( p->trans_table, hash_code, hopbyhopID );
-	if (linker) {
-		remove_cell_from_htable( p->trans_table, linker );
-		lock_release( p->mutex );
-		return ((struct trans*)((char *)(linker) -
-			(unsigned long)(&((struct trans*)0)->linker)));
-	}
-	lock_release( p->mutex );
+	linker = cell_lookup_and_remove( p->trans_table, hash_code, hopbyhopID);
+	if (linker)
+		return get_hlink_payload( linker, struct trans, linker );
 	return 0;
 }
 

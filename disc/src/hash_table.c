@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.c,v 1.4 2003/04/04 16:59:24 bogdan Exp $
+ * $Id: hash_table.c,v 1.5 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-01-29  created by bogdan
  * 2003-03-12  converted to use shm_malloc (andrei)
@@ -105,13 +105,10 @@ int add_cell_to_htable( struct h_table *table, struct h_link *link)
 	entry = &(table->entrys[link->hash_code]);
 
 	lock_get( table->mutex );
-
 	/* get a label for this session */
 	link->label = entry->next_label++;
-
 	/* insert the session into the linked list at the end */
 	list_add_tail( &(link->lh), &(entry->lh) );
-
 	lock_release( table->mutex );
 
 	return 1;

@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.h,v 1.6 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: hash_table.h,v 1.7 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-01-29 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -55,6 +55,9 @@ struct h_table {
 
 
 
+#define get_hlink_payload( _ptr_ , _type_ , _field_ ) \
+	((_type_ *)((char *)(_ptr_)-(unsigned long)(&((_type_ *)0)->_field_)))
+
 /* builds and inits the hash table */
 struct h_table* build_htable( unsigned int hash_size);
 
@@ -91,12 +94,36 @@ static inline struct h_link *cell_lookup(struct h_table *table,
 			break;
 		}
 	}
-
 	lock_release( table->mutex );
+
 	return link;
 }
 
 
+/* search on an entry a cell having a given label  */
+static inline struct h_link *cell_lookup_and_remove(struct h_table *table,
+								unsigned int hash_code, unsigned int label)
+{
+	struct h_entry   *entry;
+	struct h_link    *link;
+	struct list_head *lh;
+
+	entry = &(table->entrys[hash_code]);
+	link = 0;
+
+	lock_get( table->mutex );
+	/* looks into the the sessions hash table */
+	list_for_each( lh, &(entry->lh) ) {
+		if ( ((struct h_link*)lh)->label==label ) {
+			link = (struct h_link*)lh;
+			list_del( lh );
+			break;
+		}
+	}
+	lock_release( table->mutex );
+
+	return link;
+}
 
 
 

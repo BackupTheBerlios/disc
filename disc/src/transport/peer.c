@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.17 2003/04/06 22:19:49 bogdan Exp $
+ * $Id: peer.c,v 1.18 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -41,16 +41,21 @@
 
 #define list_add_tail_safe( _lh_ , _list_ ) \
 	do{ \
-		lock_get( (_list_)->mutex );\
-		list_add_tail( (_lh_), &((_list_)->lh) );\
-		lock_release( (_list_)->mutex );\
+		if ( !(_lh_)->next ) { \
+			lock_get( (_list_)->mutex );\
+			list_add_tail( (_lh_), &((_list_)->lh) );\
+			lock_release( (_list_)->mutex );\
+		} \
 	}while(0);
 
 #define list_del_safe( _lh_ , _list_ ) \
 	do{ \
-		lock_get( (_list_)->mutex );\
-		list_del( (_lh_) );\
-		lock_release( (_list_)->mutex );\
+		if ( (_lh_)->next ) {\
+			lock_get( (_list_)->mutex );\
+			list_del( (_lh_) );\
+			(_lh_)->next = (_lh_)->prev = 0;\
+			lock_release( (_list_)->mutex );\
+		}\
 	}while(0);
 
 
@@ -499,8 +504,8 @@ int send_req_to_peers( struct trans *tr , struct peer_chaine *pc)
 		add_cell_to_htable( pc->peer->trans_table, &(tr->linker) );
 		tr->peer = pc->peer;
 		/* the hash label is used as hop-by-hop ID */
-		((unsigned int*)tr->req.s)[3] = tr->linker.label;
-		if (write( pc->peer->sock, tr->req.s, tr->req.len)!=-1) {
+		((unsigned int*)tr->req->s)[3] = tr->linker.label;
+		if (write( pc->peer->sock, tr->req->s, tr->req->len)!=-1) {
 			lock_release( pc->peer->mutex);
 			/* success */
 			return 1;
@@ -535,13 +540,13 @@ int send_res_to_peer( str *buf, struct peer *p)
 
 
 /*  sends out a buffer*/
-struct trans *internal_send_request( str *buf, struct peer *p)
+inline int internal_send_request( str *buf, struct peer *p)
 {
 	struct trans *tr;
 	str s;
 
 	/* build a new transaction for this request */
-	if ((tr=create_transaction( buf, 0, p))==0) {
+	if ((tr=create_transaction( 0/*buf*/, 0/*ses*/, p/*peer*/))==0) {
 		LOG(L_ERR,"ERROR:internal_send_request: cannot create a new"
 			" transaction!\n");
 		goto error;
@@ -571,46 +576,44 @@ struct trans *internal_send_request( str *buf, struct peer *p)
 	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
 		get_ticks()+TR_TIMEOUT_TIMEOUT );
 
-	return tr;
+	return 1;
 error:
-	shm_free( buf->s );
 	if (tr)
 		destroy_transaction(tr);
-	return 0;
+	return -1;
 }
 
 
 
-int internal_send_response( str *buf, struct trans *tr)
+inline int internal_send_response( str *buf, struct trans *tr)
 {
-	int ret;
+	/* set the length and the command code */
+	((unsigned int*)buf->s)[0] |= htonl( buf->len );
+	((unsigned int*)buf->s)[1]  = MASK_MSG_CODE&((unsigned int*)tr->req->s)[1];
 
-	/* set the same hop-by-hop and end-to-end Id as in request */
-	((unsigned int*)buf->s)[2] = ((unsigned int*)tr->req.s)[2];
-	((unsigned int*)buf->s)[3] = ((unsigned int*)tr->req.s)[3];
-	((unsigned int*)buf->s)[4] = ((unsigned int*)tr->req.s)[4];
+	/* set the same application, hop-by-hop and end-to-end Id as in request */
+	((unsigned int*)buf->s)[2] = ((unsigned int*)tr->req->s)[2];
+	((unsigned int*)buf->s)[3] = ((unsigned int*)tr->req->s)[3];
+	((unsigned int*)buf->s)[4] = ((unsigned int*)tr->req->s)[4];
 
 	/* send the message */
-	if ( (ret=tcp_send_unsafe( tr->peer, buf->s, buf->len))==-1 ) {
+	if ( tcp_send_unsafe( tr->peer, buf->s, buf->len)==-1 ) {
 		LOG(L_ERR,"ERROR:internal_send_response: tcp_send_unsafe "
 			"returned error!\n");
+		return -1;
 	}
 
-	/* destroy everything */
-	destroy_transaction( tr );
-	shm_free( buf->s );
-
-	return ret;
+	return 1;
 }
 
 
 
 int send_cer( struct peer *dst_peer)
 {
-	struct trans *tr;
 	char *ptr;
 	str *ce_avp;
 	str cer;
+	int ret;
 
 #ifdef USE_IPV6
 	if (dst_peer->local_ip.af==AF_INET6)
@@ -635,11 +638,10 @@ int send_cer( struct peer *dst_peer)
 	memcpy( ptr+AVP_HDR_SIZE,dst_peer->local_ip.u.addr,dst_peer->local_ip.len);
 
 	/* send the buffer */
-	if ( (tr=internal_send_request( &cer, dst_peer))==0 )
-		goto error;
-	tr->info = dst_peer->conn_cnt;
+	ret = internal_send_request( &cer, dst_peer);
 
-	return 1;
+	shm_free( cer.s );
+	return ret;
 error:
 	return -1;
 }
@@ -652,6 +654,7 @@ int send_cea( struct trans *tr, unsigned int result_code)
 	char *ptr;
 	str *ce_avp;
 	str cea;
+	int ret;
 
 #ifdef USE_IPV6
 	if (tr->peer->local_ip.af==AF_INET6)
@@ -666,22 +669,22 @@ int send_cea( struct trans *tr, unsigned int result_code)
 		goto error;
 	}
 	ptr = cea.s;
-	/**/
+	/* copy the standart answer part */
 	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
-	((unsigned int*)ptr)[0] |= htonl( cea.len );
-	((unsigned int*)ptr)[1] |= CE_MSG_CODE;
+
+	/* set the result code  AVP value */
 	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
 		htonl( result_code );
 	ptr += peer_table->std_ans.len;
-	/* set the correct address */
+	/* set the correct address into host-ip-address AVP */
 	memcpy( ptr, ce_avp->s, ce_avp->len );
 	memcpy( ptr+AVP_HDR_SIZE,tr->peer->local_ip.u.addr,tr->peer->local_ip.len);
 
-
 	/* send the buffer */
-	return internal_send_response( &cea, tr);
+	ret = internal_send_response( &cea, tr);
 
-	return 1;
+	shm_free( cea.s );
+	return ret;
 error:
 	return -1;
 }
@@ -758,9 +761,9 @@ error:
 
 int send_dwr( struct peer *dst_peer)
 {
-	struct trans *tr;
 	char *ptr;
 	str dwr;
+	int ret;
 
 	dwr.len = peer_table->std_req.len ;
 	dwr.s = shm_malloc( dwr.len );
@@ -775,11 +778,10 @@ int send_dwr( struct peer *dst_peer)
 	((unsigned int*)ptr)[1] |= DW_MSG_CODE;
 
 	/* send the buffer */
-	if ( (tr=internal_send_request( &dwr, dst_peer))==0 )
-		goto error;
-	tr->info = dst_peer->conn_cnt;
+	ret = internal_send_request( &dwr, dst_peer);
 
-	return 1;
+	shm_free( dwr.s );
+	return ret;
 error:
 	return -1;
 }
@@ -790,6 +792,7 @@ int send_dwa( struct trans *tr, unsigned int result_code)
 {
 	char *ptr;
 	str dwa;
+	int ret;
 
 	dwa.len = peer_table->std_ans.len;
 	dwa.s = shm_malloc( dwa.len );
@@ -798,17 +801,19 @@ int send_dwa( struct trans *tr, unsigned int result_code)
 		goto error;
 	}
 	ptr = dwa.s;
-	/**/
+
+	/* copy the standart part of an answer */
 	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
-	((unsigned int*)ptr)[0] |= htonl( dwa.len );
-	((unsigned int*)ptr)[1] |= DW_MSG_CODE;
+
+	/* set the result code */
 	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
 		htonl( result_code );
 
 	/* send the buffer */
-	return internal_send_response( &dwa, tr);
+	ret = internal_send_response( &dwa, tr);
 
-	return 1;
+	shm_free( dwa.s );
+	return ret;
 error:
 	return -1;
 }
@@ -858,9 +863,9 @@ error:
 
 int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 {
-	struct trans *tr;
 	char *ptr;
 	str dpr;
+	int ret;
 
 	dpr.len = peer_table->std_req.len + peer_table->dpr_avp.len;
 	dpr.s = shm_malloc( dpr.len );
@@ -879,11 +884,10 @@ int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 	((unsigned int*)ptr)[ AVP_HDR_SIZE>>2 ] |= htonl( disc_cause );
 
 	/* send the buffer */
-	if ( (tr=internal_send_request( &dpr, dst_peer))==0 )
-		goto error;
-	tr->info = dst_peer->conn_cnt;
+	ret = internal_send_request( &dpr, dst_peer);
 
-	return 1;
+	shm_free( dpr.s );
+	return ret;
 error:
 	return -1;
 }
@@ -894,6 +898,7 @@ int send_dpa( struct trans *tr, unsigned int result_code)
 {
 	char *ptr;
 	str dpa;
+	int ret;
 
 	dpa.len = peer_table->std_ans.len;
 	dpa.s =shm_malloc( dpa.len );
@@ -902,17 +907,19 @@ int send_dpa( struct trans *tr, unsigned int result_code)
 		goto error;
 	}
 	ptr = dpa.s;
-	/**/
+
+	/* copy the standart part of an answer */
 	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
-	((unsigned int*)ptr)[0] |= htonl( dpa.len );
-	((unsigned int*)ptr)[1] |= DP_MSG_CODE;
+
+	/* set thr result code */
 	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
 		htonl( result_code );
 
 	/* send the buffer */
-	return internal_send_response( &dpa, tr);
+	ret = internal_send_response( &dpa, tr);
 
-	return 1;
+	shm_free( dpa.s );
+	return ret;
 error:
 	return -1;
 }
@@ -995,10 +1002,8 @@ void dispatch_message( struct peer *p, str *buf)
 		/* request */
 		tr = create_transaction( buf, 0/*ses*/, p);
 		if (tr) {
-			if (peer_state_machine( p, event, tr)==-1)
-				destroy_transaction( tr );
-		} else {
-			shm_free( buf->s );
+			peer_state_machine( p, event, tr);
+			destroy_transaction( tr );
 		}
 	} else {
 		/* response -> find its transaction and remove it from 
@@ -1008,39 +1013,48 @@ void dispatch_message( struct peer *p, str *buf)
 		if (!tr) {
 			LOG(L_ERR,"ERROR:dispatch_message: respons received, but no"
 				" transaction found!\n");
-			shm_free( buf->s );
 		} else {
-			/* destroy the transaction along with the originator request */
+			/* destroy the transaction */
 			destroy_transaction( tr );
-			/*make from a request event a response event */
+			/* make from a request event a response event */
 			event++;
 			/* call the peer machine */
 			peer_state_machine( p, event, buf );
-			shm_free(buf->s);
 		}
 	}
+	/* free the message buffer */
+	shm_free( buf->s );
 }
 
 
 
 inline void reset_peer( struct peer *p)
 {
-	/* reset peer filds */
+	/* if it's in a timer list -> remove it */
 	if (p->tl.timer_list)
 		rmv_from_timer_list( &(p->tl) );
+
+	/* reset the socket */
 	p->sock = -1;
-	/**/
+
+	/* reset the PEER_CONN_IN_PROG flag */
 	p->flags &= !PEER_CONN_IN_PROG;
+
+	/* put the peer in timer list for reconnection  */
 	if (!p->flags&PEER_TO_DESTROY)
-		add_to_timer_list( &(p->tl), reconn_timer,
-			get_ticks()+RECONN_TIMEOUT);
-	/**/
+		add_to_timer_list( &(p->tl), reconn_timer, get_ticks()+RECONN_TIMEOUT);
+
+	/* remove the peer from activ peer list */
+	list_del_safe(  &p->lh , &activ_peers );
+
+	/* reset the buffer for  reading messages */
 	p->first_4bytes = 0;
 	p->buf_len = 0;
 	if (p->buf)
 		shm_free(p->buf);
 	p->buf = 0;
-	/**/
+
+	/* reset the supported application ids */
 	p->supp_acc_app_id  = 0;
 	p->supp_auth_app_id = 0;
 }
@@ -1058,6 +1072,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 		"unknown peer state"
 	};
 	int error_code=0;
+	int res;
 
 	if (!p) {
 		LOG(L_ERR,"ERROR:peer_state_machine: addressed peer is 0!!\n");
@@ -1161,8 +1176,6 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			lock_get( p->mutex );
 			DBG("DEBUG:peer_state_machine: closing connection\n");
 			tcp_close( p );
-			/* remove the peer from activ peer list */
-			list_del_safe(  &p->lh , &activ_peers );
 			reset_peer( p );
 			/* new state */
 			p->state = PEER_UNCONN;
@@ -1254,23 +1267,21 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 				case PEER_WAIT_CEA:
 					DBG("DEBUG:peer_state_machine: CER received -> "
 						"sending CEA\n");
-					if (process_ce( p, &(((struct trans*)ptr)->req), 1 )==-1) {
-						LOG(L_ERR,"ERROR:peer_state_machine: bad CER !!\n");
-						send_cea( (struct trans*)ptr, AAA_MISSING_AVP);
-						tcp_close( p );
-						reset_peer( p );
-						p->state = PEER_UNCONN;
-					} else if (cheack_app_ids(p)) {
-						send_cea( (struct trans*)ptr, AAA_SUCCESS);
-						list_add_tail_safe( &p->lh, &activ_peers );
-						p->state = PEER_CONN;
-					} else {
+					res = AAA_SUCCESS;
+					if (process_ce( p, ((struct trans*)ptr)->req, 1 )==-1)
+						res = AAA_MISSING_AVP;
+					else if ( !cheack_app_ids(p) ) {
 						LOG(L_ERR,"ERROR:peer_state_machine: no common app\n");
-						send_cea((struct trans*)ptr,AAA_NO_COMMON_APPLICATION);
+						res = AAA_NO_COMMON_APPLICATION;
+					}
+					/* send the response */
+					if(send_cea((struct trans*)ptr,res)==-1||res!=AAA_SUCCESS){
 						tcp_close( p );
 						reset_peer( p );
 						p->state = PEER_UNCONN;
 					}
+					list_add_tail_safe( &p->lh, &activ_peers );
+					p->state = PEER_CONN;
 					lock_release( p->mutex );
 					break;
 				default:
@@ -1287,11 +1298,14 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 				case PEER_WAIT_DPA:
 					DBG("DEBUG:peer_state_machine: DWR received -> "
 						"sending DWA\n");
-					if (process_dw( p, &(((struct trans*)ptr)->req), 1 )==-1) {
-						LOG(L_ERR,"ERROR:peer_state_machine: bad DWR !!\n");
-						send_dwa( (struct trans*)ptr, AAA_MISSING_AVP);
-					} else {
-						send_dwa( (struct trans*)ptr, AAA_SUCCESS);
+					res = AAA_SUCCESS;
+					if (process_dw( p, ((struct trans*)ptr)->req, 1 )==-1)
+						res = AAA_MISSING_AVP;
+					/* send the response */
+					if(send_dwa((struct trans*)ptr,res)==-1||res!=AAA_SUCCESS){
+						tcp_close( p );
+						reset_peer( p );
+						p->state = PEER_UNCONN;
 					}
 					lock_release( p->mutex );
 					break;
@@ -1352,12 +1366,11 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					list_del_safe( &p->lh , &activ_peers );
 					DBG("DEBUG:peer_state_machine: DPR received -> "
 						"sending DPA\n");
-					if (process_dp( p, &(((struct trans*)ptr)->req), 1 )==-1) {
-						LOG(L_ERR,"ERROR:peer_state_machine: bad DPR !!\n");
-						send_dpa( (struct trans*)ptr, AAA_MISSING_AVP);
-					} else {
-						send_dpa( (struct trans*)ptr, AAA_SUCCESS);
-					}
+					res = AAA_SUCCESS;
+					if (process_dp( p, ((struct trans*)ptr)->req, 1 )==-1)
+						res = AAA_MISSING_AVP;
+					/* send the response */
+					send_dpa( (struct trans*)ptr, res);
 					tcp_close( p );
 					reset_peer( p );
 					p->state = PEER_UNCONN;

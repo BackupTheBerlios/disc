@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.24 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: message.c,v 1.25 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -436,8 +436,7 @@ int send_request( AAAMessage *msg)
 
 	pc = (struct peer_chaine*)msg->peers;
 
-	/* link the transaction into the hash table ; use end-to-end-ID for
-	 * calculating the hash_code */
+	/* calculating the hash_code (over the end-to-end Id) */
 	s.s = (char*)&ete;
 	s.len = END_TO_END_IDENTIFIER_SIZE;
 	tr->linker.hash_code = hash( &s , pc->peer->trans_table->hash_size );
@@ -478,7 +477,7 @@ int send_aaa_response( AAAMessage *msg)
 		goto error;
 
 	/* copy the end-to-end id and hop-by-hop id */
-	req = &(((struct trans*)msg->trans)->req);
+	req = ((struct trans*)msg->trans)->req;
 	((unsigned int*)msg->buf.s)[3] = ((unsigned int*)req->s)[3];
 	((unsigned int*)msg->buf.s)[4] = ((unsigned int*)req->s)[4];
 
@@ -634,6 +633,10 @@ AAAReturnCode  AAAFreeMessage(AAAMessage **msg)
 		/*free the avp*/
 		AAAFreeAVP(&avp_t);
 	}
+
+	/* free the buffer (if any) */
+	if ( (*msg)->buf.s )
+		shm_free( (*msg)->buf.s );
 
 	/* free the AAA msg */
 	shm_free(*msg);

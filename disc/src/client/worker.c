@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.3 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: worker.c,v 1.4 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -86,10 +86,14 @@ void *client_worker(void *attr)
 		code = ((unsigned int*)buf.s)[1]&MASK_MSG_CODE;
 		if ( buf.s[VER_SIZE+MESSAGE_LENGTH_SIZE]&0x80 ) {
 			/* request */
-			// TO DO !!!!!!!!!!!!!!
+			/* TO DO  - make sens only if the server is statefull */
+			LOG(L_ERR,"ERROR:client_worker: request received"
+				" - UNIMPLEMENTED!!\n");
+			shm_free( buf.s );
 		} else {
-			/* response -> performe transaction lookup */
-			tr = transaction_lookup_safe( peer,
+			/* response -> performe transaction lookup and remove it from 
+			 * hash table */
+			tr = transaction_lookup( peer,
 				((unsigned int*)buf.s)[4], ((unsigned int*)buf.s)[3]);
 			if (!tr) {
 				LOG(L_ERR,"ERROR:client_worker: unexpected answer received "
@@ -97,11 +101,9 @@ void *client_worker(void *attr)
 				shm_free( buf.s );
 				continue;
 			}
-			/* stop the timeout timer */
-			rmv_from_timer_list( &(tr->timeout) );
 			/* remember the session! - I will need it later */
 			ses = tr->ses;
-			/* destroy the transaction*/
+			/* destroy the transaction (also the timeout timer will be stop) */
 			destroy_transaction( tr );
 
 			/* parse the message */
@@ -109,13 +111,18 @@ void *client_worker(void *attr)
 			if (!msg) {
 				LOG(L_ERR,"ERROR:client_worker: error parsing message!\n");
 				shm_free( buf.s );
+				/* TODO - should I notify the modules some how?
+				 * a trans timeout maybe? */
 				continue;
 			}
 			msg->sId = &(ses->sID);
 
 			if (code==ST_MSG_CODE) {
 				/* it's a session termination answer */
-				// TO DO !!!!!!!!!!!!
+				/* TO DO - only when the client will support a statefull
+				 * server  */
+				LOG(L_ERR,"ERROR:client_worker: STA received!! very strange!"
+					" - UNIMPLEMENTED!!\n");
 			} else {
 				/* it's an auth answer -> change the state */
 				if (session_state_machine( ses, AAA_AA_RECEIVED, msg)!=-1) {
@@ -126,9 +133,8 @@ void *client_worker(void *attr)
 				}
 			}
 
-			/* free the mesage */
+			/* free the mesage (along with the buffer) */
 			AAAFreeMessage( &msg  );
-			shm_free( buf.s );
 		}
 	}
 

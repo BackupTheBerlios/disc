@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.5 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: trans.c,v 1.6 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -70,10 +70,8 @@ struct trans* create_transaction(str *buf, struct session *ses, struct peer *p)
 	/* init the timer_link for timeout */
 	t->timeout.payload = t;
 	/* link the outging request */
-	t->req.s = buf->s;
-	t->req.len = buf->len;
+	t->req = buf;
 	/* link the outgoing peer */
-	//atomic_inc( &(p->ref_cnt) );  <--- SGF!!!
 	t->peer = p;
 
 	return t;
@@ -83,28 +81,23 @@ error:
 
 
 
-void destroy_transaction( void *vp)
+void destroy_transaction( struct trans *tr )
 {
-	struct trans *t=(struct trans*)vp;
-
-	if (!t) {
+	if (!tr) {
 		LOG(L_ERR,"ERROR:destroy_transaction: null parameter received!\n");
 		return;
 	}
 
 	/* unref the peers */
-	if (t->peer)
-		atomic_dec( &(t->peer->ref_cnt) );
+	if (tr->peer)
+		atomic_dec( &(tr->peer->ref_cnt) );
 
-	/* free the messages */
-	if (t->req.s)
-		shm_free( t->req.s );
 	/* timer */
-	if (t->timeout.timer_list)
-		rmv_from_timer_list( &(t->timeout) );
+	if (tr->timeout.timer_list)
+		rmv_from_timer_list( &(tr->timeout) );
 
 	/* free the structure */
-	shm_free(t);
+	shm_free(tr);
 }
 
 
@@ -124,7 +117,7 @@ void timeout_handler(unsigned int ticks, void* param)
 		tl = tl->next_tl;
 		/* process the transaction */
 		if (tr->ses) {
-			//session_state_machine();
+			session_state_machine( tr->ses, AAA_SESSION_REQ_TIMEOUT, 0);
 		}else{
 			write_command( tr->peer->fd, TIMEOUT_PEER_CMD,
 				PEER_TR_TIMEOUT, tr->peer, (void*)tr->info);

@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.15 2003/04/06 22:19:49 bogdan Exp $
+ * $Id: session.c,v 1.16 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -361,6 +361,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 		case AAA_CLIENT:
 			/* I am server, I am all the time statefull ;-) */
 			break;
+
 		case AAA_SERVER_STATELESS:
 			/* I am client to a stateless server */
 			switch( event ) {
@@ -369,12 +370,14 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 					lock_get( ses->mutex );
 					switch(ses->state) {
 						case AAA_IDLE_STATE:
+						case AAA_OPEN_STATE:
 							/* send out the message */
 							if (send_request(msg)==-1) {
 								lock_release( ses->mutex );
 								error_code = 4;
 								goto error;
 							}
+							ses->prev_state = ses->state;
 							ses->state = AAA_PENDING_STATE;
 							lock_release( ses->mutex );
 							break;
@@ -397,7 +400,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 							if ( avp2int(msg->res_code)== AAA_SUCCESS)
 								ses->state = AAA_OPEN_STATE;
 							else
-								ses->state = AAA_IDLE_STATE;
+								ses->state = ses->prev_state;
 							lock_release( ses->mutex );
 							break;
 						default:
@@ -406,16 +409,19 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 							goto error;
 					}
 					break;
-				case AAA_SESSION_TIMEOUT:
-					/* session timeout was generated */
+				case AAA_SESSION_REQ_TIMEOUT:
+					/* a session request gave timeout waiting for answer */
+					lock_get( ses->mutex );
 					switch(ses->state) {
-						case AAA_OPEN_STATE:
-							/* Disconnect user/device */
-							/* Destroy session ???? */
-							// TO DO
-							ses->state = AAA_IDLE_STATE;
+						case AAA_PENDING_STATE:
+							ses->state = ses->prev_state;
+							lock_release( ses->mutex );
+							/* run the timeout handler */
+							((struct module_exports*)ses->app_ref)->mod_tout(
+								ANSWER_TIMEOUT_EVENT,&(ses->sID),ses->context);
 							break;
 						default:
+							lock_release( ses->mutex );
 							error_code = 1;
 							goto error;
 					}
@@ -425,8 +431,13 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 					goto error;
 			}
 			break;
+
 		case AAA_SERVER_STATEFULL:
 			/* I am client to a statefull server */
+			LOG(L_ERR,"ERROR: UNIMPLEMENTED - client for a "
+				"statefull server\n");
+			break;
+#if 0
 			switch( event ) {
 				case AAA_SEND_AR:
 					/* an re-auth request was sent */
@@ -504,6 +515,7 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 					goto error;
 			}
 			break;
+#endif
 		default:
 			error_code = 3;
 			goto error;

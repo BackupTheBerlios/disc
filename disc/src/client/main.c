@@ -152,7 +152,7 @@ int init_aaa_client()
 
 	/* add the peers from config file */
 	//..................
-	host.s   = "fec0::1:250:daff:fe43:37e3";
+	host.s   = "ugluk.mobis.fokus.gmd.de";
 	host.len = strlen(host.s);
 	aaa_id.s   = "aaa://ugluk.mobis.fokus.gmd.de:1812;transport=tcp";
 	aaa_id.len = strlen( aaa_id.s );

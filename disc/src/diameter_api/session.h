@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.12 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: session.h,v 1.13 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -48,8 +48,8 @@ enum AAA_EVENTS {
 	AAA_AR_RECEIVED,
 	AAA_SEND_AR,
 	AAA_SEND_AA,
+	AAA_SESSION_REQ_TIMEOUT,
 
-	AAA_SESSION_TIMEOUT,
 	AAA_ASR_RECEIVED,
 	AAA_ASA_RECEIVED,
 	AAA_ASR_SENT,
@@ -114,6 +114,7 @@ struct session {
 	void  *context;
 	/* session status */
 	unsigned int state;
+	unsigned int prev_state;
 };
 
 

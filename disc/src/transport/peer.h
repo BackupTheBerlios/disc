@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.11 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: peer.h,v 1.12 2003/04/07 15:17:51 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -71,7 +71,7 @@ struct peer {
 	/* what kind of app the other peer supports */
 	unsigned int supp_acc_app_id;
 	unsigned int supp_auth_app_id;
-	/* */
+	/* inactivity time list linker */
 	struct list_head lh;
 	unsigned int last_activ_time;
 	/* counter rhat tells how many time this peer was connected */
