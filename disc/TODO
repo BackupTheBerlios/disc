@@ -1,0 +1,9 @@
+$Id: TODO,v 1.1 2003/04/08 17:52:25 andrei Exp $
+
+- find a name [all]
+- put GNU license in every file [all]
+- different autoconf for modules [andrei]
+- shared lib from diameter_msg [andrei]
+- make install ? [andrei]
+
+- grouped avp [bogdan]
