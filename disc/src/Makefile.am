@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.18 2003/04/11 17:48:02 bogdan Exp $
+## $Id: Makefile.am,v 1.19 2003/04/11 18:09:46 andrei Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -31,8 +31,8 @@ aaa_SOURCES = $(common)
 				
 EXTRA_DIST=	server aaa_client.cfg aaa_server.cfg
 
-aaa_LDADD =	../libltdl/libltdlc.la mem/libmem.la transport/libtransport.la \
-			diameter_api/libdiameter_api.la diameter_msg/libdiameter_msg.la
+aaa_LDADD =	 mem/libmem.la transport/libtransport.la \
+			diameter_api/libdiameter_api.la diameter_msg/libdiameter_msg.la \
 			@LIBLTDL@
 # @LIBADD_DL@ # not needed for newer libtool version (>=1.4)
 aaa_LDFLAGS = -export-dynamic -pthread
