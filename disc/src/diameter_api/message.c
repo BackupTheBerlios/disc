@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.16 2003/03/26 17:58:38 bogdan Exp $
+ * $Id: message.c,v 1.17 2003/03/27 16:05:30 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -562,7 +562,8 @@ AAAMessage *AAANewMessage(
 		/* it's a new request -> set the flag */
 		msg->flags = 0x80;
 		/* keep track of the session -> SendMessage will need it! */
-		msg->intern = sessionId;
+		msg->intern = (struct session*)((char*)(sessionId)-
+			(unsigned long)(&((struct session*)0)->sID));
 	} else {
 		/* link the transaction the req. belong to */
 		msg->intern = request->intern;
@@ -662,7 +663,6 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 {
 	struct session *ses;
 	struct trans   *tr;
-	struct peer    *dst_peer;
 	AAA_AVP        *avp;
 	unsigned int   event;
 	str            buf;
@@ -670,7 +670,6 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	ses = 0;
 	avp = 0;
 	tr  = 0;
-	dst_peer = 0;
 	buf.s =0;
 	buf.len = 0;
 
@@ -712,8 +711,6 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		if (send_aaa_response( &buf, tr)==-1)
 			goto error;
 	} else {
-		/* where should I send this request? */
-		//dst_peer = ?????;
 		/* it's a request -> get its session */
 		ses = (struct session*)msg->intern;
 		/* update the session state */
@@ -736,7 +733,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		if ( build_buf_from_msg( msg, &buf)==-1 )
 			goto error;
 		/* send the response */
-		if ( (tr=send_aaa_request( &buf, ses, dst_peer))==0 )
+		if ( (tr=send_aaa_request( &buf, ses, 0/*dst_peer*/))==0 )
 			goto error;
 		msg->intern = tr;
 	}
