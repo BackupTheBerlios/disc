@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.11 2003/04/01 13:39:04 bogdan Exp $
+ * $Id: session.h,v 1.12 2003/04/04 16:59:25 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -14,16 +14,22 @@
 #include "../aaa_lock.h"
 #include "../hash_table.h"
 #include "../locking.h"
+#include "../timer.h"
 
 
 #define SESSION_STATE_MAINTAINED      0
 #define SESSION_NO_STATE_MAINTAINED   1
 
+#define sId2session( _sId_ ) \
+	((struct session*)((char *)(_sId_) - \
+	(unsigned long)(&((struct session*)0)->sID)))
+
+
+
 /* all possible states of the session state machine */
 enum {
 	AAA_IDLE_STATE,
 	AAA_PENDING_STATE,
-	AAA_PROCESSING_AA_STATE,
 	AAA_OPEN_STATE,
 	AAA_DISCON_STATE
 };
@@ -64,13 +70,20 @@ enum AAA_EVENTS {
  * all session manager's info packed
  */
 struct session_manager {
+	/* SESSION ID */
 	/* vector used to store the monotonically increasing 64-bit value used
 	 * in session ID generation */
 	unsigned int monoton_sID[2];
 	/* mutex */
 	gen_lock_t *sID_mutex;
-	/* hash_table for the sessions */
+
+	/* SESSIONS */
+	/* hash_table */
 	struct h_table *ses_table;
+	/* timer */
+	struct timer *ses_timer;
+
+	/* SHARED MUTEXES */
 	/* mutexes that are distributed to the sessions */
 	gen_lock_t *shared_mutexes;
 	/* mutex for protecting disribution of shared mutexes :-)) */
@@ -82,23 +95,24 @@ struct session_manager {
 };
 
 
+
 /*
  * encapsulates a everything about a AAA session
  */
 struct session {
-	/* linker into hash table; MUST be the first */
+	/* linker into hash table */
 	struct h_link  linker;
+	/* linmker into tiler list */
+	struct timer_link tl;
 	/* mutex */
 	gen_lock_t *mutex;
 	/* AAA info */
 	unsigned short peer_identity;        /* is it a client, server ....? */
 	str sID;                             /* session-ID as string */
 	/* context  */
-	void  *context;
 	AAAApplicationRef app_ref;
-	/* infos */
-	unsigned int session_timeout;
-	unsigned int request_timeout;
+	void  *context;
+	/* session status */
 	unsigned int state;
 };
 
@@ -135,12 +149,18 @@ int session_state_machine( struct session* , enum AAA_EVENTS event,
 inline static struct session* session_lookup(struct h_table *table,
 															AAASessionId *sID)
 {
+	struct h_link  *linker;
 	unsigned int   hash_code;
 	unsigned int   label;
 
 	if (parse_sessionID(  sID, &hash_code, &label)!=1)
 		return 0;
-	return (struct session*)cell_lookup( table, hash_code, label);
+	linker = cell_lookup( table, hash_code, label);
+	if (linker)
+		return ((struct session*)((char *)(linker) -
+			(unsigned long)(&((struct session*)0)->linker))) ;
+	else
+		return 0;
 }
 
 

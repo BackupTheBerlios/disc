@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.23 2003/04/04 11:26:37 bogdan Exp $
+ * $Id: message.c,v 1.24 2003/04/04 16:59:25 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -749,10 +749,10 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 			goto error;
 	}
 
-	AAAFreeMessage( &msg );
+	msg->peers = 0;
 	return AAA_ERR_SUCCESS;
 error:
-	AAAFreeMessage( &msg );
+	msg->peers = 0;
 	return AAA_ERR_FAILURE;
 }
 

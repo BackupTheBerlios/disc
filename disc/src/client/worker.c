@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.2 2003/04/02 15:05:13 bogdan Exp $
+ * $Id: worker.c,v 1.3 2003/04/04 16:59:25 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -70,11 +70,12 @@ void stop_client_workers()
 
 void *client_worker(void *attr)
 {
-	str           buf;
-	struct peer   *peer;
-	AAAMessage    *msg;
-	unsigned int  code;
-	struct trans  *tr;
+	str            buf;
+	struct peer    *peer;
+	AAAMessage     *msg;
+	unsigned int   code;
+	struct trans   *tr;
+	struct session *ses;
 
 	while (1) {
 		/* read a mesage from the queue */
@@ -85,6 +86,7 @@ void *client_worker(void *attr)
 		code = ((unsigned int*)buf.s)[1]&MASK_MSG_CODE;
 		if ( buf.s[VER_SIZE+MESSAGE_LENGTH_SIZE]&0x80 ) {
 			/* request */
+			// TO DO !!!!!!!!!!!!!!
 		} else {
 			/* response -> performe transaction lookup */
 			tr = transaction_lookup_safe( peer,
@@ -97,31 +99,36 @@ void *client_worker(void *attr)
 			}
 			/* stop the timeout timer */
 			rmv_from_timer_list( &(tr->timeout) );
+			/* remember the session! - I will need it later */
+			ses = tr->ses;
+			/* destroy the transaction*/
+			destroy_transaction( tr );
 
 			/* parse the message */
 			msg = AAATranslateMessage( buf.s, buf.len );
 			if (!msg) {
 				LOG(L_ERR,"ERROR:client_worker: error parsing message!\n");
-				destroy_transaction( tr );
 				shm_free( buf.s );
 				continue;
 			}
+			msg->sId = &(ses->sID);
 
 			if (code==ST_MSG_CODE) {
 				/* it's a session termination answer */
+				// TO DO !!!!!!!!!!!!
 			} else {
-				/* it's an auth answer */
-				if (session_state_machine( tr->ses, AAA_AA_RECEIVED, msg)==-1){
-					/* dump the request */
-					AAAFreeMessage( &msg );
-					destroy_transaction( tr );
-					shm_free( buf.s );
-				}
-				/* call the handler */
-				if (((struct module_exports*)tr->ses->app_ref)->
-				mod_run( msg, tr->ses->context)!=1) {
+				/* it's an auth answer -> change the state */
+				if (session_state_machine( ses, AAA_AA_RECEIVED, msg)!=-1) {
+					/* message was accepted by the session state machine -> 
+					 * call the handler */
+					((struct module_exports*)ses->app_ref)->
+						mod_msg( msg, ses->context);
 				}
 			}
+
+			/* free the mesage */
+			AAAFreeMessage( &msg  );
+			shm_free( buf.s );
 		}
 	}
 

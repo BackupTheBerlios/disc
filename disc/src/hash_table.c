@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.c,v 1.3 2003/03/17 19:10:55 bogdan Exp $
+ * $Id: hash_table.c,v 1.4 2003/04/04 16:59:24 bogdan Exp $
  *
  * 2003-01-29  created by bogdan
  * 2003-03-12  converted to use shm_malloc (andrei)
@@ -14,6 +14,7 @@
 #include "dprint.h"
 #include "list.h"
 #include "str.h"
+#include "aaa_lock.h"
 #include "hash_table.h"
 
 
@@ -32,7 +33,7 @@ struct h_table* build_htable( unsigned int hash_size)
 	/* allocates the hash table */
 	table = (struct h_table*)shm_malloc( sizeof(struct h_table));
 	if (!table) {
-		LOG(L_ERR,"ERROR:build_htable: cannot get free memory!\n");
+		LOG(L_CRIT,"ERROR:build_htable: cannot get free memory!\n");
 		goto error;
 	}
 	memset( table, 0, sizeof(struct h_table));
@@ -42,10 +43,17 @@ struct h_table* build_htable( unsigned int hash_size)
 	table->entrys = (struct h_entry*)shm_malloc( hash_size*
 													sizeof(struct h_entry));
 	if (!table->entrys) {
-		LOG(L_ERR,"ERROR:build_htable: cannot get free memory!\n");
+		LOG(L_CRIT,"ERROR:build_htable: cannot get free memory!\n");
 		goto error;
 	}
 	memset( table->entrys, 0, hash_size*sizeof(struct h_entry));
+
+	/* create the mutex for it */
+	table->mutex = create_locks( 1 );
+	if (!table->mutex) {
+		LOG(L_CRIT,"ERROR:build_htable: cannot create mutex lock!\n");
+		goto error;
+	}
 
 	/* init the label counter and linked list head */
 	for(i=0;i<hash_size;i++) {
@@ -72,6 +80,9 @@ void destroy_htable( struct h_table *table)
 			/* free the entry's array */
 			shm_free( table->entrys  );
 		}
+		/* destroy the mutex */
+		if (table->mutex)
+			destroy_locks( table->mutex, 1);
 		/* at last, free the table structure */
 		shm_free( table);
 	}
@@ -93,11 +104,15 @@ int add_cell_to_htable( struct h_table *table, struct h_link *link)
 
 	entry = &(table->entrys[link->hash_code]);
 
+	lock_get( table->mutex );
+
 	/* get a label for this session */
 	link->label = entry->next_label++;
 
 	/* insert the session into the linked list at the end */
 	list_add_tail( &(link->lh), &(entry->lh) );
+
+	lock_release( table->mutex );
 
 	return 1;
 }
@@ -109,8 +124,9 @@ int add_cell_to_htable( struct h_table *table, struct h_link *link)
  */
 void remove_cell_from_htable(struct h_table *table, struct h_link *link)
 {
+	lock_get( table->mutex );
 	list_del( &(link->lh) );
-
+	lock_release( table->mutex );
 }
 
 

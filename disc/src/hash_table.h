@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.h,v 1.5 2003/03/28 14:20:43 bogdan Exp $
+ * $Id: hash_table.h,v 1.6 2003/04/04 16:59:25 bogdan Exp $
  *
  * 2003-01-29 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -15,14 +15,13 @@
 
 #include "dprint.h"
 #include "list.h"
+#include "locking.h"
 #include "str.h"
 
 
 /*
  * link element used by al kind of different structure that wants to be linked
  * into a hash entry; 
- * IMPORTANT: this link structure MUST be INCLUDED(not refere) at the BEGININNG
- * of the structrure that uses the hash_table
  */
 struct h_link {
 	struct list_head lh;
@@ -49,7 +48,9 @@ struct h_entry {
 struct h_table {
 	unsigned int hash_size;
 	/* hash entrys */
-	struct h_entry* entrys;
+	struct h_entry *entrys;
+	/* mutex */
+	gen_lock_t *mutex;
 };
 
 
@@ -82,6 +83,7 @@ static inline struct h_link *cell_lookup(struct h_table *table,
 	entry = &(table->entrys[hash_code]);
 	link = 0;
 
+	lock_get( table->mutex );
 	/* looks into the the sessions hash table */
 	list_for_each( lh, &(entry->lh) ) {
 		if ( ((struct h_link*)lh)->label==label ) {
@@ -90,6 +92,7 @@ static inline struct h_link *cell_lookup(struct h_table *table,
 		}
 	}
 
+	lock_release( table->mutex );
 	return link;
 }
 

@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.3 2003/04/02 19:08:53 bogdan Exp $
+ * $Id: print.c,v 1.4 2003/04/04 16:59:25 bogdan Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -21,8 +21,9 @@
 
 static int mod_init();
 static void mod_destroy();
-static int mod_run(AAAMessage *msg, void *context);
-static int Tout_run(int event, void *context);
+static int mod_msg(AAAMessage *msg, void *context);
+static int mod_tout(int event, AAASessionId* sId, void *context);
+
 
 struct module_exports exports = {
 	"print",
@@ -30,7 +31,8 @@ struct module_exports exports = {
 	
 	mod_init,
 	mod_destroy,
-	mod_run
+	mod_msg,
+	mod_tout
 };
 
 
@@ -47,11 +49,13 @@ void *print_worker(void *attr)
 
 	sleep(5);
 
-	AAAStartSession( &sID, &exports, 0);
+	AAAStartSession( &sID, get_my_appref(), 0);
 	req = AAANewMessage( 456, 4, sID, 0);
 	AAACreateAVP( &avp, AVP_Destination_Realm, 0, 0, "gmd.de", 6);
 	AAAAddAVPToMessage( req, avp, req->orig_realm);
 	AAASendMessage( req );
+
+	AAAFreeMessage( &req );
 
 	while(1)
 		sleep(100);
@@ -78,14 +82,24 @@ void mod_destroy()
 }
 
 
-int mod_run(AAAMessage *msg, void *context)
+int mod_msg(AAAMessage *msg, void *context)
 {
-	printf("\n print module: mod_run() called\n");
+	DBG("\n print module: mod_msg() called\n");
+	if (msg->commandCode==456) {
+		DBG(" print module: got answer on my request\n");
+		AAASessionTimerStart( msg->sId, 5);
+	}
 	return 1;
 }
 
-int Tout_run(int event, void *context)
+
+int mod_tout(int event, AAASessionId* sId, void *context)
 {
+	DBG("\n print module: mod_tout() called\n");
+	if (event==SESSION_TIMEOUT_EVENT) {
+		DBG(" print module: session %p expired -> destroy it\n",sId);
+		AAAEndSession( sId );
+	}
 	return 1;
 }
 

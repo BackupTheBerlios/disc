@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.3 2003/04/01 14:04:45 bogdan Exp $
+ * $Id: timer.c,v 1.4 2003/04/04 16:59:25 bogdan Exp $
  *
  * 
  *  2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -168,6 +168,34 @@ int add_to_timer_list( struct timer_link* tl, struct timer* timer_list,
 	lock_release(timer_list->mutex);
 
 	DBG("DEBUG: add_to_timer_list[%p]: %p\n",timer_list,tl);
+	return 1;
+}
+
+
+
+int insert_into_timer_list( struct timer_link* t_link, struct timer* t_list,
+														unsigned int timeout)
+{
+	struct timer_link *tlink;
+
+	/* lock the list */
+	lock_get(t_list->mutex);
+	/* add the element into the list */
+	t_link->timeout = timeout;
+	/* look for the corect possition */
+	tlink = &(t_list->first_tl);
+	for(;tlink!=&(t_list->last_tl)&&tlink->timeout<timeout;
+		tlink=tlink->next_tl);
+	/* do insert before "tlink" */
+	t_link->next_tl = tlink;
+	t_link->prev_tl = tlink->prev_tl;
+	tlink->prev_tl->next_tl = t_link;
+	tlink->prev_tl = t_link;
+	t_link->timer_list = t_list;
+	/* unlock the list */
+	lock_release(t_list->mutex);
+
+	DBG("DEBUG: insert_into_timer_list[%p]: %p\n",t_list,t_link);
 	return 1;
 }
 

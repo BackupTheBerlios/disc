@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_api.h,v 1.6 2003/04/02 15:05:13 bogdan Exp $
+ * $Id: diameter_api.h,v 1.7 2003/04/04 16:59:25 bogdan Exp $
  *
  * 2002-10-04 created by illya (komarov@fokus.gmd.de)
  *
@@ -11,6 +11,8 @@
 
 #include "diameter_types.h"
 
+
+#define get_my_appref() ((AAAApplicationRef)&exports)
 
 
 AAAReturnCode AAAOpen(
@@ -52,15 +54,23 @@ AAAReturnCode AAARegisterExtension(
 AAAReturnCode AAAStartSession(
 		AAASessionId **sessionId,
 		AAAApplicationRef appReference,
-		void *contect);
+		void *context);
 
-/*  AAAReturnCode AAARegisterPeerSession(AAASessionId **sessionId,
-				                               AAAApplicationId *appHandle,   				
-                               				 AAAMessage *message,
-				                               char *userName,
-					                             char *hostName);
-  AAAReturnCode AAAEndSession(AAASessionId *sessionId);
-  AAAReturnCode AAAAbortSession(AAASessionId *sessionId);
+
+AAAReturnCode AAAEndSession(
+		AAASessionId *sessionId );
+
+
+AAAReturnCode AAASessionTimerStart(
+		AAASessionId *sessionId ,
+		unsigned int timeout);
+
+
+AAAReturnCode AAASessionTimerStop(
+		AAASessionId *sessionId );
+
+
+/*  AAAReturnCode AAAAbortSession(AAASessionId *sessionId);
   AAAServer *AAALookupServer(IP_ADDR ipAddr);
   AAAReturnCode AAASetSessionMessageTimeout(AAASessionId *id,
                                             time_t timeout);

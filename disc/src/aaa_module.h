@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.h,v 1.4 2003/04/02 19:08:52 bogdan Exp $
+ * $Id: aaa_module.h,v 1.5 2003/04/04 16:59:24 bogdan Exp $
  */
 /* History:
  * --------
@@ -11,7 +11,6 @@
 
 #include "diameter_api/diameter_types.h"
 
-
 struct module_exports{
 	char* name; /* module name, must be unique */
 	unsigned int appid; /* application id*/
@@ -19,8 +18,8 @@ struct module_exports{
 	int (*mod_init)();   /* module initialization function */
 	void (*mod_destroy)(); /* called on exit */
 	
-	int (*mod_run)(AAAMessage*, void*); /* called for each message */
-	int (*mod_Tout)(int, void*); /* called for all TimeOut event */
+	int (*mod_msg)(AAAMessage*, void*); /* called for each message */
+	int (*mod_tout)(int, AAASessionId*, void*);  /* called for all timeout */
 };
 
 

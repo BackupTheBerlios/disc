@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.15 2003/04/04 11:26:37 bogdan Exp $
+ * $Id: diameter_types.h,v 1.16 2003/04/04 16:59:25 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -33,6 +33,8 @@
 	(AVP_CODE_SIZE+AVP_FLAGS_SIZE+AVP_LENGTH_SIZE)
 
 
+/* mesage codes
+ */
 #if (__BYTE_ORDER==LITTLE_ENDIAN)
 	#define AS_MSG_CODE      0x12010000
 	#define AC_MSG_CODE      0x0f010000
@@ -53,6 +55,11 @@
 	#define MASK_MSG_CODE    0x00ffffff
 #endif
 
+
+/* types of timeout - passed when a Tout handler is called
+ */
+#define ANSWER_TIMEOUT_EVENT  1
+#define SESSION_TIMEOUT_EVENT 2
 
 
 typedef struct ip_addr  IP_ADDR;
@@ -298,9 +305,6 @@ typedef struct _message_t {
 	void                *trans;
 } AAAMessage;
 
-
-
-typedef AAAReturnCode (*AAACallback)(AAAMessage *msg, void *context);
 
 
 #endif

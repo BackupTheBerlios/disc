@@ -192,6 +192,9 @@ void close_aaa_client()
 	/* stop all the worker threads */
 	stop_client_workers();
 
+	/**/
+	destroy_dest_peers();
+
 	/* stop the tcp layer */
 	terminate_tcp_shell();
 

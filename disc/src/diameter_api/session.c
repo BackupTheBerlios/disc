@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.13 2003/04/01 13:39:04 bogdan Exp $
+ * $Id: session.c,v 1.14 2003/04/04 16:59:25 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -18,9 +18,9 @@
 #include "../aaa_lock.h"
 #include "../locking.h"
 #include "../hash_table.h"
+#include "../aaa_module.h"
 #include "message.h"
 #include "session.h"
-
 
 
 /* session-ID manager */
@@ -30,7 +30,11 @@ struct session_manager  ses_mgr;
 /* extra functions */
 struct session* create_session( unsigned short peer_id);
 void destroy_session( struct session *ses);
+void ses_timer_handler( unsigned int ticks, void* param );
 
+
+#define avp2int( _avp_ ) \
+	( ntohl(*((unsigned int *)(_avp_)->data.s)) )
 
 
 
@@ -43,23 +47,8 @@ int init_session_manager( unsigned int ses_hash_size,
 	/* init the session manager */
 	memset( &ses_mgr, 0, sizeof(ses_mgr));
 
-	/* init the monoton_sID vector as follows:  the high 32 bits of the 64-bit
-	 * value are initialized to the time, and the low 32 bits are initialized
-	 * to zero */
-	ses_mgr.monoton_sID[0] = 0;
-	ses_mgr.monoton_sID[1] = (unsigned int)time(0) ;
-	/* create the mutex */
-	ses_mgr.sID_mutex = create_locks( 1 );
-	if (!ses_mgr.sID_mutex) {
-		LOG(L_ERR,"ERROR:init_session_manager: cannot create lock!\n");
-		goto error;
-	}
-
-	/* build the hash_table */
-	ses_mgr.ses_table = build_htable( ses_hash_size );
-
 	/* build and set the shared mutexes */
-	ses_mgr.shared_mutexes = create_locks(nr_shared_mutexes+1);
+	ses_mgr.shared_mutexes = create_locks(nr_shared_mutexes+2);
 	if (!ses_mgr.shared_mutexes) {
 		LOG(L_ERR,"ERROR:init_ssession_manager: cannot create locks!!\n");
 		goto error;
@@ -67,6 +56,36 @@ int init_session_manager( unsigned int ses_hash_size,
 	ses_mgr.shared_mutexes_mutex = ses_mgr.shared_mutexes + nr_shared_mutexes;
 	ses_mgr.nr_shared_mutexes = nr_shared_mutexes;
 	ses_mgr.shared_mutexes_counter = 0;
+
+	/* init the monoton_sID vector as follows:  the high 32 bits of the 64-bit
+	 * value are initialized to the time, and the low 32 bits are initialized
+	 * to zero */
+	ses_mgr.monoton_sID[0] = 0;
+	ses_mgr.monoton_sID[1] = (unsigned int)time(0) ;
+	/* create the mutex */
+	ses_mgr.sID_mutex = ses_mgr.shared_mutexes + nr_shared_mutexes + 1;
+
+	/* hash table */
+	ses_mgr.ses_table= build_htable( 1024 );
+	if (!ses_mgr.ses_table) {
+		LOG(L_CRIT,"ERROR:init_session_manager: failed to build hash table\n");
+		goto error;
+	}
+
+	/* timer */
+	ses_mgr.ses_timer = new_timer_list();
+	if (!ses_mgr.ses_timer) {
+		LOG(L_CRIT,"ERROR:init_session_manager: failed to create timer"
+			" list!\n");
+		goto error;
+	}
+
+	/* register timer function */
+	if (register_timer( ses_timer_handler , 0/*param*/, 1/*interval*/)!=1 ) {
+		LOG(L_CRIT,"ERROR:init_session_manager: failed to register timer"
+			" function!\n");
+		goto error;
+	}
 
 	LOG(L_INFO,"INFO:init_session_manager: session manager started\n");
 	return 1;
@@ -82,16 +101,17 @@ error:
  */
 void shutdown_session_manager()
 {
-	/* destroy the mutex */
-	if (ses_mgr.sID_mutex)
-		destroy_locks( ses_mgr.sID_mutex, 1);
+	/* destroy the shared mutexes */
+	if (ses_mgr.shared_mutexes)
+		destroy_locks( ses_mgr.shared_mutexes, ses_mgr.nr_shared_mutexes + 2);
 
-	/* free the hash table */
+	/* destroy the hash tabel */
 	if (ses_mgr.ses_table)
 		destroy_htable( ses_mgr.ses_table );
 
-	if (ses_mgr.shared_mutexes)
-		destroy_locks( ses_mgr.shared_mutexes, ses_mgr.nr_shared_mutexes);
+	/* destroy the timer */
+	if (ses_mgr.ses_timer)
+		destroy_timer_list( ses_mgr.ses_timer );
 
 	LOG(L_INFO,"INFO:shutdown_session_manager: session manager stoped\n");
 	return;
@@ -279,6 +299,7 @@ struct session* create_session( unsigned short peer_id)
 	/* init the session */
 	ses->peer_identity = peer_id;
 	ses->state = AAA_IDLE_STATE;
+	ses->tl.payload = ses;
 
 	return ses;
 error:
@@ -289,12 +310,35 @@ error:
 
 void destroy_session( struct session *ses)
 {
-	if (!ses)
-		return;
-	if ( ses->sID.s)
-		shm_free( ses->sID.s );
-	shm_free(ses);
+	if (ses) {
+		if ( ses->sID.s)
+			shm_free( ses->sID.s );
+		if ( ses->tl.timer_list )
+			rmv_from_timer_list( &(ses->tl) );
+		shm_free(ses);
+	}
 }
+
+
+
+void ses_timer_handler( unsigned int ticks, void* param )
+{
+	struct timer_link *tl;
+	struct session    *ses;
+
+	/* get the expired sessions */
+	tl = get_expired_from_timer_list( ses_mgr.ses_timer, ticks);
+	while (tl) {
+		ses  = (struct session*)tl->payload;
+		DBG("DEBUG:ses_timeout_handler: session %p expired!\n", ses);
+		tl = tl->next_tl;
+		/* run the timeout handler for this session */
+		((struct module_exports*)ses->app_ref)->
+			mod_tout( SESSION_TIMEOUT_EVENT, &(ses->sID), ses->context);
+	}
+}
+
+
 
 
 
@@ -347,10 +391,13 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 						case AAA_PENDING_STATE:
 							/* check the session state advertise by server */
 							if (msg->auth_ses_state && SESSION_STATE_MAINTAINED
-							==(*((unsigned int *)msg->auth_ses_state->data.s)))
+							==avp2int(msg->auth_ses_state) )
 								ses->peer_identity = AAA_SERVER_STATEFULL;
 							/* new state */
-							ses->state = AAA_PROCESSING_AA_STATE;
+							if ( avp2int(msg->res_code)== AAA_SUCCESS)
+								ses->state = AAA_OPEN_STATE;
+							else
+								ses->state = AAA_IDLE_STATE;
 							lock_release( ses->mutex );
 							break;
 						default:
@@ -478,8 +525,10 @@ error:
 /****************************** API FUNCTIONS ********************************/
 
 
-AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
-								AAAApplicationRef appReference, void *context)
+AAAReturnCode  AAAStartSession(
+		AAASessionId **sessionId,
+		AAAApplicationRef appReference,
+		void *context)
 {
 	struct session  *session;
 	char            *p;
@@ -494,6 +543,10 @@ AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 	if (!session)
 		goto error;
 
+	/* link info into the session */
+	session->context = context;
+	session->app_ref  = appReference;
+
 	/* generates a new session-ID - the extra pad is used to append to 
 	 * session-ID the hash-code and label of the session ".XXXXXXXX.XXXXXXXX"*/
 	if (generate_sessionID( &(session->sID), 2*9 )!=1)
@@ -503,7 +556,7 @@ AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 	 * inserting the session into the hash table, otherwise, the entry to
 	 * insert on , will not be known */
 	session->linker.hash_code = hash( &(session->sID),
-		ses_mgr.ses_table->hash_size );
+		ses_mgr.ses_table->hash_size);
 
 	/* insert the session into the hash table */
 	add_cell_to_htable( ses_mgr.ses_table, (struct h_link*)session);
@@ -517,16 +570,65 @@ AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 	p += int2hexstr( session->linker.label, p, 8);
 	session->sID.len = p - session->sID.s;
 
-	/* link info into the session */
-	session->context = context;
-	session->app_ref = appReference;
-
 	/* return the session-ID */
 	*sessionId = &(session->sID);
 
 	return AAA_ERR_SUCCESS;
 error:
 	return AAA_ERR_NOMEM;
+}
+
+
+
+
+AAAReturnCode AAASessionTimerStart( AAASessionId *sessionId , unsigned int to)
+{
+	struct session *ses;
+	ses = sId2session( sessionId );
+
+	/* add the session into the timer list */
+	insert_into_timer_list( &(ses->tl), ses_mgr.ses_timer,
+		get_ticks()+to);
+
+	return AAA_ERR_SUCCESS;
+}
+
+
+
+
+AAAReturnCode AAASessionTimerStop( AAASessionId *sessionId )
+{
+	struct session *ses;
+	ses = sId2session( sessionId );
+
+	/* remove the sessoin from timer list */
+	rmv_from_timer_list( &(ses->tl) );
+
+	return AAA_ERR_SUCCESS;
+}
+
+
+
+
+AAAReturnCode AAAEndSession( AAASessionId *sessionId )
+{
+	struct session *ses;
+	ses = sId2session( sessionId );
+
+	if (ses->peer_identity==AAA_SERVER_STATEFULL) {
+		/* server is statefull -> maybe I have to send a STR */
+		// TO DO !!!!!!!!!
+	} else {
+		/* for stateless servers -> just remove it */
+		remove_cell_from_htable( ses_mgr.ses_table, &(ses->linker) );
+		if (ses->state==AAA_PENDING_STATE) {
+			LOG(L_WARN,"WARNING:AAAEndSession: removing a session that waits"
+				" for an answer -> BUG!!! \n");
+		}
+		destroy_session( ses );
+	}
+
+	return AAA_ERR_SUCCESS;
 }
 
 

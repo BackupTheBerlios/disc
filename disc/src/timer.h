@@ -1,5 +1,5 @@
 /*
- * $Id: timer.h,v 1.3 2003/04/01 14:04:45 bogdan Exp $
+ * $Id: timer.h,v 1.4 2003/04/04 16:59:25 bogdan Exp $
  *
  */
 
@@ -43,7 +43,7 @@ typedef struct timer_link
 
 
 /* timer list: includes head, tail and protection semaphore */
-typedef struct  timer
+typedef struct timer
 {
 	struct timer_link  first_tl;
 	struct timer_link  last_tl;
@@ -74,6 +74,8 @@ struct timer* new_timer_list();
 void destroy_timer_list( struct timer* timer_list );
 
 int add_to_timer_list( struct timer_link*, struct timer* ,unsigned int);
+
+int insert_into_timer_list( struct timer_link*, struct timer* ,unsigned int);
 
 int rmv_from_timer_list( struct timer_link* );
 

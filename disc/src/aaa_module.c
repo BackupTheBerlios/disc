@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.5 2003/04/03 15:13:16 andrei Exp $
+ * $Id: aaa_module.c,v 1.6 2003/04/04 16:59:24 bogdan Exp $
  */
 /*
  * History:
@@ -149,8 +149,10 @@ void destroy_modules()
 {
 	struct aaa_module* a;
 	
-	for (a=modules; a; a=a->next)
-		if ((a->exports)&&(a->exports->mod_destroy)) a->exports->mod_destroy();
+	for (a=modules; a; a=a->next) {
+		if ((a->exports)&&(a->exports->mod_destroy))
+			a->exports->mod_destroy();
+	}
 	modules=0;
 }
 

@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.8 2003/04/01 11:35:00 bogdan Exp $
+ * $Id: trans.h,v 1.9 2003/04/04 16:59:25 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -20,18 +20,15 @@ struct trans;
 
 
 struct trans {
-	/* COMMON PART */
-	/* linker inside the hash table - must be the first */
 	struct h_link  linker;
 	/* session the request belong to - if any */
 	struct session *ses;
 	/* info - can be used for different purposes */
 	unsigned int info;
 
-	/* SERVER SIDE */
-	/* outgoing peer ID */
+	/* outgoing request peer */
 	struct peer *peer;
-	/* outgoing request */
+	/* outgoing request buffer */
 	str req;
 	/* timeout timer */
 	struct timer_link timeout;
@@ -65,17 +62,20 @@ void destroy_transaction( void* );
 inline static struct trans* transaction_lookup(struct peer *p,
 							unsigned int endtoendID, unsigned int hopbyhopID)
 {
-	str          s;
-	unsigned int hash_code;
-	struct trans *tr;
+	struct h_link *linker;
+	str           s;
+	unsigned int  hash_code;
 
 	s.s = (char*)&endtoendID;
 	s.len = sizeof(endtoendID);
 	hash_code = hash( &s , p->trans_table->hash_size );
-	tr = (struct trans*)cell_lookup( p->trans_table, hash_code, hopbyhopID );
-	if (tr)
-		remove_cell_from_htable( p->trans_table, &(tr->linker) );
-	return tr;
+	linker = cell_lookup( p->trans_table, hash_code, hopbyhopID);
+	if (linker) {
+		remove_cell_from_htable( p->trans_table, linker );
+		return ((struct trans*)((char *)(linker) -
+			(unsigned long)(&((struct trans*)0)->linker)));
+	}
+	return 0;
 }
 
 
@@ -84,20 +84,23 @@ inline static struct trans* transaction_lookup(struct peer *p,
 inline static struct trans* transaction_lookup_safe(struct peer *p,
 							unsigned int endtoendID, unsigned int hopbyhopID)
 {
-	str          s;
-	unsigned int hash_code;
-	struct trans *tr;
+	struct h_link *linker;
+	str           s;
+	unsigned int  hash_code;
 
 	s.s = (char*)&endtoendID;
 	s.len = sizeof(endtoendID);
 	hash_code = hash( &s , p->trans_table->hash_size );
-	DBG("check point !!!!!!!!!!! \n");
 	lock_get( p->mutex );
-	tr = (struct trans*)cell_lookup( p->trans_table, hash_code, hopbyhopID );
-	if (tr)
-		remove_cell_from_htable( p->trans_table, &(tr->linker) );
+	linker = cell_lookup( p->trans_table, hash_code, hopbyhopID );
+	if (linker) {
+		remove_cell_from_htable( p->trans_table, linker );
+		lock_release( p->mutex );
+		return ((struct trans*)((char *)(linker) -
+			(unsigned long)(&((struct trans*)0)->linker)));
+	}
 	lock_release( p->mutex );
-	return tr;
+	return 0;
 }
 
 

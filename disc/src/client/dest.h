@@ -1,5 +1,5 @@
 /*$
- * $Id: dest.h,v 1.1 2003/04/01 12:03:16 bogdan Exp $$
+ * $Id: dest.h,v 1.2 2003/04/04 16:59:25 bogdan Exp $$
  *$
  * 2003-04-01 created by bogdan$
  */
@@ -9,6 +9,7 @@
 #define _AAA_DIAMETER_CLIENT_DEST_H_
 
 int init_dest_peers();
+void destroy_dest_peers();
 
 #endif
 

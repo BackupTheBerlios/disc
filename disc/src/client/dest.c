@@ -1,5 +1,5 @@
 /*$
- * $Id: dest.c,v 1.1 2003/04/01 12:03:16 bogdan Exp $$
+ * $Id: dest.c,v 1.2 2003/04/04 16:59:25 bogdan Exp $$
  *$
  * 2003-04-01 created by bogdan$
  */
@@ -43,6 +43,20 @@ int init_dest_peers()
 	return 1;
 error:
 	return -1;
+}
+
+
+
+void destroy_dest_peers()
+{
+	struct peer_chaine *pc, *pc_foo;
+
+	pc = all_peers;
+	while(pc) {
+		pc_foo = pc;
+		pc = pc->next;
+		shm_free( pc_foo);
+	}
 }
 
 
