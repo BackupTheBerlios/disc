@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.3 2003/03/07 18:31:12 bogdan Exp $
+ * $Id: peer.c,v 1.4 2003/03/07 19:29:19 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -48,6 +48,9 @@ int init_peer_manager()
 	}
 	memset( peer_table, 0, sizeof(struct p_table) );
 
+	/* init the peer list */
+	INIT_LIST_HEAD( &(peer_table->peers) );
+
 	/* build and set the mutex */
 	peer_table->mutex = create_locks(1);
 	if (!peer_table->mutex) {
@@ -71,7 +74,7 @@ int init_peer_manager()
 		goto error;
 	}
 
-	/* create a reconnect timer list */
+	/* create a wait CER timer list */
 	wait_cer_timer = new_timer_list();
 	if (!wait_cer_timer) {
 		LOG(L_ERR,"ERROR:init_peer_manager: cannot create wait CER "
@@ -97,17 +100,14 @@ error:
 
 void destroy_peer_manager()
 {
-	struct peer *p, *p_t;
+	struct list_head *lh, *foo;
 	struct timer_link *tl, *tl_t;
 
 	if (peer_table) {
 		/* destroy all the peers */
-		p = peer_table->head;
-		while(p){
-			p_t = p;
-			p = p->next;
+		list_for_each_safe( lh, foo, &(peer_table->peers)) {
 			/* free the peer */
-			free( p_t );
+			free( list_entry( lh, struct peer, all_peer_lh) );
 		}
 		/* destroy the mutex */
 		if (peer_table->mutex)
@@ -188,11 +188,7 @@ int add_peer( struct p_table *peer_table, str *host, unsigned int realm_offset,
 
 	/* insert the peer into the list */
 	lock( peer_table->mutex );
-	if (!peer_table->tail)
-		peer_table->head = p;
-	else
-		peer_table->tail->next = p;
-	peer_table->tail = p;
+	list_add_tail( &(p->thd_peer_lh), &(peer_table->peers) );
 	unlock( peer_table->mutex );
 
 	return 1;
@@ -213,16 +209,12 @@ void destroy_peer( struct peer *p)
 
 void init_all_peers()
 {
-	struct peer *p;
-	int res;
+	struct list_head *lh;
 
-	p = peer_table->head;
-	while (p) {
+	list_for_each( lh, &(peer_table->peers)) {
 		/* open tcp connection */
-		atomic_inc( &(p->ref_cnt) );
-		res = tcp_connect( p );
-		DBG("DEBUG:init_all_peers: conecting peer %p, res=%d\n",p,res);
-		p = p->next;
+		//atomic_inc( &(p->ref_cnt) );
+		tcp_connect( list_entry( lh, struct peer, all_peer_lh) );
 	}
 }
 

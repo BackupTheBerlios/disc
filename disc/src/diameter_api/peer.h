@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.3 2003/03/07 18:31:12 bogdan Exp $
+ * $Id: peer.h,v 1.4 2003/03/07 19:29:20 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -12,6 +12,7 @@
 #include "utils/aaa_lock.h"
 #include "utils/counter.h"
 #include "utils/ip_addr.h"
+#include "utils/list.h"
 #include "global.h"
 #include "diameter_types.h"
 #include "trans.h"
@@ -29,8 +30,6 @@ extern struct p_table *peer_table;
 
 
 struct peer {
-	/* link to the tcp connecter */
-	//struct _connection* conn;
 	/* aaa specific information */
 	str aaa_realm;
 	str aaa_host;
@@ -39,7 +38,8 @@ struct peer {
 	IP_ADDR ip;
 	unsigned int state;
 	/* linking information */
-	struct peer *next;
+	struct list_head  all_peer_lh;
+	struct list_head  thd_peer_lh;
 	/* mutex for changing the status */
 	aaa_lock *mutex;
 	/* ref counter*/
@@ -50,16 +50,16 @@ struct peer {
 	unsigned char flags;
 	/* command pipe */
 	unsigned int fd;
+	/* socket */
+	int sock;
 };
 
 
 struct p_table {
 	/* numbers of peer from the list */
 	unsigned int nr_peers;
-	/* the head of the peer list */
-	struct peer *head;
-	/* the tail of the peer list */
-	struct peer *tail;
+	/* the peer list */
+	struct list_head peers ;
 	/* mutex for manipulating the list */
 	aaa_lock *mutex;
 };
@@ -122,16 +122,16 @@ void static inline unref_peer(struct peer *p)
 /* search into the peer table for the peer having the given host name */
 static inline struct peer* lookup_peer_by_host( str *host )
 {
+	struct list_head *lh;
 	struct peer *p;
 
 	lock( peer_table->mutex );
 
-	p = peer_table->head;
-	while(p) {
+	list_for_each( lh, &(peer_table->peers)) {
+		p = list_entry( lh, struct peer, all_peer_lh);
 		if ( host->len==p->aaa_host.len &&
 		!strncasecmp( host->s, p->aaa_host.s, host->len))
 			break;
-		p=p->next;
 	}
 
 	if (p)
@@ -145,16 +145,16 @@ static inline struct peer* lookup_peer_by_host( str *host )
 /* search into the peer table for the peer searving the given realm */
 static inline struct peer* lookup_peer_by_realm( str *realm )
 {
+	struct list_head *lh;
 	struct peer *p;
 
 	lock( peer_table->mutex );
 
-	p = peer_table->head;
-	while(p) {
+	list_for_each( lh, &(peer_table->peers)) {
+		p = list_entry( lh, struct peer, all_peer_lh);
 		if ( realm->len==p->aaa_realm.len &&
 		!strncasecmp( realm->s, p->aaa_realm.s, realm->len))
 			break;
-		p=p->next;
 	}
 
 	if (p)
@@ -168,15 +168,15 @@ static inline struct peer* lookup_peer_by_realm( str *realm )
 /* search into the peer table for the peer having the given IP address */
 static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 {
+	struct list_head *lh;
 	struct peer *p;
 
 	lock( peer_table->mutex );
 
-	p = peer_table->head;
-	while(p) {
+	list_for_each( lh, &(peer_table->peers)) {
+		p = list_entry( lh, struct peer, all_peer_lh);
 		if ( ip_addr_cmp(ip, &p->ip) )
 			break;
-		p=p->next;
 	}
 
 	if (p)
