@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_api.h,v 1.2 2003/03/10 09:16:43 bogdan Exp $
+ * $Id: diameter_api.h,v 1.3 2003/03/19 16:55:49 ilk Exp $
  *
  * 2002-10-04 created by illya (komarov@fokus.gmd.de)
  *
@@ -68,25 +68,27 @@ AAAReturnCode AAAStartSession(
   AAAResultCode  AAAGetDomainInterconnectType(AAAMessage *message,
 																							char *domainName,
 				                                      char *type);
-  AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
-							                                AAAVendorId vendorId,
-								                              AAADictionaryEntry *entry);
-  AAAValue AAAValueFromName(char *avpName,
+*/
+AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
+				                                AAAVendorId vendorId,
+   				                              AAADictionaryEntry *entry);
+AAAValue AAAValueFromName(char *avpName,
 		                        char *vendorName,
 		                        char *valueName);
-	AAAReturnCode AAADictionaryEntryFromName(char *avpName,
-														               AAAVendorId vendorId,
-																					 AAADictionaryEntry *entry);
-  AAAValue AAAValueFromAVPCode(AAA_AVPCode avpCode,
+AAAReturnCode AAADictionaryEntryFromName(char *avpName,
+													     AAAVendorId vendorId,
+														 AAADictionaryEntry *entry);
+AAAValue AAAValueFromAVPCode(AAA_AVPCode avpCode,
 			                         AAAVendorId vendorId,
 		                           char *valueName);
-  const char *AAALookupValueNameUsingValue(AAA_AVPCode avpCode,
+const char *AAALookupValueNameUsingValue(AAA_AVPCode avpCode,
 				                                   AAAVendorId vendorId,
 				                                   AAAValue value);
-  boolean_t AAAGetCommandCode(char *commandNamInsert the AVP avp into this avpList after positione,
+//Insert the AVP avp into this avpList after position
+boolean_t AAAGetCommandCode(char *commandName,
 		                          AAACommandCode *commandCode,
 		                          AAAVendorId *vendorId);
-  */
+
 AAAMessage *AAANewMessage(
 		AAACommandCode commandCode,
 		AAAVendorId vendorId,

@@ -1,6 +1,6 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- *
+ * $Id: dictionary.c,v 1.7 2003/03/19 16:55:49 ilk Exp $
  */
 #include <stdio.h>
 #include "diameter_api.h"
@@ -8,7 +8,8 @@
 #define MAXWORDLEN 1024;
 FILE* file;
 
-#if 0
+//#if 0
+
 
 AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
 						                                AAAVendorId vendorId,
@@ -173,8 +174,7 @@ int vendorNameFromId(AAAVendorId vendorId, char* vendorAttr){
          }
          else
             while ((num=fgetc(file))!='\n' || num!=EOF);
+      }
    }
    return 0;
 }
-
-#endif
