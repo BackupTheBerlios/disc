@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "config.h"
+#include "../globals.h"
 #include "../mem/shm_mem.h"
 #include "../sh_mutex.h"
 #include "../timer.h"
@@ -31,6 +32,33 @@ int log_stderr=1;
 /* thread-id of the original thread */
 pthread_t main_thread;
 
+/* aaa identity of the client */
+str aaa_identity= {0, 0};
+
+/* realm served by this client */
+str aaa_realm= {0, 0};
+
+/* fqdn of the client */
+str aaa_fqdn= {0, 0 };
+
+/* product name */
+str product_name = {"AAA FokusFastServer",19};
+
+/* vendor id */
+unsigned int vendor_id = VENDOR_ID;
+
+/* lsitening port */
+unsigned int listen_port = DEFAULT_LISTENING_PORT;
+
+/* supported auth. applications */
+unsigned int supported_auth_app_id =
+	(1<<AAA_APP_RELAY) | (1<<AAA_APP_MOBILE_IP);
+
+/* supported acc. applications */
+unsigned int supported_acc_app_id = 
+	(1<<AAA_APP_RELAY);
+
+
 
 void close_client();
 
@@ -39,13 +67,10 @@ void close_client();
 
 static void sig_handler(int signo)
 {
-	printf(" -------------- SIGNAL RECEIVED (%d)(%d) -----------------\n",
-			(int)pthread_self(), getpid() );
 	if ( main_thread==pthread_self() ) {
 		close_client();
 		exit(0);
 	}
-	printf("------------- JUST A WORKER - NOTHING TO DO ---------------\n");
 	return;
 }
 
@@ -109,8 +134,19 @@ int init_client()
 		goto error;
 	}
 
+	/* read config file */
+	aaa_identity.s = "aaa://fesarius.fokus.gmd.de:1812;transport=tcp";
+	aaa_identity.len = strlen(aaa_identity.s);
+	aaa_realm.s = "fokus.gmd.de";
+	aaa_realm.len = strlen(aaa_realm.s);
+
 	/* init the peer manager */
 	if ( (peer_table=init_peer_manager(DEFAULT_TRANS_HASH_SIZE))==0) {
+		goto error;
+	}
+
+	/* init the transaction manager */
+	if (init_trans_manager()==-1) {
 		goto error;
 	}
 
@@ -140,6 +176,9 @@ void close_client()
 
 	/* stop the tcp layer */
 	terminate_tcp_shell();
+
+	/* destroy the transaction manager */
+	destroy_trans_manager();
 
 	/* destroy the peer manager */
 	destroy_peer_manager( peer_table );

@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.h,v 1.3 2003/03/17 15:52:05 bogdan Exp $
+ * $Id: hash_table.h,v 1.4 2003/03/17 19:10:55 bogdan Exp $
  *
  * 2003-01-29 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -84,7 +84,7 @@ static inline struct h_link *cell_lookup(struct h_table *table,
 
 	/* looks into the the sessions hash table */
 	list_for_each( lh, &(entry->lh) ) {
-		if ( ((struct h_link*)lh)->label!=label ) {
+		if ( ((struct h_link*)lh)->label==label ) {
 			link = (struct h_link*)lh;
 			break;
 		}

@@ -20,11 +20,11 @@
 
 
 /* array with all the threads created by the tcp_shell */
-static struct thread_info  *tinfo;
+static struct thread_info  *tinfo = 0;
 static unsigned int        nr_recv_threads;
 /* linked list with the receiving threads ordered by load */
 static struct list_head    rcv_thread_list;
-static gen_lock_t          *list_mutex;
+static gen_lock_t          *list_mutex = 0;
 
 
 #define get_payload( _pos ) \
@@ -95,6 +95,9 @@ void terminate_tcp_shell()
 	struct command cmd;
 	int i;
 
+	if (tinfo==0)
+		return;
+
 	/* build a  SHUTDOWN command */
 	memset( &cmd, 0, COMMAND_SIZE);
 	cmd.code = SHUTDOWN_CMD;
@@ -119,6 +122,9 @@ void terminate_tcp_shell()
 
 	/* destroy the lock list */
 	destroy_locks( list_mutex, 1);
+
+	/* free the thread's info array */
+	shm_free( tinfo );
 
 	LOG(L_INFO,"INFO:terminate_tcp_shell: tcp shell stoped\n");
 }

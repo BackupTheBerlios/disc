@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.3 2003/03/17 16:02:01 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.4 2003/03/17 19:10:55 bogdan Exp $
  *
  *  History:
  *  --------
@@ -320,7 +320,7 @@ void *do_receive(void *arg)
 						break;
 					case TIMEOUT_PEER_CMD:
 						LOG(L_INFO,"INFO:do_receive: timeout received\n");
-						peer_state_machine( cmd.peer, cmd.fd, 0);
+						peer_state_machine( cmd.peer, cmd.fd, cmd.attrs);
 						break;
 					case INACTIVITY_CMD:
 						LOG(L_INFO,"INFO:do_receive: inactivity detected\n");

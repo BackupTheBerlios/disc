@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.6 2003/03/17 17:54:14 bogdan Exp $
+ * $Id: peer.c,v 1.7 2003/03/17 19:10:55 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -163,15 +163,18 @@ error:
 
 void destroy_peer_manager(struct p_table *peer_table)
 {
-	struct list_head *lh, *foo;
+	struct list_head  *lh, *foo;
 	struct timer_link *tl, *tl_t;
+	struct peer       *p;
 
 	if (peer_table) {
 		/* destroy all the peers */
 		list_for_each_safe( lh, foo, &(peer_table->peers)) {
 			/* free the peer */
 			list_del( lh );
-			shm_free( list_entry( lh, struct peer, all_peer_lh) );
+			p = list_entry( lh, struct peer, all_peer_lh);
+			destroy_htable( p->trans_table );
+			shm_free( p );
 		}
 		/* destroy the mutex */
 		if (peer_table->mutex)
@@ -480,6 +483,7 @@ struct trans *internal_send_aaa_request( str *buf, struct peer *p)
 			" transaction!\n");
 		goto error;
 	}
+	tr->info = p->conn_cnt;
 
 	/* generate a new end-to-end id */
 	((unsigned int *)buf->s)[4] = p->endtoendID++;
@@ -488,7 +492,7 @@ struct trans *internal_send_aaa_request( str *buf, struct peer *p)
 	 * calculating the hash_code */
 	s.s = buf->s+(4*4);
 	s.len = END_TO_END_IDENTIFIER_SIZE;
-	tr->linker.hash_code = hash( &s, peer_table->trans_hash_size );
+	tr->linker.hash_code = hash( &s, p->trans_table->hash_size );
 	add_cell_to_htable( p->trans_table, (struct h_link*)tr );
 	/* the hash label is used as hop-by-hop ID */
 	((unsigned int*)buf->s)[3] = tr->linker.label;
@@ -919,8 +923,8 @@ void dispatch_message( struct peer *p, str *buf)
 	} else {
 		/* response -> find its transaction and remove it from 
 		 * hash table (search and remove is an atomic operation) */
-		tr = transaction_lookup( ((unsigned int*)buf->s)[4],
-			((unsigned int*)buf->s)[3], 1);
+		tr = transaction_lookup( p->trans_table, ((unsigned int*)buf->s)[4],
+			((unsigned int*)buf->s)[3]);
 		if (!tr) {
 			LOG(L_ERR,"ERROR:dispatch_message: respons received, but no"
 				" transaction found!\n");
@@ -1114,9 +1118,9 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 			}
 			break;
 		case PEER_TR_TIMEOUT:
-			if ((unsigned int)ptr!=p->conn_cnt++) {
+			if ((unsigned int)ptr!=p->conn_cnt) {
 				LOG(L_WARN,"WARNING:peer_state_machine: transaction generated"
-					" from a prev. connection gave TIMEOUT -> ignored!\n");
+					" from a prev. connection gave TIMEOUT -> ignoring!\n");
 				break;
 			}
 			lock_get( p->mutex );

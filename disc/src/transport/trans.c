@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.2 2003/03/14 18:07:56 bogdan Exp $
+ * $Id: trans.c,v 1.3 2003/03/17 19:10:55 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -8,14 +8,12 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "../dprint.h"
-//#include "utils/counter.h"
-#include "trans.h"
-#include "../hash_table.h"
-//#include "globals.h"
-#include "../diameter_api/diameter_api.h"
-
 #include "../mem/shm_mem.h"
+#include "../dprint.h"
+#include "../hash_table.h"
+#include "../diameter_api/diameter_api.h"
+#include "trans.h"
+
 
 
 struct timer *tr_timeout_timer=0;

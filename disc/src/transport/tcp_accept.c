@@ -10,6 +10,7 @@
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include "../dprint.h"
+#include "../globals.h"
 #include "peer.h"
 #include "tcp_shell.h"
 #include "tcp_accept.h"
@@ -52,7 +53,7 @@ void *do_accept(void *arg)
 	memset(&local, 0, sizeof(servaddr));
 	servaddr.sin_family      = AF_INET;
 	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port        = htons( 1812/*listen_port*/  );
+	servaddr.sin_port        = htons( listen_port  );
 
 	if ((bind(server_sock,(struct sockaddr*)&servaddr,sizeof(servaddr)))==-1) {
 		LOG(L_ERR,"ERROR:do_accept: error binding server socket\n");

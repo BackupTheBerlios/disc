@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.18 2003/03/17 16:39:46 bogdan Exp $
+ * $Id: init_conf.c,v 1.19 2003/03/17 19:10:55 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -18,16 +18,11 @@
 #include "init_conf.h"
 #include "diameter_types.h"
 #include "../dprint.h"
-//#include "../transport/common.h"
-#include "../hash_table.h"
-#include "../transport/trans.h"
-#include "../transport/peer.h"
 #include "session.h"
 #include "message.h"
 
 #include "../mem/shm_mem.h"
 #include "cfg_parser.h"
-//#include "config.h"
 
 
 
@@ -35,33 +30,16 @@
 static int  is_lib_init = 0;
 static char *config_filename = 0;
 
-#define VENDOR_ID  0x0000caca
-#define DEFAULT_LISTENING_PORT 1812
-
-/* external vars */
-//struct h_table *hash_table;           /* hash table for sessions and trans */
-//struct p_table *peer_table;           /* table with peers */
-str aaa_identity= {0, 0};             /* aaa identity */
-str aaa_realm= {0, 0};                /* realm */
-str aaa_fqdn= {0, 0 };
-str product_name = {"AAA FokusFastServer",19};     /* product name */
-unsigned int vendor_id = VENDOR_ID;   /* vendor id */
-unsigned int listen_port = DEFAULT_LISTENING_PORT;   /* listening port */
-unsigned int supported_auth_app_id =
-	(1<<AAA_APP_RELAY) | (1<<AAA_APP_MOBILE_IP);
-unsigned int supported_acc_app_id = 
-	(1<<AAA_APP_RELAY);
-
 /* config info */
 int i;
 struct cfg_def cfg_ids[]={
-	{"debug",        INT_VAL,   &debug        },
-	{"log_stderr",   INT_VAL,   &log_stderr   },
-	{"aaa_identity", STR_VAL,   &aaa_identity },
-	{"aaa_realm",    STR_VAL,   &aaa_realm    },
-	{"aaa_fqdn",     STR_VAL,   &aaa_fqdn     },
-	{"listen_port",  INT_VAL,   &listen_port  },
-	{"do_relay",     INT_VAL,   &i},
+	//{"debug",        INT_VAL,   &debug        },
+	//{"log_stderr",   INT_VAL,   &log_stderr   },
+	//{"aaa_identity", STR_VAL,   &aaa_identity },
+	//{"aaa_realm",    STR_VAL,   &aaa_realm    },
+	//{"aaa_fqdn",     STR_VAL,   &aaa_fqdn     },
+	//{"listen_port",  INT_VAL,   &listen_port  },
+	//{"do_relay",     INT_VAL,   &i},
 	{0,0,0}
 };
 
@@ -110,12 +88,6 @@ AAAReturnCode AAAClose()
 	if (config_filename)
 		shm_free(config_filename);
 
-	/* stop the socket layer (kill all threads) */
-	//terminate_tcp_shell();
-
-	/* stop the peer manager */
-	//destroy_peer_manager();
-
 	/* stop the message manager */
 	destroy_msg_manager();
 
@@ -129,8 +101,6 @@ AAAReturnCode AAAClose()
 
 AAAReturnCode AAAOpen(char *configFileName)
 {
-	str peer;
-
 	/* check if the lib is already init */
 	if (is_lib_init) {
 		LOG(L_ERR,"ERROR:AAAOpen: library already initialized!!\n");
@@ -156,23 +126,6 @@ AAAReturnCode AAAOpen(char *configFileName)
 	/* init the message manager */
 	if (init_msg_manager()==-1)
 		goto mem_error;
-
-	/* init peer manager */
-	//if (init_peer_manager( )==-1)
-	//	goto mem_error;
-
-	/* init the socket layer */
-	//if (init_tcp_shell()==-1)
-	//	goto mem_error;
-
-	/* add the peers from config file */
-	//..................
-	peer.s = "ugluk.mobis.fokus.gmd.de";
-	peer.len = strlen(peer.s);
-	//add_peer( peer_table, &peer, 7, 1812);
-
-	/* start the tcp shell */
-	//start_tcp_accept();
 
 	/* finally DONE */
 	is_lib_init = 1;

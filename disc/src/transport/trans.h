@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.5 2003/03/17 16:02:01 bogdan Exp $
+ * $Id: trans.h,v 1.6 2003/03/17 19:10:55 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -63,18 +63,16 @@ void destroy_transaction( void* );
 
 /* search into hash table a transaction, based on 
  */
-inline static struct trans* transaction_lookup(unsigned int endtoendID,
-											unsigned int hopbyhopID, int rm)
+inline static struct trans* transaction_lookup(struct h_table *trans_table,
+							unsigned int endtoendID, unsigned int hopbyhopID)
 {
 	str          s;
-	//unsigned int hash_code;
+	unsigned int hash_code;
 
 	s.s = (char*)&endtoendID;
 	s.len = sizeof(endtoendID);
-	//hash_code = hash( &s );
-	//return (struct trans*)cell_lookup
-	//	( hash_table, hash_code, hopbyhopID, TRANSACTION_CELL_TYPE, rm);
-	return 0;
+	hash_code = hash( &s , trans_table->hash_size );
+	return (struct trans*)cell_lookup( trans_table, hash_code, hopbyhopID );
 }
 
 #endif

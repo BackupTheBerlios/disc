@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.c,v 1.2 2003/03/17 13:09:33 bogdan Exp $
+ * $Id: hash_table.c,v 1.3 2003/03/17 19:10:55 bogdan Exp $
  *
  * 2003-01-29  created by bogdan
  * 2003-03-12  converted to use shm_malloc (andrei)
@@ -54,10 +54,8 @@ struct h_table* build_htable( unsigned int hash_size)
 		INIT_LIST_HEAD( &(table->entrys[i].lh) );
 	}
 
-	LOG(L_INFO,"INFO:build_htable: hash table succesfuly built\n");
 	return table;
 error:
-	LOG(L_INFO,"INFO:build_htable: FAILED to build hash table\n");
 	return 0;
 }
 
@@ -77,8 +75,6 @@ void destroy_htable( struct h_table *table)
 		/* at last, free the table structure */
 		shm_free( table);
 	}
-
-	LOG(L_INFO,"INFO:destroy_htable: table succesfuly destroyed\n");
 }
 
 
