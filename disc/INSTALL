@@ -1,13 +1,18 @@
-#$Id: INSTALL,v 1.1 2003/03/27 15:17:54 andrei Exp $
+#$Id: INSTALL,v 1.2 2003/04/04 17:47:29 andrei Exp $
 
 Compilation
 -----------
 
-./configure ; make
+cvs co aaa_server
+./rebuild ; make
 
-(if you want to regenerate configure.in and all the Makefile.in you should
- run first ./bootstrap but you need decently recent versions of autoconf, 
- automake & libtool)
+if you've already run ./rebuild at some past time, use only
+./configure ; make
+or just make if you are compiling on the same machine.
+
+(if you want to regenerate everything, including libtltdl and scripts,
+you should run first ./bootstrap but you need decently recent versions of
+autoconf, automake & libtool)
 
 
 Installation
