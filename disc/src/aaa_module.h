@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.h,v 1.15 2003/04/22 19:58:41 andrei Exp $
+ * $Id: aaa_module.h,v 1.16 2003/09/11 22:24:09 cco Exp $
  *
  * Copyright (C) 2002-2003 Fhg Fokus
  *
@@ -31,9 +31,9 @@
 
 #include "diameter_api/diameter_api.h"
 
-#define DOES_AUTH        1<<0
-#define DOES_ACCT        1<<1
-#define RUN_ON_REPLIES   1<<2
+#define DOES_AUTH        (1<<0)
+#define DOES_ACCT        (1<<1)
+#define RUN_ON_REPLIES   (1<<2)
 
 extern str module_path;
 
