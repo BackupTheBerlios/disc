@@ -1,7 +1,8 @@
 /*
- * $Id: globals.h,v 1.7 2003/04/11 17:48:02 bogdan Exp $
+ * $Id: globals.h,v 1.8 2003/04/16 17:11:19 andrei Exp $
  *
- * 2003-02-03 created by bogdan
+ * 2003-02-03  created by bogdan
+ * 2003-04-16  added lots of startup config. vars (andrei)
  *
  */
 
@@ -20,6 +21,19 @@ extern unsigned int listen_port;
 
 /* if 1 disable ipv6 */
 extern int disable_ipv6;
+
+extern int log_stderr;
+
+extern int dont_fork;
+extern char* chroot_dir;
+extern char* working_dir;
+extern char* user;
+extern char* group;
+extern int uid;
+extern int gid;
+extern char* pid_file;
+
+/* aaa identity */
 
 /* aaa_identity string */
 extern str aaa_identity;

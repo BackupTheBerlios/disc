@@ -1,9 +1,10 @@
 /*
- * $Id: cfg_init.c,v 1.8 2003/04/13 23:01:16 andrei Exp $
+ * $Id: cfg_init.c,v 1.9 2003/04/16 17:11:19 andrei Exp $
  *
  * History:
  * --------
  * 2003-03-07  created mostly from pieces of diameter_api/init_conf.c by andrei
+ * 2003-04-16  lots of new startup parameters added (andrei)
  */
 
 #include <errno.h>
@@ -44,6 +45,13 @@ struct cfg_def cfg_ids[]={
 	{"aaa_fqdn",      STR_VAL,   &aaa_fqdn,     0                    },
 	{"listen_port",   INT_VAL,   &listen_port,  0                    },
 	{"aaa_status",    STR_VAL,   0,              cfg_set_aaa_status  },
+	{"aaa_status",    STR_VAL,   0,              cfg_set_aaa_status  },
+	{"dont_fork",     INT_VAL,   &dont_fork,    0                    },
+	{"chroot",        STR_VAL,   &chroot_dir,   0                    },
+	{"workdir",       STR_VAL,   &working_dir,  0                    },
+	{"user",          STR_VAL,   &user,         0                    },
+	{"group",         STR_VAL,   &group,        0                    },
+	{"pid_file",      STR_VAL,   &pid_file,     0                    },
 	{"module_path",   STR_VAL,   &module_path,   cfg_set_module_path },
 	{"set_mod_param", GEN_VAL,   0,              cfg_set_mod_param   },
 	{"module",        GEN_VAL,   0,              cfg_load_modules    },

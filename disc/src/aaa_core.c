@@ -1,7 +1,14 @@
 /*
- * $Id: aaa_core.c,v 1.15 2003/04/16 14:27:17 andrei Exp $
- *
- * 2003-04-08 created by bogdan
+ * $Id: aaa_core.c,v 1.16 2003/04/16 17:11:19 andrei Exp $
+ */
+/* History:
+ * --------
+ *  2003-04-08  created by bogdan
+ *  2003-04-08  peer & route support in the cfg. file (andrei)
+ *  2003-04-09  cmd. line parsing, disable_ipv6 (andrei)
+ *  2003-04-14  cmd. line switch for the maximum memory used (andrei)
+ *  2003-04-16  daemonize, lots of startup params  (andrei)
+ *  
  */
 
 
@@ -12,6 +19,8 @@
 #include <ctype.h> /* isprint */
 #include <signal.h>
 #include <pthread.h>
+#include <pwd.h>
+#include <grp.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -34,7 +43,7 @@
 #define CFG_FILE "aaa.cfg"
 
 
-static char id[]="$Id: aaa_core.c,v 1.15 2003/04/16 14:27:17 andrei Exp $";
+static char id[]="$Id: aaa_core.c,v 1.16 2003/04/16 17:11:19 andrei Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
@@ -87,15 +96,25 @@ static char flags[]=""
 static char help_msg[]= "\
 Usage: " NAME " -f file   \n\
 Options:\n\
-    -f file     Configuration file (default " CFG_FILE ")\n\
-    -p port     Listen on the specified port (default 1812) \n\
-    -m size     Maximum memory size to use in Mb (default 1) \n\
     -6          Disable ipv6 \n\
-    -d          Debugging mode (multiple -d increase the level)\n\
     -E          Log to stderr \n\
-    -V          Version number \n\
+    -d          Debugging mode (multiple -d increase the level)\n\
+    -D          Do not fork into daemon mode\n\
+    -f file     Configuration file (default " CFG_FILE ")\n\
     -h          This help message \n\
+    -p port     Listen on the specified port (default 1812) \n\
+    -P file     Create a pid file \n\
+    -m size     Maximum memory size to use in Mb (default 1) \n\
+    -t dir      Chroot to \"dir\" \n\
+    -u user     Change uid to \"user\" \n\
+    -g group    Change gid to \"group\" \n\
+    -V          Version number \n\
+    -w          Change the working directory to \"dir\"  (default \"/\")\n\
 ";
+
+
+#define MAX_FD 32 /* maximum number of inherited open file descriptors,
+                    (normally it shouldn't  be bigger  than 3) */
 
 
 /* thread-id of the original thread */
@@ -115,6 +134,15 @@ int debug=0;
 
 /* use std error for loging - default value */
 int log_stderr=1;
+
+int dont_fork = 0;
+char* chroot_dir = 0;
+char* working_dir = 0;
+char* user = 0;
+char* group = 0;
+int uid = 0;
+int gid = 0;
+char* pid_file = 0;
 
 /* aaa identity */
 str aaa_identity= {0, 0};
@@ -159,13 +187,13 @@ int (*send_local_request)(AAAMessage*,struct trans*);
 
 
 /* 0 on success, -1 on error */
-static int process_cmd_line(int argc, char** argv)
+static int parse_cmd_line(int argc, char** argv)
 {
 	char c;
 	char* tmp;
 	
 	opterr=0;
-	while((c=getopt(argc, argv, "f:p:m:6VhEd"))!=-1){
+	while((c=getopt(argc, argv, "f:p:m:P:t:u:g:w:6VhEdD"))!=-1){
 		switch(c){
 			case 'f':
 				cfg_file=optarg;
@@ -207,6 +235,24 @@ static int process_cmd_line(int argc, char** argv)
 				printf("%s", help_msg);
 				exit(0);
 				break;
+			case 'D':
+				dont_fork=1;
+				break;
+			case 'w':
+				working_dir=optarg;
+				break;
+			case 't':
+				chroot_dir=optarg;
+				break;
+			case 'u':
+				user=optarg;
+				break;
+			case 'g':
+				group=optarg;
+				break;
+			case 'P':
+				pid_file=optarg;
+				break;
 			case '?':
 				if (isprint(optopt))
 					fprintf(stderr, "Unknown option `-%c´\n", optopt);
@@ -233,6 +279,123 @@ static int process_cmd_line(int argc, char** argv)
 error:
 	return -1;
 }
+
+
+
+/* daemon init, return 0 on success, -1 on error */
+int daemonize(char*  name)
+{
+	FILE *pid_stream;
+	pid_t pid;
+	int r, p;
+
+
+	p=-1;
+
+
+	if (chroot_dir&&(chroot(chroot_dir)<0)){
+		LOG(L_CRIT, "Cannot chroot to %s: %s\n", chroot_dir, strerror(errno));
+		goto error;
+	}
+	
+	if (chdir(working_dir)<0){
+		LOG(L_CRIT,"cannot chdir to %s: %s\n", working_dir, strerror(errno));
+		goto error;
+	}
+
+	if (gid&&(setgid(gid)<0)){
+		LOG(L_CRIT, "cannot change gid to %d: %s\n", gid, strerror(errno));
+		goto error;
+	}
+	
+	if(uid&&(setuid(uid)<0)){
+		LOG(L_CRIT, "cannot change uid to %d: %s\n", uid, strerror(errno));
+		goto error;
+	}
+
+	/* fork to become!= group leader*/
+	if ((pid=fork())<0){
+		LOG(L_CRIT, "Cannot fork:%s\n", strerror(errno));
+		goto error;
+	}else if (pid!=0){
+		/* parent process => exit*/
+		exit(0);
+	}
+	/* become session leader to drop the ctrl. terminal */
+	if (setsid()<0){
+		LOG(L_WARN, "setsid failed: %s\n",strerror(errno));
+	}
+	/* fork again to drop group  leadership */
+	if ((pid=fork())<0){
+		LOG(L_CRIT, "Cannot  fork:%s\n", strerror(errno));
+		goto error;
+	}else if (pid!=0){
+		/*parent process => exit */
+		exit(0);
+	}
+
+	/* added by noh: create a pid file for the main process */
+	if (pid_file!=0){
+		
+		if ((pid_stream=fopen(pid_file, "r"))!=NULL){
+			fscanf(pid_stream, "%d", &p);
+			fclose(pid_stream);
+			if (p==-1){
+				LOG(L_CRIT, "pid file %s exists, but doesn't contain a valid"
+					" pid number\n", pid_file);
+				goto error;
+			}
+			if (kill((pid_t)p, 0)==0 || errno==EPERM){
+				LOG(L_CRIT, "running process found in the pid file %s\n",
+					pid_file);
+				goto error;
+			}else{
+				LOG(L_WARN, "pid file contains old pid, replacing pid\n");
+			}
+		}
+		pid=getpid();
+		if ((pid_stream=fopen(pid_file, "w"))==NULL){
+			LOG(L_WARN, "unable to create pid file %s: %s\n", 
+				pid_file, strerror(errno));
+			goto error;
+		}else{
+			fprintf(pid_stream, "%i\n", (int)pid);
+			fclose(pid_stream);
+		}
+	}
+	
+	/* try to replace stdin, stdout & stderr with /dev/null */
+	if (freopen("/dev/null", "r", stdin)==0){
+		LOG(L_ERR, "unable to replace stdin with /dev/null: %s\n",
+				strerror(errno));
+		/* continue, leave it open */
+	};
+	if (freopen("/dev/null", "w", stdout)==0){
+		LOG(L_ERR, "unable to replace stdout with /dev/null: %s\n",
+				strerror(errno));
+		/* continue, leave it open */
+	};
+	/* close stderr only if log_stderr=0 */
+	if ((!log_stderr) &&(freopen("/dev/null", "w", stderr)==0)){
+		LOG(L_ERR, "unable to replace stderr with /dev/null: %s\n",
+				strerror(errno));
+		/* continue, leave it open */
+	};
+	
+	/* close any open file descriptors */
+	for (r=3;r<MAX_FD; r++){
+			close(r);
+	}
+	
+	if (log_stderr==0)
+		openlog(name, LOG_PID|LOG_CONS, LOG_DAEMON);
+		/* LOG_CONS, LOG_PERRROR ? */
+	return  0;
+
+error:
+	return -1;
+}
+
 
 
 void init_random_generator()
@@ -397,11 +560,14 @@ void destroy_aaa_core()
 
 
 
-int init_aaa_core(char *cfg_file)
+int init_aaa_core(char* name, char *cfg_file)
 {
 	void* shm_mempool;
 	struct peer_entry* pl;
 	struct peer* pe;
+	char *tmp;
+	struct passwd *pw_entry;
+	struct group  *gr_entry;
 
 	/* fix mem size */
 	if (shm_mem_size<=0) shm_mem_size=SHM_MEM_SIZE;
@@ -429,18 +595,54 @@ int init_aaa_core(char *cfg_file)
 		goto error;
 	}
 	/* fix config stuff */
-	if (listen_port==0) listen_port=DEFAULT_LISTENING_PORT;
+	if (listen_port<=0) listen_port=DEFAULT_LISTENING_PORT;
 	if (my_aaa_status==AAA_UNDEFINED) {
 		LOG(L_CRIT,"ERROR:init_aaa_core: mandatory param \"aaa_status\" "
 			"not found in config file\n");
 		goto error;
 	}
+	
+	if (working_dir==0) working_dir="/";
+
+	/* get uid/gid */
+	if (user){
+		uid=strtol(user, &tmp, 10);
+		if ((tmp==0) ||(*tmp)){
+			/* maybe it's a string */
+			pw_entry=getpwnam(user);
+			if (pw_entry==0){
+				fprintf(stderr, "bad user name/uid number: -u %s\n", user);
+				goto error;
+			}
+			uid=pw_entry->pw_uid;
+			gid=pw_entry->pw_gid;
+		}
+	}
+	if (group){
+		gid=strtol(user, &tmp, 10);
+		if ((tmp==0) ||(*tmp)){
+			/* maybe it's a string */
+			gr_entry=getgrnam(group);
+			if (gr_entry==0){
+				fprintf(stderr, "bad group name/gid number: -u %s\n", group);
+				goto error;
+			}
+			gid=gr_entry->gr_gid;
+		}
+	}
+	
+	
 	if (my_aaa_status==AAA_SERVER)
 		do_relay=1;
 
 	/* build the aaa_identity based on FQDN and port */
 	if ( generate_aaaIdentity()==-1 ) {
 		goto error;
+	}
+
+	/* init daemon */
+	if (!dont_fork){
+		if(daemonize(name)<0) goto error;
 	}
 
 	/* init the transaction manager */
@@ -546,7 +748,7 @@ static void sig_handler(int signo)
 
 int main(int argc, char *argv[])
 {
-	if (process_cmd_line(argc, argv)!=0)
+	if (parse_cmd_line(argc, argv)!=0)
 		goto error;
 
 	/* to remember which one was the original thread */
@@ -579,7 +781,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* init the aaa core */
-	if ( init_aaa_core(cfg_file)==-1 )
+	if ( init_aaa_core(argv[0], cfg_file)==-1 )
 		goto error;
 
 	/* start the tcp shell */
