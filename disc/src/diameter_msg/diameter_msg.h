@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_msg.h,v 1.3 2003/04/08 16:45:02 bogdan Exp $
+ * $Id: diameter_msg.h,v 1.4 2003/04/08 16:47:31 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -306,9 +306,9 @@ AAAMessage* AAATranslateMessage(
 /* AVPS
  */
 
-#define AAACreateAndAddAVPToList(_msg_,_code_,_flags_,_vendor_,_data_,_len_ ) \
+#define AAACreateAndAddAVPToMessage(_msg_,_code_,_flags_,_vdr_,_data_,_len_) \
 	( AAAAddAVPToMessage(_msg_, \
-	AAACreateAVP(_code_,_flags_,_vendor_,_data_,_len_, AVP_DUPLICATE_DATA),\
+	AAACreateAVP(_code_,_flags_,_vdr_,_data_,_len_, AVP_DUPLICATE_DATA),\
 	(_msg_)->avpList.tail) )
 
 AAA_AVP* AAACreateAVP(
