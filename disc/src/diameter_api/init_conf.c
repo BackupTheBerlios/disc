@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.11 2003/03/13 18:56:48 andrei Exp $
+ * $Id: init_conf.c,v 1.12 2003/03/13 19:16:07 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -37,22 +37,23 @@
 
 
 /* local vars */
-static int is_lib_init = 0;
-static char config_filename[512];
+static int  is_lib_init = 0;
+static char *config_filename;
 
 
 /* external vars */
 unsigned int shm_mem_size=SHM_MEM_SIZE*1024*1024; /* shared mem. size*/
 int memlog=L_DBG;                     /* shm_mallocs log level */
-int debug=9;                           /* debuging level */
-int log_stderr=1;                      /* use std error fro loging? */
-struct h_table *hash_table;          /* hash table for sessions and trans */
-struct p_table *peer_table;          /* table with peers */
+int debug=9;                          /* debuging level */
+int log_stderr=1;                     /* use std error fro loging? */
+struct h_table *hash_table;           /* hash table for sessions and trans */
+struct p_table *peer_table;           /* table with peers */
 str aaa_identity= {0, 0};             /* aaa identity */
 str aaa_realm= {0, 0};                /* realm */
 str aaa_fqdn= {0, 0 };
-str product_name = {"AAA FFS",7};    /* product name */
-unsigned int vendor_id = 12345;      /* vendor id */
+str product_name = {"AAA FFS",7};     /* product name */
+unsigned int vendor_id = VENDOR_ID;   /* vendor id */
+unsigned int listen_port = DEFAULT_LISTENING_PORT;   /* listening port */
 unsigned int supported_auth_app_id =
 	(1<<AAA_APP_RELAY) | (1<<AAA_APP_MOBILE_IP);
 unsigned int supported_acc_app_id = 
@@ -66,6 +67,7 @@ struct cfg_def cfg_ids[]={
 	{"aaa_identity", STR_VAL,   &aaa_identity },
 	{"aaa_realm",    STR_VAL,   &aaa_realm    },
 	{"aaa_fqdn",     STR_VAL,   &aaa_fqdn     },
+	{"listen_port",  INT_VAL,   &listen_port  },
 	{0,0,0}
 };
 
@@ -147,56 +149,44 @@ AAAReturnCode AAAOpen(char *configFileName)
 
 	/* check if the lib is already init */
 	if (is_lib_init) {
-		LOG(L_ERR,"ERROR: AAAOpen: library already initialized!!\n");
+		LOG(L_ERR,"ERROR:AAAOpen: library already initialized!!\n");
 		return AAA_ERR_ALREADY_INIT;
 	}
 
 	/* init mallocs */
 	shm_mempool=malloc(shm_mem_size);
 	if (shm_mempool==0){
-		LOG(L_CRIT, "ERROR: AAAOpen: intial malloc failed\n");
+		LOG(L_CRIT,"ERROR:AAAOpen: intial malloc failed\n");
 		return AAA_ERR_NOMEM;
 	};
 	if (shm_mem_init_mallocs(shm_mempool, shm_mem_size)<0){
-		LOG(L_CRIT, "ERROR: AAAOpen: could not intialize shm. mallocs\n");
+		LOG(L_CRIT,"ERROR:AAAOpen: could not intialize shm. mallocs\n");
 		return AAA_ERR_NOMEM;
 	};
 
 	/* read the config file */
 	if ((cfg_file=fopen(configFileName, "r"))==0){
-		LOG(L_CRIT, "ERROR: reading config file: %s\n", strerror(errno));
+		LOG(L_CRIT,"ERROR:AAAOpen: reading config file: %s\n",strerror(errno));
 		goto error_config;
 	}
 	if (cfg_parse_stream(cfg_file)!=0){
 		fclose(cfg_file);
-		LOG(L_CRIT, "ERROR: reading config file(%s)\n", configFileName);
+		LOG(L_CRIT,"ERROR:AAAOpen: reading config file(%s)\n", configFileName);
 		goto error_config;
 	}
 	fclose(cfg_file);
 
-		
-	/* ????? */
-	strncpy( config_filename, configFileName, sizeof(config_filename)-1);
-	config_filename[511] = 0;
-
-#if 0
-	/**/
-	aaa_identity.s = "aaa://fesarius.fokus.gmd.de:1812;transport=tcp";
-	aaa_identity.len = strlen(aaa_identity.s);
-	aaa_fqdn.s = aaa_identity.s + 6;
-	aaa_fqdn.len = 21;
-	aaa_realm.s = aaa_identity.s + 15;
-	aaa_realm.len = 12 ;
-#endif
+	/* save the name of the config file  */
+	config_filename = shm_malloc( sizeof(configFileName)+1 );
+	if (!config_filename) {
+		LOG(L_CRIT, "ERROR:AAAOpen: cannot allocate memory!\n");
+		goto error_config;
+	}
+	strcpy( config_filename, configFileName);
 
 	/* init the random number geberator */
 	init_random_generator();
 
-	/* init the log system */
-#if 0
-	debug = 9;
-	log_stderr = 1;
-#endif 
 	printf("after config read: debug=%d, log_stderr=%d\n", debug, log_stderr);
 	printf("identity=%.*s, fqdn=%.*s realm=%.*s\n",
 				aaa_identity.len, aaa_identity.s,

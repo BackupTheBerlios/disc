@@ -1,5 +1,5 @@
 /*
- * $Id: globals.h,v 1.1 2003/03/12 18:12:22 andrei Exp $
+ * $Id: globals.h,v 1.2 2003/03/13 19:16:07 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -20,6 +20,9 @@ extern unsigned int shm_mem_size;
 extern int debug;
 extern int log_stderr;
 extern int memlog;
+
+/* listening port for aaa connections */
+unsigned int listen_port;
 
 /* hash_table */
 extern struct h_table *hash_table;
