@@ -67,7 +67,7 @@ unsigned int supported_acc_app_id =
 
 
 
-void close_client();
+void close_aaa_client();
 
 
 
@@ -75,7 +75,7 @@ void close_client();
 static void sig_handler(int signo)
 {
 	if ( main_thread==pthread_self() ) {
-		close_client();
+		close_aaa_client();
 		exit(0);
 	}
 	return;
@@ -111,33 +111,10 @@ void init_random_generator()
 
 
 
-int init_client()
+int init_aaa_client()
 {
-	void* shm_mempool;
 	str aaa_id;
 	str host;
-
-	/* init mallocs */
-	shm_mempool=malloc(shm_mem_size);
-	if (shm_mempool==0){
-		LOG(L_CRIT,"ERROR:AAAOpen: initial malloc failed\n");
-		goto error;
-	};
-	if (shm_mem_init_mallocs(shm_mempool, shm_mem_size)<0){
-		LOG(L_CRIT,"ERROR:AAAOpen: could not intialize shm. mallocs\n");
-		goto error;
-	};
-
-	init_random_generator();
-
-	/**/
-	main_thread = pthread_self();
-
-	/* install signal handler */
-	if (signal(SIGINT, sig_handler)==SIG_ERR) {
-		LOG(L_ERR,"ERROR:init_client: cannot install signal handler\n");
-		goto error;
-	}
 
 	/* read config file */
 	aaa_identity.s = "aaa://fesarius.fokus.gmd.de:1812;transport=tcp";
@@ -186,9 +163,6 @@ int init_client()
 		goto error;
 	}
 
-	/* start the timer */
-	init_timer();
-
 	/* start the tcp shell */
 	start_tcp_accept();
 
@@ -201,22 +175,19 @@ int init_client()
 	return 1;
 error:
 	printf("ERROR: cannot init the client\n");
-	close_client();
+	close_aaa_client();
 	return -1;
 }
 
 
 
-void close_client()
+void close_aaa_client()
 {
 	/* close the libarary */
 	AAAClose();
 
 	/* destroy the modules */
 	destroy_modules();
-
-	/* stop the timer */
-	destroy_timer();
 
 	/* stop all the worker threads */
 	stop_client_workers();
@@ -233,6 +204,9 @@ void close_client()
 	/* destroy the msg queue */
 	destroy_msg_queue();
 
+	/* destroy tge timer */
+	destroy_timer();
+
 	/* just for debuging */
 	shm_status();
 
@@ -242,15 +216,40 @@ void close_client()
 
 int main(int argc, char *argv[])
 {
-	str *sID;
-	AAAMessage *req;
-	AAA_AVP *avp;
+	void* shm_mempool;
 
-	if ( init_client()==-1 )
+	/* init mallocs */
+	shm_mempool=malloc(shm_mem_size);
+	if (shm_mempool==0){
+		LOG(L_CRIT,"ERROR:main: initial malloc failed\n");
+		exit(-1);
+	};
+	if (shm_mem_init_mallocs(shm_mempool, shm_mem_size)<0){
+		LOG(L_CRIT,"ERROR:main: could not intialize shm. mallocs\n");
+		exit(-1);
+	};
+
+	init_random_generator();
+
+	/* to remember which one was the original thread */
+	main_thread = pthread_self();
+
+	/* install signal handler */
+	if (signal(SIGINT, sig_handler)==SIG_ERR) {
+		LOG(L_ERR,"ERROR:main: cannot install signal handler\n");
+		exit(-1);
+	}
+
+	/* init the aaa client */
+	if ( init_aaa_client()==-1 )
 		exit(-1);
 
-	sleep( 5 );
+	/* for the last of the execution, I will act as timer */
+	timer_ticker();
 
+
+	/*
+	sleep( 5 );
 	AAAStartSession( &sID, modules->exports, 0);
 	req = AAANewMessage( 456, 4, sID, 0);
 	AAACreateAVP( &avp, AVP_Destination_Realm, 0, 0, "gmd.de", 6);
@@ -258,7 +257,7 @@ int main(int argc, char *argv[])
 	AAASendMessage( req );
 
 	for(;;)
-		sleep( 40 );
+		sleep( 40 );*/
 
 	return 0;
 }

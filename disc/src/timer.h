@@ -1,5 +1,5 @@
 /*
- * $Id: timer.h,v 1.2 2003/03/14 16:54:07 bogdan Exp $
+ * $Id: timer.h,v 1.3 2003/04/01 14:04:45 bogdan Exp $
  *
  */
 
@@ -13,7 +13,8 @@
 
 
 #define TIMER_TICK 1
-#define is_in_timer_list(_tl) ( (_tl)->timer_list )
+#define is_in_timer_list(_tl)  ( (_tl)->timer_list )
+#define get_ticks()            (jiffies)
 
 
 typedef void (timer_function)(unsigned int ticks, void* param);
@@ -50,6 +51,9 @@ typedef struct  timer
 } timer_type;
 
 
+/* global time */
+extern int jiffies;
+
 
 
 /************************* Functions to manipulate the timer *****************/
@@ -58,11 +62,9 @@ typedef struct  timer
  * ret: <0 on errror*/
 int register_timer(timer_function f, void* param, unsigned int interval);
 
-int init_timer();
+void timer_ticker();
 
 int destroy_timer();
-
-unsigned int get_ticks();
 
 
 /******************** Functions to manipulate the timer lists ****************/

@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.2 2003/03/14 16:54:07 bogdan Exp $
+ * $Id: timer.c,v 1.3 2003/04/01 14:04:45 bogdan Exp $
  *
  * 
  *  2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -21,10 +21,7 @@
 
 
 static struct timer_handler* timer_handler_list=0;
-static int jiffies = 0;
-static pthread_t  timer_thread = 0;
-
-void* timer_ticker( void* );
+int jiffies = 0;
 
 
 
@@ -54,32 +51,9 @@ error:
 
 
 
-int init_timer()
-{
-	/* a separat thread will be run to act as a timer */
-	if (pthread_create( &timer_thread, /*&attr*/ 0, &timer_ticker, 0) != 0) {
-		LOG(L_ERR,"ERROR:init_timer: cannot create timer thread\n");
-		return -1;
-	}
-
-	LOG(L_INFO,"INFO:init_timer: timer thread started\n");
-	return 1;
-}
-
-
-
 int destroy_timer()
 {
 	struct timer_handler *th, *th_tmp;
-
-	/* stop the timer thread */
-	if (timer_thread) {
-		if (pthread_cancel( timer_thread )!=0) {
-			LOG(L_ERR,"ERROR:destroy_timer: error when canceling the"
-					" timer thread\n");
-			return -1;;
-		}
-	}
 
 	/* clear all the timer handlers */
 	th = timer_handler_list;
@@ -95,7 +69,7 @@ int destroy_timer()
 
 
 
-void* timer_ticker( void *foo)
+void timer_ticker()
 {
 	struct timer_handler* t;
 	unsigned int prev_jiffies;
@@ -125,15 +99,7 @@ void* timer_ticker( void *foo)
 			}
 		}
 	}
-	return 0;
 }
-
-
-unsigned int get_ticks()
-{
-	return jiffies;
-}
-
 
 
 

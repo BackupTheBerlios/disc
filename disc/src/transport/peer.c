@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.13 2003/04/01 13:39:04 bogdan Exp $
+ * $Id: peer.c,v 1.14 2003/04/01 14:04:45 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -479,6 +479,8 @@ void destroy_peer( struct peer *p)
 {
 	/* unimplemented */
 }
+
+
 
 
 int send_req_to_peers( struct trans *tr , struct peer_chaine *pc)
