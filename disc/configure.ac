@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.24 2003/07/22 10:16:30 cco Exp $
+dnl $Id: configure.ac,v 1.25 2003/09/16 18:17:03 cco Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -23,8 +23,8 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.24 2003/07/22 10:16:30 cco Exp $)
-AC_INIT(disc, 0.1.3d)
+AC_REVISION($Id: configure.ac,v 1.25 2003/09/16 18:17:03 cco Exp $)
+AC_INIT(disc, 0.1.3f)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 ##AC_CONFIG_HEADERS([ac_config.h])
 AC_CONFIG_SUBDIRS(libltdl)
