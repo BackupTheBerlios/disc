@@ -1,5 +1,5 @@
 /*
- * $Id: resolve.h,v 1.4 2003/04/09 16:34:44 andrei Exp $
+ * $Id: resolve.h,v 1.5 2003/04/22 15:26:22 andrei Exp $
  *
  * resolver related functions
  */
@@ -79,7 +79,9 @@ error_dots:
 	DBG("str2ip: ERROR: too many dots in [%.*s]\n", st->len, st->s);
 	return 0;
  error_char:
+#ifdef EXTRA_DEBUG
 	DBG("str2ip: WARNING: unexpected char %c in [%.*s]\n", *s, st->len, st->s);
+#endif
 	return 0;
 }
 
@@ -166,8 +168,10 @@ error_colons:
 	return 0;
 
 error_char:
+#ifdef EXTRA_DEBUG
 	DBG("str2ip6: WARNING: unexpected char %c in  [%.*s]\n", *s, st->len,
 			st->s);
+#endif
 	return 0;
 }
 
