@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.27 2003/04/15 10:46:26 bogdan Exp $
+ * $Id: peer.c,v 1.28 2003/04/15 11:44:35 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -1195,7 +1195,7 @@ inline void reset_peer( struct peer *p)
 
 int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 {
-	struct tcp_info *info;
+	struct tcp_params *info;
 	static char     *err_msg[]= {
 		"no error",
 		"event - state mismatch",
@@ -1227,7 +1227,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					}
 					/* update the peer */
 					p->conn_cnt++;
-					info = (struct tcp_info*)ptr;
+					info = (struct tcp_params*)ptr;
 					p->sock = info->sock;
 					memcpy( &p->local_ip, info->local, sizeof(struct ip_addr));
 					/* put the peer in wait_cer timer list */
@@ -1252,7 +1252,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					/* update the peer */
 					p->conn_cnt++;
 					p->flags &= !PEER_CONN_IN_PROG;
-					info = (struct tcp_info*)ptr;
+					info = (struct tcp_params*)ptr;
 					p->sock = info->sock;
 					memcpy( &p->local_ip, info->local, sizeof(struct ip_addr));
 					/* send cer */
@@ -1277,7 +1277,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 				case PEER_UNCONN:
 					DBG("DEBUG:peer_state_machine: connect in progress\n");
 					/* update the peer */
-					info = (struct tcp_info*)ptr;
+					info = (struct tcp_params*)ptr;
 					p->sock = info->sock;
 					p->flags |= PEER_CONN_IN_PROG;
 					lock_release( p->mutex );
@@ -1303,7 +1303,7 @@ int peer_state_machine( struct peer *p, enum AAA_PEER_EVENT event, void *ptr)
 					goto error;
 			}
 			break;
-		case TCP_CLOSE:
+		case TCP_CONN_CLOSE:
 			lock_get( p->mutex );
 			DBG("DEBUG:peer_state_machine: TCP connection was closed ->"
 					"closing peer\n");

@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.11 2003/04/15 10:46:26 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.12 2003/04/15 11:44:35 bogdan Exp $
  *
  *  History:
  *  --------
@@ -14,11 +14,13 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
+#include "../diameter_msg/diameter_msg.h"
 #include "../mem/shm_mem.h"
 #include "../dprint.h"
 #include "../list.h"
 #include "../str.h"
-#include "../diameter_msg/diameter_msg.h"
 #include "peer.h"
 #include "ip_addr.h"
 #include "tcp_receive.h"
@@ -102,15 +104,22 @@ error:
 
 inline void tcp_accept(struct peer *p, unsigned int s)
 {
-	struct tcp_info      info;
+	struct tcp_params      info;
 	struct ip_addr       local_ip;
 	union sockaddr_union local;
 	unsigned int length;
 	unsigned int option;
 
-	/* get the socket blocking */
+	/* set the socket blocking */
 	option = fcntl( s, F_GETFL, 0);
 	fcntl( s, F_SETFL, option & ~O_NONBLOCK);
+	/* set the socket NODELAY */
+	option = 1;
+	if (setsockopt(s,IPPROTO_TCP,TCP_NODELAY,&option,sizeof(option))==-1) {
+		LOG(L_ERR,"ERROR:tcp_accept: setsockopt TCP_NODEALY failed: \"%s\"\n",
+			strerror(errno));
+		goto error;
+	}
 
 	/* get the address that the socket is connected to you */
 	length = sockaddru_len(local);
@@ -141,13 +150,23 @@ inline void do_connect( struct peer *p, int sock )
 {
 	union sockaddr_union local;
 	struct ip_addr       local_ip;
-	struct tcp_info      info;
+	struct tcp_params      info;
 	unsigned int         length;
 	unsigned int         option;
 
 	/* get the socket blocking */
 	option = fcntl( sock, F_GETFL, 0);
 	fcntl( sock, F_SETFL, option & ~O_NONBLOCK);
+	/* set the socket NODELAY */
+	option = 1;
+	if (setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,&option,sizeof(option))==-1) {
+		LOG(L_ERR,"ERROR:tcp_connect: setsockopt TCP_NODEALY failed: \"%s\"\n",
+			strerror(errno));
+		peer_state_machine( p, TCP_CONN_FAILED,0);
+		close( sock );
+		return;
+
+	}
 
 	length = sockaddru_len(local);
 	if (getsockname( sock, (struct sockaddr*)&local, &length)==-1) {
@@ -176,7 +195,7 @@ inline void do_connect( struct peer *p, int sock )
 inline void tcp_connect(struct peer *p)
 {
 	union sockaddr_union remote;
-	struct tcp_info      info;
+	struct tcp_params      info;
 	int option;
 	int sock;
 
@@ -194,7 +213,8 @@ inline void tcp_connect(struct peer *p)
 				"new socket\n");
 		goto error;
 	}
-	/* set connecting socket to non-blocking */
+	/* set connecting socket to non-blocking; after connection is done, the
+	 * socket will be set back to blocking */
 	option = fcntl(sock, F_GETFL, 0);
 	fcntl(sock, F_SETFL, option | O_NONBLOCK);
 
@@ -333,8 +353,9 @@ void *do_receive(void *arg)
 						break;
 					case CLOSE_CMD:
 						LOG(L_INFO,"INFO:do_receive: close cmd. received\n");
-						peer_state_machine( cmd.peer, TCP_CLOSE, 0);
-						default:
+						peer_state_machine( cmd.peer, TCP_CONN_CLOSE, 0);
+						break;
+					default:
 						LOG(L_ERR,"ERROR:do_receive: unknown command "
 							"code %d -> ignoring command\n",cmd.code);
 				}
@@ -353,12 +374,12 @@ void *do_receive(void *arg)
 					/* FIN received */
 					LOG(L_INFO,"INFO:do_receive: FIN received for socket"
 						" %d.\n",p->sock);
-					peer_state_machine( p, TCP_CLOSE, 0);
+					peer_state_machine( p, TCP_CONN_CLOSE, 0);
 				} else {
 					/* data received */
 					if (do_read( p )==-1) {
 						LOG(L_ERR,"ERROR:do_receive: error reading-> close\n");
-						peer_state_machine( p, TCP_CLOSE, 0);
+						peer_state_machine( p, TCP_CONN_CLOSE, 0);
 					}
 				}
 				continue;

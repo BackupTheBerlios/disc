@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.18 2003/04/15 10:46:26 bogdan Exp $
+ * $Id: peer.h,v 1.19 2003/04/15 11:44:35 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -19,7 +19,7 @@ struct peer;
 #include "tcp_shell.h"
 
 
-struct tcp_info {
+struct tcp_params {
 	struct ip_addr *local;
 	unsigned int   sock;
 };
@@ -106,7 +106,7 @@ enum AAA_PEER_EVENT {
 	TCP_CONNECTED,      /*  1 */
 	TCP_CONN_IN_PROG,   /*  2 */
 	TCP_CONN_FAILED,    /*  3 */
-	TCP_CLOSE,          /*  4 */
+	TCP_CONN_CLOSE,     /*  4 */
 	CER_RECEIVED,       /*  5 */
 	CEA_RECEIVED,       /*  6 */
 	DWR_RECEIVED,       /*  7 */
