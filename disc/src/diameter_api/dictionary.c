@@ -1,9 +1,10 @@
 /*
  * 2003-02-17 created by illya (komarov@fokus.gmd.de)
- * $Id: dictionary.c,v 1.7 2003/03/19 16:55:49 ilk Exp $
+ * $Id: dictionary.c,v 1.8 2003/03/19 17:18:51 ilk Exp $
  */
 #include <stdio.h>
-#include "diameter_api.h"
+#include <stdlib.h>
+#include "dictionary.h"
 
 #define MAXWORDLEN 1024;
 FILE* file;
@@ -21,6 +22,7 @@ AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
 AAAValue AAAValueFromName(char *avpName,
 	                        char *vendorName,
 	                        char *valueName){
+  return 0;
 }
 
 AAAReturnCode AAADictionaryEntryFromName( char *avpName,
@@ -33,16 +35,19 @@ AAAReturnCode AAADictionaryEntryFromName( char *avpName,
 AAAValue AAAValueFromAVPCode(AAA_AVPCode avpCode,
 		                         AAAVendorId vendorId,
 	                           char *valueName){
+  return 0;
 }
 
 const char *AAALookupValueNameUsingValue(AAA_AVPCode avpCode,
 			                                   AAAVendorId vendorId,
 			                                   AAAValue value){
+  return 0;
 }
 
 boolean_t AAAGetCommandCode(char *commandName,
 	                          AAACommandCode *commandCode,
 	                          AAAVendorId *vendorId){
+   return 0;
 }
 
 AAAReturnCode AAAFindDictionaryEntry(  AAAVendorId vendorId,
@@ -92,7 +97,7 @@ int findEntry( char** entry){
    while(!match && findWord(entry[0])){
       int i;
       int size=MAXWORDLEN;
-      char* buf;
+      char* buf=(char*)malloc(sizeof(char));
       for(i=1; i<sizeof(entry); i++){
          if((size=readWord(buf,size))){
             if(entry[i]==NULL){
@@ -111,7 +116,7 @@ int findEntry( char** entry){
    return match;
 }
 int findWord( char* word){
-   char num;
+   char num=0;
    int match = 0;
    while(!match ||(num=fgetc(file))!=EOF){
       if(num == '#')
@@ -137,10 +142,9 @@ int findWord( char* word){
 }
 
 int readWord(char* buf,int size){
-   int realSize;
    char num;
    int i = 0;
-   buf=(char*)malloc(size);
+   buf=NULL;
    while ((num=fgetc(file))==' ' || num=='\t' )
       if(num =='\n' || num==EOF)
          return 0;
@@ -159,15 +163,15 @@ int vendorNameFromId(AAAVendorId vendorId, char* vendorAttr){
       return 0;
    }
    char num;
-   char* vendorValue;
-   char* vendorName;
+   char* vendorValue=NULL;
+   char* vendorName=NULL;
    int vid;
    while((num=fgetc(file))!=EOF){
       if(num == '#')
          while ((num=fgetc(file))!='\n' || num!=EOF);
       else{
          ungetc(num,file);
-         if(fscanf(file,"%s %s %i %s\n",vendorAttr,vendorValue,vid,vendorName)==4){
+         if(fscanf(file,"%s %s %i %s\n",vendorAttr,vendorValue,&vid,vendorName)==4){
             if(vid==vendorId){
                return 1;
             }
