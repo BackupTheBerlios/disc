@@ -1,6 +1,27 @@
-#$Id: INSTALL,v 1.3 2003/04/06 14:12:20 andrei Exp $
+#$Id: INSTALL,v 1.4 2003/04/22 18:07:45 andrei Exp $
+
+Dependecies
+-----------
+
+The mipv6 client and server modules require libmysqlclient and libssl.
+
+
+configure important options
+---------------------------
+
+--with-mipv6_modules       - includes the mipv6 server & client modules,
+                           equivalent to
+                           --with-mipv6_server_module --with_mipv6_client_module
+--with-mipv6_server_module - includes only the mipv6 server module
+--with-mipv6_client_module - includes only the mipv6 client module
+
+Check also ./configure --help
+
 
 Compilation
+-----------
+
+1. From CVS
 -----------
 
 cvs co aaa_server
@@ -13,6 +34,29 @@ or just make if you are compiling on the same machine.
 (if you want to regenerate everything, including libtltdl and scripts,
 you should run first ./bootstrap but you need decently recent versions of
 autoconf, automake & libtool)
+
+
+2. From tar.gz
+--------------
+
+tar zxvf disc-0.1.0.tar.gz
+./configure (or ./configure --with-mipv6_modules)
+make
+make install (or make DESTDIR=/tmp/foo install)
+
+
+Creating a distribution
+-----------------------
+
+(you should have the full cvs version)
+
+./configure --with-mipv6_mopdules
+make dist
+
+
+WARNING: if you forget --with-mipv6_modules, the mipv6 server and client modules
+won't be included in the tar.gz !
+
 
 Troubleshooting
 ---------------
@@ -31,6 +75,10 @@ Installation
 ------------
 
 make install
+
+or
+
+make DESTDIR=/your_destination_dir install
 
 
 Other usefull targets

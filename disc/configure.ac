@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.18 2003/04/22 13:14:28 andrei Exp $
+dnl $Id: configure.ac,v 1.19 2003/04/22 18:07:45 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -23,7 +23,7 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.18 2003/04/22 13:14:28 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.19 2003/04/22 18:07:45 andrei Exp $)
 AC_INIT(disc, 0.1.0)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 ##AC_CONFIG_HEADERS([ac_config.h])
@@ -118,6 +118,8 @@ dnl init to nothing
 
 server_modules=""
 client_modules=""
+server_module_dir=server
+client_module_dir=client
 	
 AC_ARG_WITH(mipv6_modules, 
 				AC_HELP_STRING([--with-mipv6_modules],
@@ -158,7 +160,8 @@ fi
 
 if test "$with_mipv6_client_module" = yes; then
 	extra_output="$extra_output src/client/modules/mipv6/Makefile"
-	AC_CONFIG_FILES([src/client/modules/mipv6/Makefile])
+	AC_CONFIG_FILES([src/client/modules/mipv6/Makefile
+						src/client/modules/mipv6/libmeter/Makefile])
 	client_modules="$client_modules mipv6"
 	ssl_check=yes
 dnl add here mipv6/urp autoconf ?
@@ -336,6 +339,8 @@ AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
 AC_SUBST(server_modules)
 AC_SUBST(client_modules)
+AC_SUBST(server_module_dir)
+AC_SUBST(client_module_dir)
 
 AC_OUTPUT(Makefile src/Makefile src/client/Makefile src/server/Makefile 
 			src/diameter_msg/Makefile
