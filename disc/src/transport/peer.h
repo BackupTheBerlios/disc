@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.15 2003/04/09 22:10:34 bogdan Exp $
+ * $Id: peer.h,v 1.16 2003/04/10 23:54:02 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -254,7 +254,7 @@ static inline struct peer* lookup_peer_by_realm_appid(str *realm,
 
 	list_for_each( lh, &(peer_table->peers)) {
 		p = list_entry( lh, struct peer, all_peer_lh);
-		if ( realm->len==p->aaa_realm.len &&
+		if ( realm->len==p->aaa_realm.len-1 &&
 		!strncasecmp( realm->s, p->aaa_realm.s, realm->len)) {
 			for(i=0;p->supp_auth_app_ids[i];i++) {
 				if ( p->supp_auth_app_ids[i]==appid ) {

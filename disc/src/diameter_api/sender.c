@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.4 2003/04/10 21:40:03 bogdan Exp $
+ * $Id: sender.c,v 1.5 2003/04/10 23:54:02 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -65,8 +65,8 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		if ( AAABuildMsgBuffer( msg )==-1 )
 			goto error;
 
-		ses = sId2session( msg->sId );
-		if (ses!=FAKE_SESSION) {
+		if (!msg->no_ses) {
+			ses = sId2session( msg->sId );
 			/* update the session state machine */
 			switch (msg->commandCode) {
 				case 274: /*ASA*/ event = AAA_SENDING_ASA; break;
@@ -81,13 +81,10 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 		/* send the reply to the request incoming peer  */
 		if (send_res_to_peer( &(msg->buf), (struct peer*)msg->in_peer)==-1) {
 			LOG(L_ERR,"ERROR:send_aaa_response: send returned error!\n");
-			if (ses!=FAKE_SESSION)
+			if (!msg->no_ses)
 				session_state_machine( ses, AAA_SEND_FAILED, 0);
 			goto error;
 		}
-
-		/* destroy the transaction  */
-		destroy_transaction( tr );
 	} else {
 		/* it's a request -> get its session */
 		ses = sId2session( msg->sId );

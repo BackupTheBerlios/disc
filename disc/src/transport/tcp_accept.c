@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_accept.c,v 1.7 2003/04/09 16:34:44 andrei Exp $
+ * $Id: tcp_accept.c,v 1.8 2003/04/10 23:54:02 bogdan Exp $
  *
  *  History:
  *  --------
@@ -96,7 +96,7 @@ void *do_accept(void *arg)
 	max_sock = tinfo->cmd_pipe[0];
 
 	server_sock4 = -1;
-#if USE_IPV6
+#ifdef USE_IPV6
 	server_sock6 = -1;
 	bind_retest = 0;
 	if (disable_ipv6) goto do_bind4; /* skip ipv6 binding part*/

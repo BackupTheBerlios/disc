@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.3 2003/04/10 21:40:03 bogdan Exp $
+ * $Id: worker.c,v 1.4 2003/04/10 23:54:02 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -90,7 +90,7 @@ int get_req_destination( AAAMessage *msg, struct peer_chain **p_chain,
 		}
 		/* check the dest-host */
 		if (msg->dest_host->data.len==aaa_identity.len &&
-		strncmp(msg->dest_host->data.s, aaa_identity.s, aaa_identity.len) ) {
+		!strncmp(msg->dest_host->data.s, aaa_identity.s, aaa_identity.len) ) {
 			/* I'm the destination host */
 			*p_chain = 0;
 			*module = find_module(msg->applicationId);
@@ -116,9 +116,12 @@ int get_req_destination( AAAMessage *msg, struct peer_chain **p_chain,
 		/* do routing based on dest realm */
 	}
 
+	DBG("*** realms mine=[%.*s] req=[%.*s]\n",
+			aaa_realm.len,aaa_realm.s,
+			msg->dest_realm->data.len,msg->dest_realm->data.s);
 	/* do routing based on destination-realm AVP */
 	if (msg->dest_realm->data.len==aaa_realm.len &&
-	strncmp(msg->dest_realm->data.s, aaa_realm.s, aaa_realm.len) ) {
+	!strncmp(msg->dest_realm->data.s, aaa_realm.s, aaa_realm.len) ) {
 		/* I'm the destination realm */
 		/* do I support the requested app_id? */
 		if ( (mod=find_module(msg->applicationId))!=0) {
@@ -127,6 +130,7 @@ int get_req_destination( AAAMessage *msg, struct peer_chain **p_chain,
 			*module = mod;
 			return 0;
 		} else {
+			DBG("********** forward inside realm\n");
 			/* do I have a peer in same realm that supports this app-Id? */
 			p = lookup_peer_by_realm_appid( &msg->dest_realm->data,
 				msg->applicationId );
@@ -142,6 +146,7 @@ int get_req_destination( AAAMessage *msg, struct peer_chain **p_chain,
 	} else {
 		/* it's not my realm -> do routing based on script */
 		// TO DO
+		DBG(" routing tabel - call UNIMPLEMENTED\n ");
 		*p_chain = 0;
 		*module = 0;
 		return 0;
@@ -166,7 +171,7 @@ inline void send_error_reply(AAAMessage *msg, unsigned int response_code)
 	AAAMessage *ans;
 
 	ans = AAANewMessage( msg->commandCode, msg->applicationId,
-		0 /*session*/, msg );
+		&(msg->sessionId->data), msg );
 	if (!ans) {
 		LOG(L_ERR,"ERROR:send_error_reply: cannot create error answer"
 			" back to client!\n");
@@ -202,15 +207,20 @@ void *server_worker(void *attr)
 			continue;
 		}
 
+		/* parse the message */
+		msg = AAATranslateMessage( buf.s, buf.len );
+		if (!msg) {
+			LOG(L_ERR,"ERROR:server_worker: dropping message!\n");
+			shm_free( buf.s );
+			continue;
+		}
+
 		/* process the message */
-		if ( is_req( msg ) ) {
+		if ( is_req(msg) ) {
 			/* request*/
-			msg = AAATranslateMessage( buf.s, buf.len );
-			if (!msg) {
-				LOG(L_ERR,"ERROR:server_worker: dropping message!\n");
-				shm_free( buf.s );
-				continue;
-			}
+			msg->no_ses = 1;
+			msg->in_peer = in_peer;
+			DBG(" ******** request received!!! \n");
 			if (!msg->sessionId || !msg->orig_host || !msg->orig_realm ||
 			!msg->dest_realm) {
 				LOG(L_ERR,"ERROR:server_worker: message without sessionId/"
@@ -231,12 +241,14 @@ void *server_worker(void *attr)
 			/* process the request */
 			if (mod) {
 				/* it's a local request */
+				DBG("******* server received  local request \n");
 				/* if the server is statefull, I have to call here the session
 				 * state machine for the incoming request TO DO */
 				msg->sId = &(msg->sessionId->data);
 				/*run the handler for this module */
 				mod->exports->mod_msg( msg, 0);
 			} else {
+				DBG("********* forwarding request\n");
 				/* forward the request -> build a transaction for it */
 				tr = create_transaction( &(msg->buf), in_peer);
 				if (!tr) {
@@ -269,34 +281,30 @@ void *server_worker(void *attr)
 					send_error_reply( msg, AAA_UNABLE_TO_DELIVER);
 				}
 			}
-			/* free the mesage (along with the buffer) */
-			AAAFreeMessage( &msg  );
 		} else {
+				DBG(" ******** response received!!! \n");
 			/* response -> performe transaction lookup and remove it from 
 			 * hash table */
 			tr = transaction_lookup(in_peer,msg->endtoendId,msg->hopbyhopId);
 			if (!tr) {
 				LOG(L_ERR,"ERROR:server_worker: unexpected answer received "
 					"(without sending any request)!\n");
-				shm_free( buf.s );
+				AAAFreeMessage( &msg  );
 				continue;
 			}
 			/* stop the transaction timeout */
 			rmv_from_timer_list( &(tr->timeout) );
-			/* parse the reply */
-			msg = AAATranslateMessage( buf.s, buf.len );
-			if (!msg) {
-				LOG(L_ERR,"ERROR:server_worker: dropping message!\n");
-				shm_free( buf.s );
-				continue;
-			}
+			/* process the reply */
 			if (tr->in_peer) {
+					DBG(" ******** doing downstream forward!!! \n");
 				/* I have to forward the reply downstream */
 				msg->hopbyhopId = tr->orig_hopbyhopId;
 				((unsigned int*)msg->buf.s)[3] = tr->orig_hopbyhopId;
 				/* am I Foreign server for this reply? */
 				if (tr->info==I_AM_FOREIGN_SERVER) {
 					mod = find_module(msg->applicationId);
+					DBG(" ******* running module (%p) for reply "
+						"(I am foreign server)\n",mod);
 					if (mod)
 						mod->exports->mod_msg( msg, 0);
 				}
@@ -312,9 +320,9 @@ void *server_worker(void *attr)
 			}
 			/* destroy the transaction */
 			destroy_transaction( tr );
-			/* free the mesage (along with the buffer) */
-			AAAFreeMessage( &msg  );
 		}
+		/* free the mesage (along with the buffer) */
+		AAAFreeMessage( &msg  );
 	}
 
 	return 0;

@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.3 2003/04/10 21:40:03 bogdan Exp $
+ * $Id: message.c,v 1.4 2003/04/10 23:54:02 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -189,6 +189,7 @@ AAAMessage *AAANewMessage(
 	} else {
 		/* it'a an answer -> it will have the same session Id */
 		msg->sId = request->sId;
+		msg->no_ses = request->no_ses;
 		/* link the incoming peer to the answer */
 		msg->in_peer = request->in_peer;
 		/* set the P flag as in request */
@@ -202,7 +203,7 @@ AAAMessage *AAANewMessage(
 		code = AAA_SUCCESS;
 		avp = AAACreateAVP( AVP_Result_Code, 0, 0, (char*)&code, sizeof(code),
 			AVP_DUPLICATE_DATA);
-		if (!avp || AAAAddAVPToMessage( msg, avp, msg->avpList.tail)
+		if (!avp || AAAAddAVPToMessage( msg, avp, msg->sessionId)
 		!=AAA_ERR_SUCCESS ) {
 			LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add "
 				"Result-Code avp\n");
