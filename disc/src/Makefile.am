@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.2 2003/03/27 15:17:54 andrei Exp $
+## $Id: Makefile.am,v 1.3 2003/03/27 20:10:13 bogdan Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -20,6 +20,7 @@ aaa_client_SOURCES = aaa_lock.c dprint.c hash_table.c sh_mutex.c \
 					aaa_lock.h dprint.h hash.h lock_alloc.h sem.h \
 					timer.h config.h fastlock.h hash_table.h lock_ops.h \
 					sh_mutex.h utils.h counter.h globals.h list.h \
+					route.c route.h script.c script.h \
 					locking.h str.h
 # hash.c only for tests
 				

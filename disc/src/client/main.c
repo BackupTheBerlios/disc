@@ -12,6 +12,7 @@
 #include "../mem/shm_mem.h"
 #include "../sh_mutex.h"
 #include "../timer.h"
+#include "../script.h"$
 #include "../transport/peer.h"
 #include "../transport/tcp_shell.h"
 
@@ -150,6 +151,11 @@ int init_client()
 		goto error;
 	}
 
+	/* init the script */
+	if ( init_script() ) {
+		goto error;
+	}
+
 	/* starts the transport layer - tcp */
 	if (init_tcp_shell(DEFAULT_TCP_RECEIVE_THREADS))
 
@@ -195,16 +201,19 @@ void close_client()
 
 int main(int argc, char *argv[])
 {
-	str peer;
+	str aaa_id;
+	str host;
 
 	if ( init_client()==-1 )
 		exit(-1);
 
 	/* add the peers from config file */
 	//..................
-	peer.s = "ugluk.mobis.fokus.gmd.de";
-	peer.len = strlen(peer.s);
-	add_peer( &peer, 7, 1812);
+	host.s   = "ugluk.mobis.fokus.gmd.de";
+	host.len = strlen(host.s);
+	aaa_id.s   = "aaa://ugluk.mobis.fokus.gmd.de:1812;transport=tcp";
+	aaa_id.len = strlen( aaa_id.s );
+	add_peer( &aaa_id, &host, 1812);
 
 	/* start the tcp shell */
 	start_tcp_accept();

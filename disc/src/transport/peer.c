@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.8 2003/03/18 17:29:40 bogdan Exp $
+ * $Id: peer.c,v 1.9 2003/03/27 20:11:04 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -392,7 +392,7 @@ error:
 /* a new peer is created and added. The name of the peer host is given and the 
  * offset of the realm inside the host name. The host name and realm are copied
  * locally */
-int add_peer( str *host, unsigned int realm_offset, unsigned int port )
+int add_peer( str *aaa_identity, str *host, unsigned int port )
 {
 	static struct hostent* ht;
 	struct peer *p;
@@ -400,26 +400,31 @@ int add_peer( str *host, unsigned int realm_offset, unsigned int port )
 
 	p = 0;
 
-	if (!peer_table || !host->s || !host->len) {
+	if (!peer_table || !host->s || !host->len || !aaa_identity->s ||
+	!aaa_identity->len ) {
 		LOG(L_ERR,"ERROR:add_peer: one of the param is null!!!!\n");
 		goto error;
 	}
 
-	p = (struct peer*)shm_malloc( sizeof(struct peer) + host->len + 1 );
+	p = (struct peer*)shm_malloc( sizeof(struct peer) + aaa_identity->len +
+		host->len + 1 );
 	if(!p) {
 		LOG(L_ERR,"ERROR:add_peer: no more free memory!\n");
 		goto error;
 	}
-	memset(p,0,sizeof(struct peer) + host->len + 1 );
+	memset(p,0,sizeof(struct peer) + aaa_identity->len + host->len + 1 );
 
 	/* fill the peer structure */
 	p->tl.payload = p;
 	p->mutex = get_shared_mutex();
-	p->aaa_host.s = (char*)p + sizeof(struct peer);
+	p->aaa_identity.s = (char*)p + sizeof(struct peer);
+	p->aaa_identity.len = aaa_identity->len;
+	p->aaa_host.s = p->aaa_identity.s + aaa_identity->len;
 	p->aaa_host.len = host->len;
-	p->aaa_realm.s = host->s + realm_offset;
-	p->aaa_realm.len = host->len - realm_offset;
 
+	/* copy the aaa_identity converted to lower case */
+	for(i=0;i<aaa_identity->len;i++)
+		p->aaa_identity.s[i] = tolower( aaa_identity->s[i] );
 	/* copy the host name converted to lower case */
 	for(i=0;i<host->len;i++)
 		p->aaa_host.s[i] = tolower( host->s[i] );

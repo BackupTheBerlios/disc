@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.7 2003/03/18 17:29:53 bogdan Exp $
+ * $Id: peer.h,v 1.8 2003/03/27 20:11:04 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -36,7 +36,7 @@ struct safe_list_head {
 
 struct peer {
 	/* aaa specific information */
-	str aaa_realm;
+	str aaa_identity;
 	str aaa_host;
 	/* location of the peer as ip:port */
 	unsigned int port;
@@ -165,7 +165,7 @@ struct p_table *init_peer_manager( unsigned int trans_hash_size );
 
 void destroy_peer_manager();
 
-int add_peer( str *host, unsigned int realm_offset, unsigned int port);
+int add_peer( str *aaa_identity, str *host, unsigned int port);
 
 void init_all_peers();
 
@@ -187,76 +187,52 @@ void static inline unref_peer(struct peer *p)
 }
 
 
-/* search into the peer table for the peer having the given host name */
-static inline struct peer* lookup_peer_by_host( str *host )
+/* search into the peer table for the peer having the given aaa identity */
+static inline struct peer* lookup_peer_by_identity( str *aaa_id )
 {
-	//struct list_head *lh;
-	//struct peer *p;
+	struct list_head *lh;
+	struct peer *p;
 	struct peer *res=0;
-#if 0
+
 	lock_get( peer_table->mutex );
 
 	list_for_each( lh, &(peer_table->peers)) {
 		p = list_entry( lh, struct peer, all_peer_lh);
-		if ( host->len==p->aaa_host.len &&
-		!strncasecmp( host->s, p->aaa_host.s, host->len)) {
-			ref_peer( p );
+		if ( aaa_id->len==p->aaa_identity.len &&
+		!strncasecmp( aaa_id->s, p->aaa_identity.s, aaa_id->len)) {
+			//ref_peer( p );
 			res = p;
 			break;
 		}
 	}
 
 	lock_release( peer_table->mutex );
-#endif
+
 	return res;
 }
 
-
-/* search into the peer table for the peer searving the given realm */
-static inline struct peer* lookup_peer_by_realm( str *realm )
-{
-	//struct list_head *lh;
-	//struct peer *p;
-	struct peer *res=0;
-#if 0
-	lock_get( peer_table->mutex );
-
-	list_for_each( lh, &(peer_table->peers)) {
-		p = list_entry( lh, struct peer, all_peer_lh);
-		if ( realm->len==p->aaa_realm.len &&
-		!strncasecmp( realm->s, p->aaa_realm.s, realm->len)) {
-			ref_peer( p );
-			res = p;
-			break;
-		}
-	}
-
-	lock_release( peer_table->mutex );
-#endif
-	return res;
-}
 
 
 /* search into the peer table for the peer having the given IP address */
 static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 {
-	//struct list_head *lh;
-	//struct peer *p;
+	struct list_head *lh;
+	struct peer *p;
 	struct peer *res=0;
-#if 0
+
 	lock_get( peer_table->mutex );
 
 	list_for_each( lh, &(peer_table->peers)) {
 		p = list_entry( lh, struct peer, all_peer_lh);
 		if ( ip_addr_cmp(ip, &p->ip) ) {
-			ref_peer( p );
+			//ref_peer( p );
 			res = p;
 			break;
 		}
 	}
 
 	lock_release( peer_table->mutex );
-#endif
+
 	return res;
 }
 
