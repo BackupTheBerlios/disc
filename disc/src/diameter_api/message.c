@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.14 2003/03/18 17:29:39 bogdan Exp $
+ * $Id: message.c,v 1.15 2003/03/18 18:09:44 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -530,7 +530,7 @@ AAAMessage *AAANewMessage(
 		msg->flags = 0x80;
 		/* add session ID */
 		if (sessionId) {
-			if(AAACreateAVP(&avp,263,0,0,sessionId->val->s,sessionId->val->len)
+			if (AAACreateAVP( &avp, 263, 0, 0, sessionId->s, sessionId->len)
 			!=AAA_ERR_SUCCESS || AAAAddAVPToList( &(msg->avpList), avp, 0)
 			!=AAA_ERR_SUCCESS )
 				goto error;
@@ -569,8 +569,8 @@ AAAMessage *AAANewMessage(
 			AAAAddAVPToList( &(msg->avpList), avp, 0);
 		} else {
 			/* create a new session-Id avp */
-			if (sessionId && (AAACreateAVP( &avp, 263, 0, 0, sessionId->val->s,
-			sessionId->val->len)!=AAA_ERR_SUCCESS || AAAAddAVPToList
+			if (sessionId && (AAACreateAVP( &avp, 263, 0, 0, sessionId->s,
+			sessionId->len)!=AAA_ERR_SUCCESS || AAAAddAVPToList
 			( &(msg->avpList), avp, 0)!=AAA_ERR_SUCCESS) )
 				goto error;
 		}

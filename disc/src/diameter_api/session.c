@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.6 2003/03/18 17:29:40 bogdan Exp $
+ * $Id: session.c,v 1.7 2003/03/18 18:09:44 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -435,7 +435,7 @@ error:
 /****************************** API FUNCTIONS ********************************/
 
 
-AAAReturnCode  AAAStartSession( AAASessionId *sessionId,
+AAAReturnCode  AAAStartSession( AAASessionId **sessionId,
 		AAAApplicationId appHandle, char *userName, AAACallback abortCallback)
 {
 	struct session  *session;
@@ -447,7 +447,7 @@ AAAReturnCode  AAAStartSession( AAASessionId *sessionId,
 	}
 
 	/* build a new session structure */
-	session = create_session( AAA_SERVER );
+	session = create_session( AAA_CLIENT );
 	if (!session)
 		goto error;
 
@@ -475,8 +475,7 @@ AAAReturnCode  AAAStartSession( AAASessionId *sessionId,
 	session->sID.len = p - session->sID.s;
 
 	/* return the session-ID */
-	sessionId->val = &(session->sID);
-	sessionId->ptr = session;
+	*sessionId = &(session->sID);
 
 	return AAA_ERR_SUCCESS;
 error:

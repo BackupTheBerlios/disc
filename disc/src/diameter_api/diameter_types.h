@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.10 2003/03/18 17:29:11 bogdan Exp $
+ * $Id: diameter_types.h,v 1.11 2003/03/18 18:09:44 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -62,6 +62,7 @@ typedef unsigned int    AAAExtensionId;
 typedef unsigned int    AAA_AVPCode;
 typedef unsigned int    AAAValue;
 typedef void            AAAServer;
+typedef str             AAASessionId;
 typedef unsigned int    AAAMsgIdentifier;
 typedef void*           AAAApplicationId;
 typedef uint8_t         AAAMsgFlag;
@@ -260,11 +261,6 @@ typedef struct _message_t {
 	str                 buf;
 } AAAMessage;
 
-
-typedef struct _session_t {
-	str   *val;
-	void  *ptr;
-}AAASessionId;
 
 
 typedef AAAReturnCode (*AAACallback)(AAAMessage *message);
