@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.16 2003/04/15 18:38:20 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.17 2003/04/15 19:57:44 bogdan Exp $
  *
  *  History:
  *  --------
@@ -97,7 +97,8 @@ inline static int do_read( struct peer *p)
 		goto error;
 	}
 	if ( n==-1 && errno!=EINTR && errno!=EAGAIN ) {
-		LOG(L_ERR,"ERROR:do_read: n=%d , errno=%d\n",n,errno);
+		LOG(L_ERR,"ERROR:do_read: n=%d , errno=%d (%s)\n",
+			n, errno, strerror(errno));
 		goto error;
 	}
 
@@ -374,7 +375,7 @@ void *do_receive(void *arg)
 				break;
 			p = list_entry( lh, struct peer, thd_peer_lh);
 
-			if ( FD_ISSET( p->sock, &ret_rd_set) ) {
+			if ( p->sock!=-1 && FD_ISSET( p->sock, &ret_rd_set) ) {
 				nready--;
 				/* data received */
 				if (do_read( p )==-1)
@@ -382,7 +383,7 @@ void *do_receive(void *arg)
 				continue;
 			}
 
-			if ( FD_ISSET( p->sock, &ret_wr_set) ) {
+			if ( p->sock!=-1 && FD_ISSET( p->sock, &ret_wr_set) ) {
 				nready--;
 				DBG("DEBUG:do_receive: connect done on socket %d\n",p->sock);
 				FD_CLR( p->sock, &tinfo->wr_set);
