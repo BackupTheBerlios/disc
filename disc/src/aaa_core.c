@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.20 2003/04/22 21:47:10 andrei Exp $
+ * $Id: aaa_core.c,v 1.21 2003/05/09 16:35:17 andrei Exp $
  *
  * Copyright (C) 2002-2003 Fhg Fokus
  *
@@ -27,6 +27,7 @@
  *  2003-04-09  cmd. line parsing, disable_ipv6 (andrei)
  *  2003-04-14  cmd. line switch for the maximum memory used (andrei)
  *  2003-04-16  daemonize, lots of startup params  (andrei)
+ *  2003-05-09  closelog before openlog (solaris ready) (andrei)
  *  
  */
 
@@ -62,7 +63,7 @@
 /*#define CFG_FILE "aaa.cfg"*/
 
 
-static char id[]="$Id: aaa_core.c,v 1.20 2003/04/22 21:47:10 andrei Exp $";
+static char id[]="$Id: aaa_core.c,v 1.21 2003/05/09 16:35:17 andrei Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
@@ -407,6 +408,7 @@ int daemonize(char*  name)
 	};
 	
 	/* close any open file descriptors */
+	closelog();
 	for (r=3;r<MAX_FD; r++){
 			close(r);
 	}
