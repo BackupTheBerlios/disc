@@ -1,4 +1,4 @@
-$Id: TODO,v 1.2 2003/04/08 22:06:24 andrei Exp $
+$Id: TODO,v 1.3 2003/04/09 18:12:44 andrei Exp $
 
 - find a name [all]
 - put GNU license in every file [all]
@@ -7,4 +7,7 @@ $Id: TODO,v 1.2 2003/04/08 22:06:24 andrei Exp $
 - make install ? [andrei]
 
 - grouped avp [bogdan]
-- disable ipv6  var [bogdan]
+
+- daemonize [andrei]
+- use *_config.h for autoconf
+- change default log_stderr value to 1

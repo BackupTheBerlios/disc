@@ -1,5 +1,5 @@
 /*
- * $Id: timer.c,v 1.4 2003/04/04 16:59:25 bogdan Exp $
+ * $Id: timer.c,v 1.5 2003/04/09 18:12:44 andrei Exp $
  *
  * 
  *  2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -80,8 +80,10 @@ void timer_ticker()
 		/* call all the handlers */
 		prev_jiffies=jiffies;
 		jiffies+=TIMER_TICK;
+	#ifdef EXTRA_DEBUG
 		DBG("DEBUG:timer_ticker: la semnalul urmator va fi ora: %d sec\n",
 				jiffies);
+	#endif
 		/* test for overflow (if tick= 1s =>overflow in 136 years)*/
 		if (jiffies<prev_jiffies){ 
 			/*force expire & update every timer, a little buggy but it 

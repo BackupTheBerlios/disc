@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.10 2003/04/08 21:00:19 andrei Exp $
+ * $Id: aaa_module.c,v 1.11 2003/04/09 18:12:44 andrei Exp $
  */
 /*
  * History:
@@ -174,10 +174,17 @@ void destroy_modules()
 	struct aaa_module* a;
 	struct aaa_module* b;
 	
-	for (a=modules; a; ) {
-		b = a->next;
+	/* first call module->destroy */
+	for (a=modules; a; a=a->next ) {
 		if ((a->exports)&&(a->exports->mod_destroy)&&(a->is_init))
 			a->exports->mod_destroy();
+	}
+	if (lt_dlexit()!=0){ /* unload modules */
+		LOG(L_CRIT, "ERROR: destroy_modules: lt_dlexit: %s\n", lt_dlerror());
+	};
+	for (a=modules; a;){
+		b = a->next;
+		if (a->path) shm_free(a->path);
 		shm_free( a );
 		a = b;
 	}

@@ -1,4 +1,4 @@
-/* $Id: shm_mem.h,v 1.1 2003/03/14 15:40:53 bogdan Exp $*
+/* $Id: shm_mem.h,v 1.2 2003/04/09 18:12:44 andrei Exp $*
  *
  * shared mem stuff
  *

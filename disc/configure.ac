@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.10 2003/04/08 20:45:07 cco Exp $
+dnl $Id: configure.ac,v 1.11 2003/04/09 18:12:44 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -20,10 +20,11 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.10 2003/04/08 20:45:07 cco Exp $)
+AC_REVISION($Id: configure.ac,v 1.11 2003/04/09 18:12:44 andrei Exp $)
 AC_INIT(aaa_client, 0.0.1)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 AC_CONFIG_SUBDIRS(libltdl)
+dnl add here mipv6/urp autoconf ?
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION, 
 					[nostdinc dist-bzip2 dist-shar dist-zip dist-tarZ])
 # AM_MAINTAINER_MODE
@@ -35,9 +36,8 @@ if test "$cache_file" = /dev/null; then
 fi
 AC_CACHE_LOAD
 
-dnl FIXME:
 AC_DEFINE(NAME, ["]AC_PACKAGE_NAME["])
-AC_DEFINE(VERSION, AC_PACKAGE_VERSION)
+AC_DEFINE(VERSION, ["]AC_PACKAGE_VERSION["])
 AC_DEFINE(CFG_DIR, ["/etc/aaa_client"])
 
 
@@ -70,10 +70,10 @@ if test "$enable_extra_debug" = yes; then
 fi
 
 AC_ARG_ENABLE(malloc_debug,
-				AC_HELP_STRING([--enable-malloc_debug],
-							[enable malloc debugging code (default is NO)]))
+				AC_HELP_STRING([--disable-malloc_debug],
+							[disable malloc debugging code (default is NO)]))
 if test -z "$enable_malloc_debug"; then
-	enable_malloc_debug=no
+	enable_malloc_debug=yes
 fi
 if test "$enable_malloc_debug" = yes; then
 	AC_DEFINE(DBG_QM_MALLOC)
@@ -103,7 +103,7 @@ AC_ARG_ENABLE(dns_ip_hack,
 				AC_HELP_STRING([--disable-dns_ip_hack],
                         [disable fast ip address conversion (default is NO)]))
 if test -z "$enable_dns_ip_hack"; then
-	enable_dns_ip_hack=no
+	enable_dns_ip_hack=yes
 fi
 if test "$enable_dns_ip_hack" = yes; then
 	AC_DEFINE(DNS_IP_HACK)
@@ -140,8 +140,12 @@ AC_DEFINE_UNQUOTED([__OS_${os}])
 
 dnl Checks for programs
 AC_PROG_CC
+
+dnl Check for openssl -- needed by mipv6 module FIXME - move it to 
+dnl mipv6 module cfg
 AC_PROG_CXX
 AC_PROG_CXXCPP
+
 AM_PROG_LEX
 #AC_DECL_YYTEXT
 AC_PROG_YACC
@@ -205,7 +209,8 @@ AC_SEARCH_LIBS([getipnodebyname], [nsl xnet])
 dnl ?libfast on Solaris??
 
 
-dnl Check for openssl
+dnl Check for openssl -- needed by mipv6 module FIXME - move it to 
+dnl mipv6 module cfg
 AC_CHECK_LIB(ssl, main)
 
 dnl Checks for header files

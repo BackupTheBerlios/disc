@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_init.c,v 1.5 2003/04/09 16:34:44 andrei Exp $
+ * $Id: cfg_init.c,v 1.6 2003/04/09 18:12:44 andrei Exp $
  *
  * History:
  * --------
@@ -173,6 +173,7 @@ int cfg_include(struct cfg_line* cl, void* value)
 	if (ret!=0) return ret;
 	DBG("-> including <%s>\n", s.s);
 	ret=read_config_file(s.s);
+	shm_free(s.s);
 	return ret;
 }
 
@@ -211,12 +212,13 @@ int cfg_addpair(struct cfg_line* cl, void* callback)
 		goto error;
 	}
 	
-	return CFG_OK;
-error_mem:
-	LOG(L_CRIT, "ERROR: cfg: memory allocation error\n");
-	ret=CFG_MEM_ERR;
+	ret=CFG_OK;
 error:
 	if (s1) shm_free(s1);
 	if (s2) shm_free(s2);
 	return ret;
+error_mem:
+	LOG(L_CRIT, "ERROR: cfg: memory allocation error\n");
+	ret=CFG_MEM_ERR;
+	goto error;
 }

@@ -1,4 +1,4 @@
-/* $Id: mem.h,v 1.3 2003/03/24 18:45:11 andrei Exp $
+/* $Id: mem.h,v 1.4 2003/04/09 18:12:44 andrei Exp $
  *
  * memory related stuff (malloc & friends)
  * 
@@ -31,6 +31,8 @@
  * --------
  *  2003-03-10  __FUNCTION__ is a gcc-ism, defined it to "" for sun cc
  *               (andrei)
+ *  2003-03-07  split init_malloc into init_pkg_mallocs & init_shm_mallocs 
+ *               (andrei)
  */
 
 
@@ -39,7 +41,6 @@
 #define mem_h
 #include "../config.h"
 #include "../dprint.h"
-
 
 #ifdef PKG_MALLOC
 #	ifdef VQ_MALLOC
@@ -67,14 +68,14 @@
 				__FUNCTION__, __LINE__)
 #		elif defined F_MALLOC
 #			define pkg_malloc(s) fm_malloc(mem_block, (s),__FILE__, \
-				__FUNCTION__, __LINE__);
+				__FUNCTION__, __LINE__)
 #			define pkg_free(p)   fm_free(mem_block, (p), __FILE__,  \
-				__FUNCTION__, __LINE__);
+				__FUNCTION__, __LINE__)
 #		else
 #			define pkg_malloc(s) qm_malloc(mem_block, (s),__FILE__, \
-				__FUNCTION__, __LINE__);
+				__FUNCTION__, __LINE__)
 #			define pkg_free(p)   qm_free(mem_block, (p), __FILE__,  \
-				__FUNCTION__, __LINE__);
+				__FUNCTION__, __LINE__)
 #		endif
 #	else
 #		ifdef VQ_MALLOC
@@ -110,6 +111,7 @@
 #	define pkg_status()
 #endif
 
-int init_mallocs();
+int init_pkg_mallocs();
+int init_shm_mallocs();
 
 #endif

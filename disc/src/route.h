@@ -1,5 +1,5 @@
 /* 
- * $Id: route.h,v 1.3 2003/04/08 22:06:24 andrei Exp $
+ * $Id: route.h,v 1.4 2003/04/09 18:12:44 andrei Exp $
  */
 /*
  *
@@ -39,6 +39,10 @@ extern struct route_entry* route_lst;
 int add_cfg_peer(str* uri, str* alias);
 int add_route(str* realm, str* dst);
 struct peer_entry* route_dest(str* realm);
+
+/* destroy functions, call them to free the memory */
+void destroy_cfg_peer_lst();
+void destroy_route_lst();
 
 
 

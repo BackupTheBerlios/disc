@@ -1,5 +1,5 @@
 /*
- * $Id: route.c,v 1.4 2003/04/08 22:06:24 andrei Exp $
+ * $Id: route.c,v 1.5 2003/04/09 18:12:44 andrei Exp $
  */
 /*
  * History:
@@ -79,6 +79,7 @@ int add_route(str* realm, str* dst)
 	struct peer_entry* new_pe;
 	struct peer_entry*  pi;
 	struct route_entry* ri;
+	int ret;
 	
 	/* find coreponding peer, try alias match, full uri(id) match and
 	 *  host match */
@@ -119,13 +120,20 @@ int add_route(str* realm, str* dst)
 	LIST_APPEND(re->peer_l, new_pe, pi, next);
 	/* append the route entry to the main list */
 	LIST_APPEND(route_lst, re, ri, next);
-	return 0;
+	/* we don't need dst.s anymore => free it */
+	
+	ret=0;
+end:
+	if (dst->s) {shm_free(dst->s);dst->s=0;}
+	return ret;
 error_mem:
 	LOG(L_ERR, "ERROR: add_route: memory allocation error\n");
-	return -1;
+	ret=-1;
+	goto end;
 error_no_peer:
 	LOG(L_ERR, "ERROR: add_route: no peer <%.*s> found\n", dst->len, dst->s);
-	return -1;
+	ret=-1;
+	goto end;
 }
 
 
@@ -148,5 +156,58 @@ struct peer_entry* route_dest(str* realm)
 	DBG("WARNING: route_dest: no route found for <%s>\n", realm->s);
 	return 0;
 }
+
+
+
+void destroy_cfg_peer_lst()
+{
+	struct peer_entry* p;
+	struct peer_entry* r;
+	
+	p=cfg_peer_lst; 
+	cfg_peer_lst=0;
+	r=0;
+	for(; p; p=r){
+		r=p->next;
+		if (p->full_uri.s){
+			shm_free(p->full_uri.s);
+			p->full_uri.s=0; p->full_uri.len=0;
+		}
+		if (p->alias.s){
+			shm_free(p->alias.s);
+			p->alias.s=0; p->alias.len=0;
+		}
+		shm_free(p);
+	}
+}
+
+
+
+void destroy_route_lst()
+{
+	struct route_entry* p;
+	struct route_entry* r;
+	
+	struct peer_entry* pe;
+	struct peer_entry* re;
+	
+	p=route_lst;
+	route_lst=0;
+	r=0;
+	for(; p; p=r){
+		r=p->next;
+		for(pe=p->peer_l,re=0; pe; pe=re){
+			re=pe->next;
+			shm_free(pe);
+		}
+		p->peer_l=0;
+		if (p->realm.s){
+			shm_free(p->realm.s);
+			p->realm.s=0; p->realm.len=0;
+		}
+		shm_free(p);
+	}
+}
+
 
 

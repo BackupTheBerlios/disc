@@ -1,5 +1,5 @@
 /*
- * $Id: memtest.c,v 1.2 2003/03/14 18:07:13 bogdan Exp $
+ * $Id: memtest.c,v 1.3 2003/04/09 18:12:44 andrei Exp $
  *
  * Copyright (C) 2001-2003 Fhg Fokus
  *
@@ -33,8 +33,8 @@
 #include <stdlib.h>
 
 
-//#include "../globals.h"
-//#include "../config.h"
+#include "../globals.h"
+#include "../config.h"
 
 #if 0
 #ifdef PKG_MALLOC
