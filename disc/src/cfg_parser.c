@@ -1,5 +1,5 @@
 /*
- * $Id: cfg_parser.c,v 1.6 2003/04/22 19:58:41 andrei Exp $
+ * $Id: cfg_parser.c,v 1.7 2003/04/22 21:47:10 andrei Exp $
  *
  * configuration parser
  *
@@ -135,6 +135,10 @@ int cfg_parse_stream(FILE* stream)
 			switch (cl.type){
 				case CFG_DEF:
 					if ((ret=cfg_run_def(&cl))!=0){
+						if (log_stderr==0){
+							fprintf(stderr, 
+									"ERROR (%d): on line %d\n", ret, line);
+						}
 						LOG(L_CRIT, "ERROR (%d): on line %d\n", ret, line);
 						goto error;
 					}
@@ -143,6 +147,10 @@ int cfg_parse_stream(FILE* stream)
 				case CFG_SKIP:
 					break;
 				case CFG_ERROR:
+					if (log_stderr==0){
+						fprintf(stderr, 
+								"ERROR: bad config line (%d):%s\n", line, buf);
+					}
 					LOG(L_CRIT, "ERROR: bad config line (%d):%s\n", line, buf);
 					goto error;
 					break;
@@ -150,6 +158,11 @@ int cfg_parse_stream(FILE* stream)
 			line++;
 		}else{
 			if (ferror(stream)){
+				if (log_stderr==0){
+					fprintf(stderr, 
+							"ERROR: reading configuration: %s\n",
+							strerror(errno));
+				}
 				LOG(L_CRIT,
 						"ERROR: reading configuration: %s\n",
 						strerror(errno));

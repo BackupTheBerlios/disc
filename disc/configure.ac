@@ -1,4 +1,4 @@
-dnl $Id: configure.ac,v 1.19 2003/04/22 18:07:45 andrei Exp $
+dnl $Id: configure.ac,v 1.20 2003/04/22 21:47:10 andrei Exp $
 dnl Process this file with autoconf to produce a configure script
 dnl autoconf version: 2.54, automake 1.7.1, libtool 1.4.3
 dnl WARNING: libtool 1.4.2 generates a libtool script that won't work
@@ -23,7 +23,7 @@ dnl  -add locking tests (define HAVE_blabla)
 
 
 AC_PREREQ(2.53)
-AC_REVISION($Id: configure.ac,v 1.19 2003/04/22 18:07:45 andrei Exp $)
+AC_REVISION($Id: configure.ac,v 1.20 2003/04/22 21:47:10 andrei Exp $)
 AC_INIT(disc, 0.1.0)
 AC_CONFIG_SRCDIR([src/aaa_lock.c])
 ##AC_CONFIG_HEADERS([ac_config.h])
@@ -41,7 +41,6 @@ AC_CACHE_LOAD
 
 AC_DEFINE(NAME, ["]AC_PACKAGE_NAME["], [display name])
 AC_DEFINE(VERSION, ["]AC_PACKAGE_VERSION["], [display version])
-AC_DEFINE(CFG_DIR, ["/etc/aaa_client"], [built in config search path])
 
 
 dnl Command line options
@@ -197,7 +196,9 @@ AC_DEFINE_UNQUOTED([ARCH], ["${cpu}"], [cpu type] )
 AC_DEFINE_UNQUOTED([OS],   ["${host_os}"], [os name])
 ##AC_DEFINE_UNQUOTED([__OS_${os}],, [os name used internally])
 dnl  -D__CPU_ cannot be added to ac_config.h
-CPPFLAGS="${CPPFLAGS} -D__CPU_${cpu} -D__OS_${os}"
+CPPFLAGS="${CPPFLAGS} -D__CPU_${cpu} -D__OS_${os} \
+			-DCFG_DIR='\"${sysconfdir}/${PACKAGE}\"' \
+			-DCFG_FILE='\"${sysconfdir}/${PACKAGE}/disc.cfg\"'"
 
 dnl Checks for programs
 AC_PROG_CC

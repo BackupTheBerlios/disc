@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.19 2003/04/22 19:58:41 andrei Exp $
+ * $Id: aaa_core.c,v 1.20 2003/04/22 21:47:10 andrei Exp $
  *
  * Copyright (C) 2002-2003 Fhg Fokus
  *
@@ -59,10 +59,10 @@
 #include "route.h"
 
 
-#define CFG_FILE "aaa.cfg"
+/*#define CFG_FILE "aaa.cfg"*/
 
 
-static char id[]="$Id: aaa_core.c,v 1.19 2003/04/22 19:58:41 andrei Exp $";
+static char id[]="$Id: aaa_core.c,v 1.20 2003/04/22 21:47:10 andrei Exp $";
 static char version[]= NAME " " VERSION " (" ARCH "/" OS ")" ;
 static char compiled[]= __TIME__ " " __DATE__;
 static char flags[]=""
