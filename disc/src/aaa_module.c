@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.4 2003/04/02 19:00:35 andrei Exp $
+ * $Id: aaa_module.c,v 1.5 2003/04/03 15:13:16 andrei Exp $
  */
 /*
  * History:
@@ -71,6 +71,7 @@ int load_module(char* name)
 	if (handle==0){
 		LOG(L_CRIT, "ERROR: load_module: failed to load <%s> in <%s>\n",
 					name, MODULE_SEARCH_PATH);
+		ret=-1;
 		goto error;
 	}
 	/* get module struct */
@@ -79,6 +80,7 @@ int load_module(char* name)
 	if (e==0){
 		LOG(L_CRIT, "ERROR: load_module: symbol not found <%s>: %s\n",
 				name, error_msg);
+		ret=-1;
 		goto error;
 	}
 	/* link it in the module list - TODO*/
