@@ -7,10 +7,10 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "../utils/ip_addr.h"
-#include "../utils/list.h"
-#include "../globals.h"
-#include "../peer.h"
+#include "ip_addr.h"
+#include "../list.h"
+//#include "../globals.h"
+#include "peer.h"
 
 
 #define NR_RECEIVE_THREADS  1

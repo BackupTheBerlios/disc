@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.1 2003/03/14 16:05:58 bogdan Exp $
+ * $Id: peer.h,v 1.2 2003/03/14 17:15:38 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -8,15 +8,15 @@
 #ifndef _AAA_DIAMETER_PEER_H
 #define _AAA_DIAMETER_PEER_H
 
-#include "utils/str.h"
-#include "locking.h"
-#include "utils/counter.h"
-#include "utils/ip_addr.h"
-#include "utils/list.h"
-#include "globals.h"
-#include "diameter_types.h"
+#include "../str.h"
+#include "../locking.h"
+#include "../counter.h"
+#include "ip_addr.h"
+#include "../list.h"
+//#include "globals.h"
+//#include "diameter_types.h"
 #include "trans.h"
-#include "timer.h"
+#include "../timer.h"
 
 struct peer;
 #include "tcp_shell/common.h"

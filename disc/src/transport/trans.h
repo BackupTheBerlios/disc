@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.1 2003/03/14 16:05:58 bogdan Exp $
+ * $Id: trans.h,v 1.2 2003/03/14 17:15:38 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -8,16 +8,16 @@
 #ifndef _AAA_DIAMETER_TRANS_H
 #define _AAA_DIAMETER_TRANS_H
 
-#include "utils/str.h"
-#include "dprint.h"
-#include "hash_table.h"
-#include "timer.h"
-#include "diameter_types.h"
+#include "../str.h"
+#include "../dprint.h"
+#include "../hash_table.h"
+#include "../timer.h"
+//#include "diameter_types.h"
 
 struct trans;
 
 #include "peer.h"
-#include "session.h"
+#include "../diameter_api/session.h"
 
 
 struct trans {

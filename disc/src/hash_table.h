@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.h,v 1.4 2003/03/13 13:07:55 andrei Exp $
+ * $Id: hash_table.h,v 1.1 2003/03/14 17:15:38 bogdan Exp $
  *
  * 2003-01-29 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
@@ -14,31 +14,14 @@
 
 #include "locking.h"
 #include "dprint.h"
-#include "utils/str.h"
-#include "utils/aaa_lock.h"
+#include "str.h"
+#include "aaa_lock.h"
 
 
 /*
  * number of entrys for the hash table
  */
 #define HASH_SIZE  1024
-
-
-/*
- * possible types of structures inserted in the hash_table
- */
-enum HASH_CELL_TYPES {
-	DEFAULT_CELL_TYPE = 0,
-	SESSION_CELL_TYPE ,
-	TRANSACTION_CELL_TYPE,
-	MAX_HASH_CELL_TYPES
-};
-
-
-/*
- * prototype for destroy function for specific type of cell
- */
-typedef void (destroy_cell_func_t)(void *);
 
 
 /*
@@ -77,20 +60,12 @@ struct h_entry {
 struct h_table {
 	/* hash entrys */
 	struct h_entry* entrys;
-	/* destroy functions */
-	destroy_cell_func_t* destroy_cell_func[MAX_HASH_CELL_TYPES];
-	/* lists */
 };
 
-extern struct h_table *hash_table;
 
 
 /* builds and inits the hash table */
 struct h_table* build_htable();
-
-/* register a destroy function for a specific cell type */
-int register_destroy_func( struct h_table* , enum HASH_CELL_TYPES,
-											destroy_cell_func_t *func );
 
 /* free the hash table */
 void destroy_htable( struct h_table* );
@@ -101,7 +76,7 @@ int add_cell_to_htable(struct h_table* ,struct h_link* );
 /* retursn the hash for a string */
 int hash( str* );
 
-/* remove a cell from the hash table; the session is NOT freed */
+/* remove a cell from the hash table */
 void remove_cell_from_htable_unsafe(struct h_entry* ,struct h_link* );
 
 
@@ -123,14 +98,14 @@ static inline void remove_cell_from_htable(struct h_table *table ,
 
 /* search on an entry a cell having a given label  */
 static inline struct h_link *cell_lookup(struct h_table *table,
-	unsigned int hash_code, unsigned int label, unsigned int type, int rm)
+						unsigned int hash_code, unsigned int label, int rm)
 {
 	struct h_link *link;
 	/* lock the hash entry */
 	lock_get( table->entrys[hash_code].mutex );
 	/* looks into the the sessions hash table */
 	link = table->entrys[hash_code].head;
-	while ( link && (link->label!=label || link->type!=type) )
+	while ( link && link->label!=label  )
 		link = link->next;
 	/* do I have to remove the cell from table? */
 	if (rm && link)

@@ -1,4 +1,4 @@
-/* $Id: ip_addr.h,v 1.1 2003/03/14 16:05:58 bogdan Exp $
+/* $Id: ip_addr.h,v 1.2 2003/03/14 17:15:38 bogdan Exp $
  *
  * ip address family realted structures
  *
@@ -35,7 +35,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include "str.h"
+#include "../str.h"
 #include "../dprint.h"
 
 

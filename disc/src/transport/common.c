@@ -4,13 +4,13 @@
 #include <errno.h>
 #include <string.h>
 #include <pthread.h>
-#include "../utils/list.h"
+#include "../list.h"
 #include "../dprint.h"
-#include "../utils/ip_addr.h"
-#include "../utils/aaa_lock.h"
-#include "../peer.h"
-#include "accept.h"
-#include "receive.h"
+#include "ip_addr.h"
+#include "../aaa_lock.h"
+#include "peer.h"
+#include "tcp_accept.h"
+#include "tcp_receive.h"
 #include "common.h"
 #include "../locking.h"
 

@@ -1,5 +1,5 @@
 /*
- * $Id: hash_table.c,v 1.4 2003/03/13 18:46:16 bogdan Exp $
+ * $Id: hash_table.c,v 1.1 2003/03/14 17:15:38 bogdan Exp $
  *
  * 2003-01-29  created by bogdan
  * 2003-03-12  converted to use shm_malloc (andrei)
@@ -10,16 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "dprint.h"
-#include "utils/str.h"
-#include "hash_table.h"
-
 #include "mem/shm_mem.h"
-
-
-
-/* default function used for freeing unkown hash cell type */
-static void default_cell_destroyer( void *link ) { shm_free(link); }
+#include "dprint.h"
+#include "str.h"
+#include "hash_table.h"
 
 
 
@@ -29,7 +23,7 @@ static void default_cell_destroyer( void *link ) { shm_free(link); }
 struct h_table* build_htable( )
 {
 	struct h_table *table;
-	gen_lock_t       *entry_locks;
+	gen_lock_t     *entry_locks;
 	int            i;
 
 	/* inits */
@@ -64,9 +58,6 @@ struct h_table* build_htable( )
 		table->entrys[i].next_label |= ((unsigned int)rand( ))>>12;
 	}
 
-	/* set a default detroy cell function */
-	table->destroy_cell_func[ DEFAULT_CELL_TYPE ] = default_cell_destroyer;
-
 	LOG(L_INFO,"INFO:build_htable: hash table succesfuly built\n");
 	return table;
 error:
@@ -81,12 +72,14 @@ error:
  */
 void destroy_htable( struct h_table *table)
 {
-	int i;
+	/*int i;
 	struct h_link  *link1, *link2;
+	*/
 
 	if (table) {
 		/* deal with the entryes */
 		if (table->entrys) {
+#if 0
 			/* first, remove and destroy all records from table */
 			for(i=0;i<HASH_SIZE;i++) {
 				link1 = table->entrys[i].head;
@@ -96,6 +89,7 @@ void destroy_htable( struct h_table *table)
 					table->destroy_cell_func[link2->type]( (void*)link2 );
 				}
 			}
+#endif
 			/* than, destroy the mutexes.... */
 			if (table->entrys[0].mutex)
 				destroy_locks( table->entrys[0].mutex , HASH_SIZE );
@@ -107,21 +101,6 @@ void destroy_htable( struct h_table *table)
 	}
 
 	LOG(L_INFO,"INFO:destroy_htable: table succesfuly destroyed\n");
-}
-
-
-
-/* register a destroy function for a specific cell type */
-int register_destroy_func( struct h_table *table, enum HASH_CELL_TYPES type,
-													destroy_cell_func_t* func)
-{
-	if (type<1 || type>=MAX_HASH_CELL_TYPES) {
-		LOG(L_ERR,"ERROR:register_destroy_func: invalid hash_cell_type "
-			"received [%d]; domain is [1..%d]\n",type,MAX_HASH_CELL_TYPES-1);
-		return 0;
-	}
-	table->destroy_cell_func[type] = func;
-	return 1;
 }
 
 
