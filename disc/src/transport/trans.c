@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.8 2003/04/10 21:40:03 bogdan Exp $
+ * $Id: trans.c,v 1.9 2003/04/15 15:09:04 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -54,7 +54,8 @@ void destroy_trans_manager()
 
 
 
-struct trans* create_transaction( str *buf, struct peer *in_peer)
+struct trans* create_transaction( str *buf, struct peer *in_peer,
+										void (*timeout_f)(struct trans*) )
 {
 	struct trans *t;
 
@@ -71,6 +72,9 @@ struct trans* create_transaction( str *buf, struct peer *in_peer)
 	t->req = buf;
 	/* link the incoming peer */
 	t->in_peer = in_peer;
+
+	/* timeout handler */
+	t->timeout_f = timeout_f;
 
 	return t;
 error:
@@ -111,12 +115,8 @@ void timeout_handler(unsigned int ticks, void* param)
 		DBG("DEBUG:timeout_handler: transaction %p expired!\n",tr);
 		tl = tl->next_tl;
 		/* process the transaction */
-		if (tr->ses) {
-			session_state_machine( tr->ses, AAA_SESSION_REQ_TIMEOUT, 0);
-		}else{
-			write_command( tr->out_peer->fd, TIMEOUT_PEER_CMD,
-				PEER_TR_TIMEOUT, tr->out_peer, (void*)tr->info);
-		}
+		if (tr->timeout_f)
+			tr->timeout_f( tr );
 		destroy_transaction( tr );
 	}
 

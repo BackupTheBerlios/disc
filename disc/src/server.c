@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.7 2003/04/14 14:56:00 bogdan Exp $
+ * $Id: server.c,v 1.8 2003/04/15 15:09:04 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -82,7 +82,7 @@ static inline int forward_request( AAAMessage *msg, struct peer *in_p,
 		out_p, out_p->aaa_identity.len, out_p->aaa_identity.s );
 	
 	/* forward the request -> build a transaction for it */
-	tr = create_transaction( &(msg->buf), in_p);
+	tr = create_transaction( &(msg->buf), in_p, 0);
 	if (!tr)
 		return -1;
 	update_forward_transaction_from_msg( tr , msg );

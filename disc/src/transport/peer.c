@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.28 2003/04/15 11:44:35 bogdan Exp $
+ * $Id: peer.c,v 1.29 2003/04/15 15:09:04 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -62,10 +62,9 @@
 
 void destroy_peer( struct peer *p);
 void peer_timer_handler(unsigned int ticks, void* param);
-int build_msg_buffers(struct p_table *table);
+static int build_msg_buffers(struct p_table *table);
 
 struct p_table      *peer_table = 0;
-static struct timer *del_timer = 0;
 static struct timer *reconn_timer = 0;
 static struct timer *wait_cer_timer = 0;
 static struct safe_list_head activ_peers;
@@ -103,14 +102,6 @@ struct p_table *init_peer_manager( unsigned int trans_hash_size )
 	/* creates the msg buffers */
 	if (build_msg_buffers(peer_table)==-1) {
 		LOG(L_ERR,"ERROR:init_peer_manager: cannot build msg buffers!!\n");
-		goto error;
-	}
-
-	/* create a delete timer list */
-	del_timer = new_timer_list();
-	if (!del_timer) {
-		LOG(L_ERR,"ERROR:init_peer_manager: cannot create delete "
-			"timer list!!\n");
 		goto error;
 	}
 
@@ -158,7 +149,6 @@ error:
 void destroy_peer_manager(struct p_table *peer_table)
 {
 	struct list_head  *lh, *foo;
-	struct timer_link *tl, *tl_t;
 	struct peer       *p;
 
 	if (peer_table) {
@@ -187,20 +177,6 @@ void destroy_peer_manager(struct p_table *peer_table)
 		shm_free( peer_table );
 	}
 
-	if (del_timer) {
-		/* destroy the peers from delete timer */
-		tl = del_timer->first_tl.next_tl;
-		while( tl!=&del_timer->last_tl){
-			tl_t = tl;
-			tl = tl->next_tl;
-			/* free the peer */
-			if (tl->payload)
-				shm_free( tl->payload );
-		}
-		/* destroy the list */
-		destroy_timer_list( del_timer );
-	}
-
 	if (wait_cer_timer)
 		destroy_timer_list( wait_cer_timer );
 
@@ -215,7 +191,7 @@ void destroy_peer_manager(struct p_table *peer_table)
 
 
 
-int build_msg_buffers(struct p_table *table)
+static int build_msg_buffers(struct p_table *table)
 {
 	struct aaa_module *mod;
 	int  nr_auth_app;
@@ -513,6 +489,15 @@ void destroy_peer( struct peer *p)
 }
 
 
+
+void static peer_trans_timeout_f( struct trans *tr )
+{
+	write_command( tr->out_peer->fd, TIMEOUT_PEER_CMD,
+		PEER_TR_TIMEOUT, tr->out_peer, (void*)tr->info);
+}
+
+
+
 static inline int safe_write(struct peer *p, char *buf, unsigned int len)
 {
 	int n;
@@ -586,6 +571,8 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 
 
 
+
+
 int send_res_to_peer( str *buf, struct peer *p)
 {
 	lock_get( p->mutex );
@@ -610,7 +597,7 @@ inline int internal_send_request( str *buf, struct peer *p)
 	str s;
 
 	/* build a new outgoing transaction for this request */
-	if ((tr=create_transaction( 0, 0))==0) {
+	if ((tr=create_transaction( 0, 0, peer_trans_timeout_f))==0) {
 		LOG(L_ERR,"ERROR:internal_send_request: cannot create a new"
 			" transaction!\n");
 		goto error;

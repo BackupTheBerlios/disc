@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.13 2003/04/14 14:56:00 bogdan Exp $
+ * $Id: trans.h,v 1.14 2003/04/15 15:09:04 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -36,7 +36,10 @@ struct trans {
 	str *req;
 	/* timeout timer */
 	struct timer_link timeout;
+	/* timeout handler */
+	void (*timeout_f)(struct trans*);
 };
+
 
 
 #define TRANS_SEVER   1<<0
@@ -56,7 +59,8 @@ int init_trans_manager();
 void destroy_trans_manager();
 
 
-struct trans* create_transaction( str *in_buf, struct peer *in_peer );
+struct trans* create_transaction( str *in_buf, struct peer *in_peer ,
+		void (*timeout_f)(struct trans*) );
 
 
 void destroy_transaction( struct trans* );

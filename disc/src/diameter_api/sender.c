@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.7 2003/04/12 20:53:50 bogdan Exp $
+ * $Id: sender.c,v 1.8 2003/04/15 15:09:04 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -23,6 +23,7 @@
 #include "../utils.h"
 #include "../locking.h"
 #include "../globals.h"
+#include "../aaa_module.h"
 #include "../transport/peer.h"
 #include "../transport/trans.h"
 #include "diameter_api.h"
@@ -30,6 +31,15 @@
 
 
 extern int (*send_local_request)(AAAMessage*, struct trans*);
+
+
+
+static void ses_trans_timeout_f( struct trans *tr ) {
+	session_state_machine( tr->ses, AAA_SESSION_REQ_TIMEOUT, 0);
+	/* run the timeout handler */
+	((struct module_exports*)tr->ses->app_ref)->mod_tout(
+		ANSWER_TIMEOUT_EVENT, &(tr->ses->sID), tr->ses->context);
+}
 
 
 /****************************** API FUNCTIONS ********************************/
@@ -105,7 +115,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 			goto error;
 
 		/* build a new outgoing transaction for this request */
-		if (( tr=create_transaction(&(msg->buf), 0) )==0 ) {
+		if ((tr=create_transaction(&(msg->buf), 0, ses_trans_timeout_f))==0 ) {
 			LOG(L_ERR,"ERROR:AAASendMesage: cannot create a new"
 				" transaction!\n");
 			goto error;

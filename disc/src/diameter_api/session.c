@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.19 2003/04/10 21:40:03 bogdan Exp $
+ * $Id: session.c,v 1.20 2003/04/15 15:09:04 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -410,9 +410,6 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 						case AAA_PENDING_STATE:
 							ses->state = ses->prev_state;
 							lock_release( ses->mutex );
-							/* run the timeout handler */
-							((struct module_exports*)ses->app_ref)->mod_tout(
-								ANSWER_TIMEOUT_EVENT,&(ses->sID),ses->context);
 							break;
 						default:
 							lock_release( ses->mutex );

@@ -1,5 +1,5 @@
 /*
- * $Id: route.c,v 1.12 2003/04/14 15:05:54 andrei Exp $
+ * $Id: route.c,v 1.13 2003/04/15 15:09:04 bogdan Exp $
  */
 /*
  * History:
@@ -193,7 +193,7 @@ int do_route(AAAMessage *msg, struct peer *in_p)
 	pl=route_dest(&msg->dest_realm->data);
 	if (pl==0) goto noroute;
 	/* transaction stuff */
-	tr=create_transaction(&(msg->buf), in_p);
+	tr=create_transaction(&(msg->buf), in_p, 0);
 	if (tr==0) goto error_transaction;
 	update_forward_transaction_from_msg(tr, msg);
 	/* try to send it to the first peer in the route */
