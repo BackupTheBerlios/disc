@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.17 2003/03/27 16:05:30 bogdan Exp $
+ * $Id: message.c,v 1.18 2003/03/28 10:25:03 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -22,6 +22,7 @@
 #include "../str.h"
 #include "../utils.h"
 #include "../locking.h"
+#include "../route.h"
 #include "../globals.h"
 #include "../transport/peer.h"
 #include "message.h"
@@ -661,11 +662,13 @@ AAAResultCode  AAASetMessageResultCode(
  * message by AAASetServer() */
 AAAReturnCode  AAASendMessage(AAAMessage *msg)
 {
+	struct peer_chaine *pc;
 	struct session *ses;
 	struct trans   *tr;
 	AAA_AVP        *avp;
 	unsigned int   event;
 	str            buf;
+	int            ret;
 
 	ses = 0;
 	avp = 0;
@@ -702,17 +705,29 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 			default:
 				event = AAA_AA_SENT;
 		}
-		if (session_state_machine( ses, event)!=1)
-			goto error;
+		//if (session_state_machine( ses, event)!=1)
+		//	goto error;
 		/* generate the buf from the message */
-		if ( build_buf_from_msg( msg, &buf)==-1 )
-			goto error;
+		//if ( build_buf_from_msg( msg, &buf)==-1 )
+		//	goto error;
 		/* send the response */
-		if (send_aaa_response( &buf, tr)==-1)
-			goto error;
+		//if (send_aaa_response( &buf, tr)==-1)
+		//	goto error;
 	} else {
 		/* it's a request -> get its session */
 		ses = (struct session*)msg->intern;
+		/* generate the buf from the message */
+		if ( build_buf_from_msg( msg, &buf)==-1 )
+			goto error;
+		/* where should I send this request? */
+		pc = 0;
+		ret = do_routing( msg, &pc );
+		if (ret!=1 || pc==0) {
+			LOG(L_ERR,"ERROR:AAASendMessage: no outgoing peer found for msg!"
+				" do_routing returned %d.\n",ret);
+			goto error;
+		}
+		msg->peers = pc;
 		/* update the session state */
 		switch (msg->commandCode) {
 			case 274: /*ASR*/
@@ -727,15 +742,12 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 			default:
 				event = AAA_AR_SENT;
 		}
-		if (session_state_machine( ses, event)!=1)
-			goto error;
-		/* generate the buf from the message */
-		if ( build_buf_from_msg( msg, &buf)==-1 )
+		if (session_state_machine( ses, event, msg)!=1)
 			goto error;
 		/* send the response */
-		if ( (tr=send_aaa_request( &buf, ses, 0/*dst_peer*/))==0 )
-			goto error;
-		msg->intern = tr;
+		//if ( (tr=send_aaa_request( &buf, ses, 0/*dst_peer*/))==0 )
+		//	goto error;
+		//msg->intern = tr;
 	}
 
 	AAAFreeMessage( &msg );

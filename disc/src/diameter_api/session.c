@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.9 2003/03/26 17:58:38 bogdan Exp $
+ * $Id: session.c,v 1.10 2003/03/28 10:25:03 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -268,7 +268,8 @@ void destroy_session( struct session *ses)
 
 
 
-int session_state_machine( struct session *ses, enum AAA_EVENTS event)
+int session_state_machine( struct session *ses, enum AAA_EVENTS event,
+															AAAMessage *msg)
 {
 	static char *err_msg[]= {
 		"no error"

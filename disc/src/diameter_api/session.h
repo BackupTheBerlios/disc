@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.7 2003/03/26 17:58:38 bogdan Exp $
+ * $Id: session.h,v 1.8 2003/03/28 10:25:03 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -110,7 +110,8 @@ int parse_sessionID( str* ,unsigned int* ,unsigned int* );
 
 /*
  */
-int session_state_machine( struct session* , enum AAA_EVENTS event);
+int session_state_machine( struct session* , enum AAA_EVENTS event,
+															AAAMessage *msg);
 
 
 /* search into hash table a session, based on session-Id
