@@ -1,5 +1,5 @@
 /*
- * $Id: route.c,v 1.6 2003/04/13 23:01:16 andrei Exp $
+ * $Id: route.c,v 1.7 2003/04/14 12:47:58 bogdan Exp $
  */
 /*
  * History:
@@ -158,11 +158,14 @@ struct peer_entry* route_dest(str* realm)
 		/*FNM_CASEFOLD | FNM_EXTMATCH - GNU extensions*/ 
 		if (fnmatch(re->realm.s, realm->s, 0)==0){
 			/*match */
-			DBG("route_dest: match on <%s> (<%s>)\n", re->realm.s, realm->s);
+			DBG("route_dest: match on <%.*s> (<%.*s>)\n",
+				re->realm.len, re->realm.s, realm->len, realm->s);
 			return re->peer_l;
 		}
 	}
-	DBG("WARNING: route_dest: no route found for <%s>\n", realm->s);
+	DBG("WARNING: route_dest: no route found for <%.*s>\n",
+		realm->len, realm->s);
+	
 	return 0;
 }
 

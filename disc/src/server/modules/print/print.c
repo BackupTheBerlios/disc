@@ -1,5 +1,5 @@
 /*
- * $Id: print.c,v 1.2 2003/04/13 23:01:16 andrei Exp $
+ * $Id: print.c,v 1.3 2003/04/14 12:47:58 bogdan Exp $
  */
 /*
  * Example aaa module (it does not do anything useful)
@@ -75,11 +75,8 @@ int mod_msg(AAAMessage *msg, void *context)
 
 int mod_tout(int event, AAASessionId* sId, void *context)
 {
-	DBG("\n print module: mod_tout() called\n");
-	if (event==SESSION_TIMEOUT_EVENT) {
-		DBG(" print module: session %p expired -> destroy it\n",sId);
-		AAAEndSession( sId );
-	}
+	DBG("\n print module: mod_tout() called - "
+		"BUG!!!! I should never get here yet!\n");
 	return 1;
 }
 
