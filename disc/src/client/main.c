@@ -13,6 +13,7 @@
 #include "../sh_mutex.h"
 #include "../timer.h"
 #include "../script.h"
+#include "../msg_queue.h"
 #include "../transport/peer.h"
 #include "../transport/tcp_shell.h"
 #include "../aaa_module.h"
@@ -53,7 +54,7 @@ str product_name = {"AAA FokusFastServer",19};
 /* vendor id */
 unsigned int vendor_id = VENDOR_ID;
 
-/* lsitening port */
+/* listening port */
 unsigned int listen_port = DEFAULT_LISTENING_PORT;
 
 /* supported auth. applications */
@@ -148,21 +149,32 @@ int init_client()
 	aaa_realm.s = "fokus.gmd.de";
 	aaa_realm.len = strlen(aaa_realm.s);
 
-	/* init the peer manager */
-	if ( (peer_table=init_peer_manager(DEFAULT_TRANS_HASH_SIZE))==0) {
-		goto error;
-	}
-
 	/* init the transaction manager */
 	if (init_trans_manager()==-1) {
 		goto error;
 	}
 
+	/* init the message queue between transport layer and session one */
+	if (init_msg_queue()==-1) {
+		goto error;
+	}
+
+	/* init the peer manager */
+	if ( (peer_table=init_peer_manager(DEFAULT_TRANS_HASH_SIZE))==0) {
+		goto error;
+	}
+
 	/* starts the transport layer - tcp */
-	if (init_tcp_shell(DEFAULT_TCP_RECEIVE_THREADS))
+	if (init_tcp_shell(DEFAULT_TCP_RECEIVE_THREADS)==-1) {
+		goto error;
+	}
+
+	if (start_client_workers(DEAFULT_CLIENT_WORKER_THREADS)==-1 ) {
+		goto error;
+	}
 
 	if( AAAOpen("aaa_lib.cfg")!=AAA_ERR_SUCCESS ) {
-		return -1;
+		goto error;
 	}
 
 	/* add the peers from config file */
@@ -210,6 +222,9 @@ void close_client()
 	/* stop the timer */
 	destroy_timer();
 
+	/* stop all the worker threads */
+	stop_client_workers();
+
 	/* stop the tcp layer */
 	terminate_tcp_shell();
 
@@ -218,6 +233,9 @@ void close_client()
 
 	/* destroy the peer manager */
 	destroy_peer_manager( peer_table );
+
+	/* destroy the msg queue */
+	destroy_msg_queue();
 
 	/* destroy the shared mutexes */
 	destroy_shared_mutexes();
@@ -240,7 +258,7 @@ int main(int argc, char *argv[])
 
 	sleep( 5 );
 
-	AAAStartSession( &sID, 3123, 0);
+	AAAStartSession( &sID, modules->exports, 0);
 	req = AAANewMessage( 456, 4, sID, 0);
 	AAACreateAVP( &avp, AVP_Destination_Realm, 0, 0, "gmd.de", 6);
 	AAAAddAVPToMessage( req, avp, req->orig_realm);

@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.20 2003/03/28 20:27:24 bogdan Exp $
+ * $Id: message.c,v 1.21 2003/04/01 11:35:00 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -724,7 +724,7 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	} else {
 		/* it's a request -> get its session */
 		ses = (struct session*)msg->intern;
-		/* where should I send this request? */
+		/* where     should I send this request? */
 		pc = 0;
 		ret = do_routing( msg, &pc );
 		if (ret!=1 || pc==0) {

@@ -1,5 +1,5 @@
 /*
- * $Id: avp.c,v 1.8 2003/03/28 20:27:24 bogdan Exp $
+ * $Id: avp.c,v 1.9 2003/04/01 11:35:00 bogdan Exp $
  *
  * 2002-10-04 created  by illya (komarov@fokus.gmd.de)
  * 2003-03-12 converted to shm_malloc/free (andrei)
@@ -194,6 +194,7 @@ AAAReturnCode  AAAAddAVPToMessage(
 		case AVP_Origin_Realm: msg->orig_realm = avp;break;
 		case AVP_Destination_Host: msg->dest_host = avp;break;
 		case AVP_Destination_Realm: msg->dest_realm = avp;break;
+		case AVP_Auth_Session_State: msg->auth_ses_state = avp;break;
 	}
 
 	return AAA_ERR_SUCCESS;
@@ -353,6 +354,7 @@ AAAReturnCode  AAARemoveAVPFromMessage(
 		case AVP_Origin_Realm: msg->orig_realm = 0;break;
 		case AVP_Destination_Host: msg->dest_host = 0;break;
 		case AVP_Destination_Realm: msg->dest_realm = 0;break;
+		case AVP_Auth_Session_State: msg->auth_ses_state = 0;break;
 	}
 
 	return AAA_ERR_SUCCESS;

@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.11 2003/03/28 14:20:43 bogdan Exp $
+ * $Id: session.c,v 1.12 2003/04/01 11:35:00 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -316,14 +316,19 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 					break;
 				case AAA_AA_RECEIVED:
 					/* an auth answer was received */
+					lock_get( ses->mutex );
 					switch(ses->state) {
 						case AAA_PENDING_STATE:
-							/* check the code and grant access
-							 * if error or service not provided -> STR
-							 * else (if auth failed) -> clenup */
-							//TO DO
+							/* check the session state advertise by server */
+							if (msg->auth_ses_state && SESSION_STATE_MAINTAINED
+							==(*((unsigned int *)msg->auth_ses_state->data.s)))
+								ses->peer_identity = AAA_SERVER_STATEFULL;
+							/* new state */
+							ses->state = AAA_PROCESSING_AA_STATE;
+							lock_release( ses->mutex );
 							break;
 						default:
+							lock_release( ses->mutex );
 							error_code = 1;
 							goto error;
 					}

@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.9 2003/03/28 14:20:43 bogdan Exp $
+ * $Id: session.h,v 1.10 2003/04/01 11:35:00 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -16,10 +16,14 @@
 #include "../locking.h"
 
 
+#define SESSION_STATE_MAINTAINED      0
+#define SESSION_NO_STATE_MAINTAINED   1
+
 /* all possible states of the session state machine */
 enum {
 	AAA_IDLE_STATE,
 	AAA_PENDING_STATE,
+	AAA_PROCESSING_AA_STATE,
 	AAA_OPEN_STATE,
 	AAA_DISCON_STATE
 };

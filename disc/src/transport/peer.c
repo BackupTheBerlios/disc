@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.11 2003/03/28 20:27:24 bogdan Exp $
+ * $Id: peer.c,v 1.12 2003/04/01 11:35:00 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -21,6 +21,7 @@
 #include "../globals.h"
 #include "../timer.h"
 #include "../sh_mutex.h"
+#include "../msg_queue.h"
 #include "../diameter_api/diameter_api.h"
 #include "ip_addr.h"
 #include "resolve.h"
@@ -477,11 +478,8 @@ void destroy_peer( struct peer *p)
 int send_req_to_peers( struct trans *tr , struct peer_chaine *pc)
 {
 	for( ; pc ; pc=pc->next ) {
-		DBG("before p=%p!!\n",pc->peer);
 		lock_get( pc->peer->mutex );
-		DBG("after!!\n");
 		if ( pc->peer->state!=PEER_CONN ) {
-			DBG("peer closed!\n");
 			lock_release( pc->peer->mutex);
 			continue;
 		}
@@ -493,6 +491,7 @@ int send_req_to_peers( struct trans *tr , struct peer_chaine *pc)
 		/* the hash label is used as hop-by-hop ID */
 		((unsigned int*)tr->req.s)[3] = tr->linker.label;
 		if (write( pc->peer->sock, tr->req.s, tr->req.len)!=-1) {
+			lock_release( pc->peer->mutex);
 			/* success */
 			return 1;
 		} else {
@@ -957,10 +956,8 @@ void dispatch_message( struct peer *p, str *buf)
 			event = DPR_RECEIVED;
 			break;
 		default:
-			/* it's a session message*/
-			LOG(L_ERR,"UNIMPLEMENTED: message for a session arrived ->"
-				" discard it!!\n");
-			shm_free( buf->s );
+			/* it's a session message -> put the message into the queue */
+			put_in_queue( buf, p );
 			return;
 	}
 
@@ -977,7 +974,7 @@ void dispatch_message( struct peer *p, str *buf)
 	} else {
 		/* response -> find its transaction and remove it from 
 		 * hash table (search and remove is an atomic operation) */
-		tr = transaction_lookup( p->trans_table, ((unsigned int*)buf->s)[4],
+		tr = transaction_lookup( p, ((unsigned int*)buf->s)[4],
 			((unsigned int*)buf->s)[3]);
 		if (!tr) {
 			LOG(L_ERR,"ERROR:dispatch_message: respons received, but no"

@@ -1,5 +1,5 @@
 /*
- * $Id: trans.c,v 1.4 2003/03/28 20:27:24 bogdan Exp $
+ * $Id: trans.c,v 1.5 2003/04/01 11:35:00 bogdan Exp $
  *
  * 2003-02-11  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -95,9 +95,6 @@ void destroy_transaction( void *vp)
 	/* unref the peers */
 	if (t->peer)
 		atomic_dec( &(t->peer->ref_cnt) );
-
-	/* unlink the transaction from hash_table */
-	//remove_cell_from_htable( hash_table, (struct h_link*)t );
 
 	/* free the messages */
 	if (t->req.s)

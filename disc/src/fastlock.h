@@ -1,7 +1,7 @@
 /*
  * fast arhitecture specific locking
  *
- * $Id: fastlock.h,v 1.1 2003/03/14 15:28:57 bogdan Exp $
+ * $Id: fastlock.h,v 1.2 2003/04/01 11:35:00 bogdan Exp $
  *
  * 
  *
@@ -119,7 +119,7 @@ inline static void get_lock(fl_lock_t* lock)
 #ifdef ADAPTIVE_WAIT
 	int i=ADAPTIVE_WAIT_LOOPS;
 #endif
-	
+	//printf(">>>>>>>>>>> lock_get %p\n",lock);
 	while(tsl(lock)){
 #ifdef BUSY_WAIT
 #elif defined ADAPTIVE_WAIT
@@ -138,6 +138,7 @@ inline static void release_lock(fl_lock_t* lock)
 #ifdef __CPU_i386
 	char val;
 	val=0;
+	//printf(">>>>>>>>>>> lock_release %p\n",lock);
 	asm volatile(
 		" movb $0, (%0)" : /*no output*/ : "r"(lock): "memory"
 		/*" xchg %b0, %1" : "=q" (val), "=m" (*lock) : "0" (val) : "memory"*/

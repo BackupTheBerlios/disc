@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.10 2003/03/28 20:27:24 bogdan Exp $
+ * $Id: peer.h,v 1.11 2003/04/01 11:35:00 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -15,7 +15,6 @@
 #include "../list.h"
 #include "../hash_table.h"
 #include "ip_addr.h"
-#include "trans.h"
 
 struct peer;
 #include "tcp_shell.h"
@@ -78,6 +77,7 @@ struct peer {
 	/* counter rhat tells how many time this peer was connected */
 	unsigned int conn_cnt;
 };
+#include "trans.h"
 
 
 struct p_table {

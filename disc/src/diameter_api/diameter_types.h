@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_types.h,v 1.13 2003/03/28 10:25:03 bogdan Exp $
+ * $Id: diameter_types.h,v 1.14 2003/04/01 11:35:00 bogdan Exp $
  *
  * 2002-09-25 created by illya (komarov@fokus.gmd.de)
  */
@@ -287,6 +287,7 @@ typedef struct _message_t {
 	AAA_AVP             *dest_host;
 	AAA_AVP             *dest_realm;
 	AAA_AVP             *res_code;
+	AAA_AVP             *auth_ses_state;
 	AAA_AVP_LIST        avpList;
 	str                 buf;
 	void                *peers;

@@ -1,5 +1,5 @@
 /*
- * $Id: trans.h,v 1.7 2003/03/18 17:29:53 bogdan Exp $
+ * $Id: trans.h,v 1.8 2003/04/01 11:35:00 bogdan Exp $
  *
  * 2003-02-11 created by bogdan
  *
@@ -12,7 +12,6 @@
 #include "../dprint.h"
 #include "../hash_table.h"
 #include "../timer.h"
-//#include "diameter_types.h"
 
 struct trans;
 
@@ -63,16 +62,43 @@ void destroy_transaction( void* );
 
 /* search a transaction into the hash table based on endtoendID and hopbyhopID
  */
-inline static struct trans* transaction_lookup(struct h_table *trans_table,
+inline static struct trans* transaction_lookup(struct peer *p,
 							unsigned int endtoendID, unsigned int hopbyhopID)
 {
 	str          s;
 	unsigned int hash_code;
+	struct trans *tr;
 
 	s.s = (char*)&endtoendID;
 	s.len = sizeof(endtoendID);
-	hash_code = hash( &s , trans_table->hash_size );
-	return (struct trans*)cell_lookup( trans_table, hash_code, hopbyhopID );
+	hash_code = hash( &s , p->trans_table->hash_size );
+	tr = (struct trans*)cell_lookup( p->trans_table, hash_code, hopbyhopID );
+	if (tr)
+		remove_cell_from_htable( p->trans_table, &(tr->linker) );
+	return tr;
 }
+
+
+/* search a transaction into the hash table based on endtoendID and hopbyhopID
+ */
+inline static struct trans* transaction_lookup_safe(struct peer *p,
+							unsigned int endtoendID, unsigned int hopbyhopID)
+{
+	str          s;
+	unsigned int hash_code;
+	struct trans *tr;
+
+	s.s = (char*)&endtoendID;
+	s.len = sizeof(endtoendID);
+	hash_code = hash( &s , p->trans_table->hash_size );
+	DBG("check point !!!!!!!!!!! \n");
+	lock_get( p->mutex );
+	tr = (struct trans*)cell_lookup( p->trans_table, hash_code, hopbyhopID );
+	if (tr)
+		remove_cell_from_htable( p->trans_table, &(tr->linker) );
+	lock_release( p->mutex );
+	return tr;
+}
+
 
 #endif
