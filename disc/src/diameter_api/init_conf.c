@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.1 2003/03/07 10:34:24 bogdan Exp $
+ * $Id: init_conf.c,v 1.2 2003/03/07 19:36:52 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  *
@@ -166,11 +166,6 @@ AAAReturnCode AAAOpen(char *configFileName)
 	/* init peer manager */
 	if (init_peer_manager( )==-1)
 		goto mem_error;
-	/* add the peers from config file */
-	//..................
-	peer.s = "ugluk.mobis.fokus.gmd.de";
-	peer.len = strlen(peer.s);
-	add_peer( peer_table, &peer, 5, 1912);
 
 	/* init the socket layer */
 	if (init_tcp_shell()==-1)
@@ -178,6 +173,12 @@ AAAReturnCode AAAOpen(char *configFileName)
 
 	/* start the timer */
 	init_timer();
+
+	/* add the peers from config file */
+	//..................
+	peer.s = "ugluk.mobis.fokus.gmd.de";
+	peer.len = strlen(peer.s);
+	add_peer( peer_table, &peer, 5, 1912);
 
 	/* init all peers */
 	init_all_peers();
