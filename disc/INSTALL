@@ -1,4 +1,4 @@
-#$Id: INSTALL,v 1.5 2003/04/22 21:32:00 cco Exp $
+#$Id: INSTALL,v 1.6 2003/10/08 10:43:32 cco Exp $
 
 Dependecies
 -----------
@@ -14,6 +14,9 @@ configure important options
                            --with-mipv6_server_module --with_mipv6_client_module
 --with-mipv6_server_module - includes only the mipv6 server module
 --with-mipv6_client_module - includes only the mipv6 client module
+--disable-ipsec            - disables IPSEC tunnel management / kernel
+calls done by urp library (used by mipv6 module on the AAA client)
+--enable-debug             - more debugging 
 
 Check also ./configure --help
 
@@ -45,6 +48,8 @@ tar zxvf disc-0.1.0.tar.gz
 make
 make install (or make DESTDIR=/tmp/foo install)
 
+(NOTE: when NO IPSEC is required do a :
+./configure --with-mipv6_modules --disable-ipsec)
 
 Creating a distribution
 -----------------------
