@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_module.c,v 1.1 2003/03/28 19:06:54 andrei Exp $
+ * $Id: aaa_module.c,v 1.2 2003/03/28 19:21:27 andrei Exp $
  */
 /*
  * History:
@@ -11,7 +11,7 @@
 
 #include "config.h"
 #include "dprint.h"
-#include "mem/mem.h"
+#include "mem/shm_mem.h"
 #include "aaa_module.h"
 
 
@@ -46,11 +46,16 @@ error:
 int load_module(char* name)
 {
 	int ret;
-	lt_dlhandle handle=0;
-	struct module_exports* e=0;
+	lt_dlhandle handle;
+	struct module_exports* e;
 	char* error_msg;
 	struct aaa_module* mod;
 	struct aaa_module** m;
+	
+	ret=0;
+	mod=0;
+	handle=0;
+	e=0;
 	
 	handle=lt_dlopenext(name);
 	if (handle==0){
@@ -67,7 +72,7 @@ int load_module(char* name)
 		goto error;
 	}
 	/* link it in the module list - TODO*/
-	mod=pkg_malloc(sizeof(struct aaa_module));
+	mod=shm_malloc(sizeof(struct aaa_module));
 	if (mod==0){
 		LOG(L_CRIT, "ERROR: load_module: memory allocation failure\n");
 		ret=-2;
@@ -81,6 +86,7 @@ int load_module(char* name)
 		if ((*m)->handle==mod->handle){
 			LOG(L_WARN, "WARNING: load_module: attempting to load the same"
 					" module twice (%s)\n", mod->path);
+			shm_free(mod);
 			goto skip;
 		}
 		if (strcmp((*m)->exports->name, e->name)==0){
@@ -91,7 +97,7 @@ int load_module(char* name)
 		}
 		if ((*m)->exports->appid==e->appid){
 			LOG(L_CRIT, "ERROR: load_module: 2 modules with the same "
-					"appid(%d): %s, %s\n",
+					"appid(%u): %s, %s\n",
 					e->appid, (*m)->exports->name, e->name);
 			ret=-4;
 			goto error;
@@ -103,6 +109,7 @@ skip:
 	
 error:
 	if(handle) lt_dlclose(handle);
+	if(mod) shm_free(mod);
 	return ret;
 }
 
