@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.23 2003/04/12 20:53:50 bogdan Exp $
+ * $Id: peer.c,v 1.24 2003/04/14 19:23:17 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -519,6 +519,7 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 {
 	unsigned int ete;
 	str s;
+	int n;
 
 	lock_get( p->mutex );
 	if ( p->state!=PEER_CONN && p->state!=PEER_WAIT_DWA) {
@@ -546,7 +547,7 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 	/* the hash label is used as hop-by-hop ID */
 	((unsigned int*)tr->req->s)[3] = tr->linker.label;
 	/* send it */
-	if (write( p->sock, tr->req->s, tr->req->len)!=-1) {
+	if ((n=write( p->sock, tr->req->s, tr->req->len))==tr->req->len) {
 		lock_release( p->mutex);
 		tr->out_peer = p;
 		tr->req = 0;
@@ -558,7 +559,8 @@ int send_req_to_peer(struct trans *tr , struct peer *p)
 	}
 	lock_release( p->mutex);
 	/* write failed*/
-	LOG(L_ERR,"ERROR:send_req_to_peer: write returned error\n");
+	LOG(L_ERR,"ERROR:send_req_to_peer: write returned error n=%d, (%s)\n",
+			n, strerror(errno) );
 	remove_cell_from_htable( p->trans_table, &(tr->linker) );
 	return -1;
 }

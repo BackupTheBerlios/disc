@@ -1,5 +1,5 @@
 /*
- * $Id: tcp_receive.c,v 1.9 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: tcp_receive.c,v 1.10 2003/04/14 19:23:17 bogdan Exp $
  *
  *  History:
  *  --------
@@ -25,7 +25,7 @@
 #include "tcp_shell.h"
 
 
-
+#define MAX_AAA_MSG_SIZE  65536
 
 
 
@@ -54,6 +54,11 @@ inline int do_read( struct peer *p)
 			if (p->buf==0) {
 				/* I just finished reading the the first 4 bytes from msg */
 				len = ntohl(p->first_4bytes)&0x00ffffff;
+				if (len<AAA_MSG_HDR_SIZE || len>MAX_AAA_MSG_SIZE) {
+					LOG(L_ERR,"ERROR:do_read: invalid message length read %u\n"
+						,len);
+					goto error;
+				}
 				//DBG("message length = %d(%x)\n",len,len);
 				if ( (p->buf=shm_malloc(len))==0  ) {
 					LOG(L_ERR,"ERROR:do_read: no more free memory\n");
@@ -83,8 +88,10 @@ inline int do_read( struct peer *p)
 	}
 
 	//DBG(">>>>>>>>>> n=%d, errno=%d \n",n,errno);
-	if (n==0 || (n==-1 && errno!=EINTR && errno!=EAGAIN) )
+	if (n==0 || (n==-1 && errno!=EINTR && errno!=EAGAIN) ) {
+		LOG(L_ERR,"ERROR:do_read: n=%d , errno=%d\n",n,errno);
 		goto error;
+	}
 
 	return 1;
 error:
