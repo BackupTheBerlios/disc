@@ -34,6 +34,8 @@ pthread_t main_thread;
 void close_client();
 
 
+
+
 static void sig_handler(int signo)
 {
 	printf(" ----------- SIGNAL RECEIVED (%d)(%d) -----------------\n",
@@ -44,6 +46,7 @@ static void sig_handler(int signo)
 	}
 	return;
 }
+
 
 
 void init_random_generator()

@@ -1,8 +1,9 @@
 /*
- * $Id: hash_table.h,v 1.1 2003/03/14 17:15:38 bogdan Exp $
+ * $Id: hash_table.h,v 1.2 2003/03/17 13:09:33 bogdan Exp $
  *
  * 2003-01-29 created by bogdan
  * 2003-03-13 converted to locking.h/gen_lock_t (andrei)
+ * 2003-03-17 all locks removed from hash_table and functions (bogdan)
  *
  */
 
@@ -12,16 +13,9 @@
 #define _AAA_DIAMETER_HASH_TABLE_H
 
 
-#include "locking.h"
 #include "dprint.h"
+#include "list.h"
 #include "str.h"
-#include "aaa_lock.h"
-
-
-/*
- * number of entrys for the hash table
- */
-#define HASH_SIZE  1024
 
 
 /*
@@ -31,11 +25,9 @@
  * of the structrure that uses the hash_table
  */
 struct h_link {
-	unsigned int  type;
-	struct h_link *next;
-	struct h_link *prev;
-	unsigned int  label;
-	unsigned int  hash_code;
+	struct list_head lh;
+	unsigned int     label;
+	unsigned int      hash_code;
 };
 
 
@@ -44,12 +36,9 @@ struct h_link {
  * share the same hash code.
  */
 struct h_entry {
-	/* anchors to the linked list */
-	struct h_link *head;
-	struct h_link *tail;
-	/* mutex for manipulating the linked list in critical region */
-	gen_lock_t *mutex;
-	/* each session from this entry will take a different label */
+	/* for linked list */
+	struct list_head  lh;
+	/* each element from this entry will take a different label */
 	unsigned int next_label;
 };
 
@@ -58,6 +47,7 @@ struct h_entry {
  * hash table = hash entrys + lists (session timeout)
  */
 struct h_table {
+	unsigned int hash_size;
 	/* hash entrys */
 	struct h_entry* entrys;
 };
@@ -65,7 +55,7 @@ struct h_table {
 
 
 /* builds and inits the hash table */
-struct h_table* build_htable();
+struct h_table* build_htable( unsigned int hash_size);
 
 /* free the hash table */
 void destroy_htable( struct h_table* );
@@ -74,33 +64,19 @@ void destroy_htable( struct h_table* );
 int add_cell_to_htable(struct h_table* ,struct h_link* );
 
 /* retursn the hash for a string */
-int hash( str* );
+int hash( str *s, unsigned int hash_size);
+
 
 /* remove a cell from the hash table */
-void remove_cell_from_htable_unsafe(struct h_entry* ,struct h_link* );
-
-
-/* remove a cell from the hash table; the session is NOT freed */
-static inline void remove_cell_from_htable(struct h_table *table ,
-													struct h_link *link)
-{
-	struct h_entry *entry;
-
-	entry = &(table->entrys[link->hash_code]);
-	/* get the mutex for the entry */
-	lock_get( entry->mutex );
-	/* remove the entry */
-	remove_cell_from_htable_unsafe( entry , link );
-	/* release the mutex */
-	lock_release( entry->mutex );
-}
+void remove_cell_from_htable(struct h_table *table , struct h_link *link);
 
 
 /* search on an entry a cell having a given label  */
 static inline struct h_link *cell_lookup(struct h_table *table,
 						unsigned int hash_code, unsigned int label, int rm)
 {
-	struct h_link *link;
+	struct h_link *link=0;
+#if 0
 	/* lock the hash entry */
 	lock_get( table->entrys[hash_code].mutex );
 	/* looks into the the sessions hash table */
@@ -112,6 +88,7 @@ static inline struct h_link *cell_lookup(struct h_table *table,
 		remove_cell_from_htable_unsafe( &(table->entrys[hash_code]), link);
 	/* unlock the entry */
 	lock_release( table->entrys[hash_code].mutex );
+#endif
 	return link;
 }
 

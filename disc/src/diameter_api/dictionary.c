@@ -6,9 +6,9 @@
 #include "diameter_api.h"
 
 #define MAXWORDLEN 1024;
-#if 0
 FILE* file;
 
+#if 0
 AAAReturnCode AAADictionaryEntryFromAVPCode(AAA_AVPCode avpCode,
 						                                AAAVendorId vendorId,
 							                              AAADictionaryEntry *entry){
