@@ -1,5 +1,5 @@
 /*
- * $Id: message.c,v 1.1 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: message.c,v 1.2 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -42,15 +42,13 @@ extern str aaa_realm;
 AAAReturnCode AAABuildMsgBuffer( AAAMessage *msg )
 {
 	unsigned char *p;
-	unsigned int  k;
 	AAA_AVP       *avp;
 
 	/* first let's comput the length of the buffer */
 	msg->buf.len = AAA_MSG_HDR_SIZE; /* AAA message header size */
 	/* count and add the avps */
 	for(avp=msg->avpList.head;avp;avp=avp->next) {
-		msg->buf.len+=AVP_HDR_SIZE+(AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0))
-			+ to_32x_len( avp->data.len ) /*data*/;
+		msg->buf.len += AVP_HDR_SIZE(avp->flags)+ to_32x_len( avp->data.len );
 	}
 
 	DBG("xxxx len=%d\n",msg->buf.len);
@@ -92,9 +90,7 @@ AAAReturnCode AAABuildMsgBuffer( AAAMessage *msg )
 		/* flags */
 		(*p++) = (unsigned char)avp->flags;
 		/* avp length */
-		k = AVP_HDR_SIZE + AVP_VENDOR_ID_SIZE*((avp->flags&0x80)!=0) +
-			avp->data.len;
-		set_3bytes(p,k);
+		set_3bytes(p, (AVP_HDR_SIZE(avp->flags)+avp->data.len) );
 		p += 3;
 		/* vendor id */
 		if ((avp->flags&0x80)!=0) {
@@ -190,6 +186,8 @@ AAAMessage *AAANewMessage(
 		/* keep track of the session -> SendMessage will need it! */
 		msg->sId = sessionId;
 	} else {
+		/* it'a ans answer -> it will have the same session Id */
+		msg->sId = request->sId;
 		/* link the transaction the req. belong to */
 		msg->trans = request->trans;
 		tr = (struct trans*)request->trans;
@@ -351,7 +349,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen)
 
 	/* start decoding the AVPS */
 	while (ptr < source+msg_len) {
-		if (ptr+AVP_HDR_SIZE>source+msg_len){
+		if (ptr+AVP_HDR_SIZE(0x80)>source+msg_len){
 			LOG(L_ERR,"ERROR:AAATranslateMessage: source buffer to short!! "
 				"Cannot read the whole AVP header!\n");
 			goto error;
@@ -377,8 +375,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen)
 			ptr += AVP_VENDOR_ID_SIZE;
 		}
 		/* data length */
-		avp_data_len = avp_len-AVP_HDR_SIZE-
-			AVP_VENDOR_ID_SIZE*((avp_flags&AAA_AVP_FLAG_VENDOR_SPECIFIC)!=0);
+		avp_data_len = avp_len-AVP_HDR_SIZE(avp_flags);
 		/*check the data length */
 		if ( source+msg_len<ptr+avp_data_len) {
 			LOG(L_ERR,"ERROR:AAATranslateMessage: source buffer to short!! "

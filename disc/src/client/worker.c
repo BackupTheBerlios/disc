@@ -1,5 +1,5 @@
 /*
- * $Id: worker.c,v 1.5 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: worker.c,v 1.6 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-03-31 created by bogdan
  */
@@ -110,8 +110,9 @@ void *client_worker(void *attr)
 			if (!msg) {
 				LOG(L_ERR,"ERROR:client_worker: error parsing message!\n");
 				shm_free( buf.s );
-				/* TODO - should I notify the modules some how?
-				 * a trans timeout maybe? */
+				/* I notify the module by sending a ANSWER_TIMEOUT_EVENT */
+				((struct module_exports*)ses->app_ref)->
+					mod_tout( ANSWER_TIMEOUT_EVENT, &ses->sID, ses->context);
 				continue;
 			}
 			msg->sId = &(ses->sID);

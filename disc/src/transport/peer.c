@@ -1,5 +1,5 @@
 /*
- * $Id: peer.c,v 1.20 2003/04/08 22:30:18 bogdan Exp $
+ * $Id: peer.c,v 1.21 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-02-18  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -224,8 +224,8 @@ int build_msg_buffers(struct p_table *table)
 
 	/* standard request */
 	table->std_req.len = AAA_MSG_HDR_SIZE +            /* header */
-		AVP_HDR_SIZE + to_32x_len(aaa_identity.len) +  /* origin-host  */
-		AVP_HDR_SIZE + to_32x_len(aaa_realm.len);      /* origin-realm */
+		AVP_HDR_SIZE(0) + to_32x_len(aaa_identity.len) +  /* origin-host  */
+		AVP_HDR_SIZE(0) + to_32x_len(aaa_realm.len);      /* origin-realm */
 	table->std_req.s = shm_malloc( table->std_req.len );
 	if (!table->std_req.s)
 		goto error;
@@ -237,25 +237,25 @@ int build_msg_buffers(struct p_table *table)
 	ptr += AAA_MSG_HDR_SIZE;
 	/* origin host AVP */
 	((unsigned int*)ptr)[0] = htonl(264);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + aaa_identity.len );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + aaa_identity.len );
 	ptr[4] = 1<<6;
-	ptr += AVP_HDR_SIZE;
+	ptr += AVP_HDR_SIZE(0);
 	memcpy( ptr, aaa_identity.s, aaa_identity.len);
 	ptr += to_32x_len(aaa_identity.len);
 	/* origin realm AVP */
 	((unsigned int*)ptr)[0] = htonl(296);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + aaa_realm.len );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + aaa_realm.len );
 	ptr[4] = 1<<6;
-	ptr += AVP_HDR_SIZE;
+	ptr += AVP_HDR_SIZE(0);
 	memcpy( ptr, aaa_realm.s, aaa_realm.len);
 	ptr += to_32x_len(aaa_realm.len);
 
 
 	/* standard answer */
 	table->std_ans.len = AAA_MSG_HDR_SIZE +            /* header */
-		AVP_HDR_SIZE + 4 +                             /* result-code  */
-		AVP_HDR_SIZE + to_32x_len(aaa_identity.len) +  /* origin-host  */
-		AVP_HDR_SIZE + to_32x_len(aaa_realm.len);      /* origin-realm */
+		AVP_HDR_SIZE(0) + 4 +                             /* result-code  */
+		AVP_HDR_SIZE(0) + to_32x_len(aaa_identity.len) +  /* origin-host  */
+		AVP_HDR_SIZE(0) + to_32x_len(aaa_realm.len);      /* origin-realm */
 	table->std_ans.s = shm_malloc( table->std_ans.len );
 	if (!table->std_ans.s)
 		goto error;
@@ -267,21 +267,21 @@ int build_msg_buffers(struct p_table *table)
 	ptr += AAA_MSG_HDR_SIZE;
 	/* result code AVP */
 	((unsigned int*)ptr)[0] = htonl(268);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 	ptr[4] = 1<<6;
-	ptr += AVP_HDR_SIZE + 4;
+	ptr += AVP_HDR_SIZE(0) + 4;
 	/* origin host AVP */
 	((unsigned int*)ptr)[0] = htonl(264);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + aaa_identity.len );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + aaa_identity.len );
 	ptr[4] = 1<<6;
-	ptr += AVP_HDR_SIZE;
+	ptr += AVP_HDR_SIZE(0);
 	memcpy( ptr, aaa_identity.s, aaa_identity.len);
 	ptr += to_32x_len(aaa_identity.len);
 	/* origin realm AVP */
 	((unsigned int*)ptr)[0] = htonl(296);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + aaa_realm.len );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + aaa_realm.len );
 	ptr[4] = 1<<6;
-	ptr += AVP_HDR_SIZE;
+	ptr += AVP_HDR_SIZE(0);
 	memcpy( ptr, aaa_realm.s, aaa_realm.len);
 	ptr += to_32x_len(aaa_realm.len);
 
@@ -299,14 +299,13 @@ int build_msg_buffers(struct p_table *table)
 		nr_auth_app++;
 		nr_acct_app++;
 	}
-
 	/* build the avps */
 	table->ce_avp_ipv4.len =
-		AVP_HDR_SIZE + 4 +                             /* host-ip-address  */
-		AVP_HDR_SIZE + 4 +                             /* vendor-id  */
-		AVP_HDR_SIZE + to_32x_len(product_name.len) +  /* product-name */
-		nr_auth_app*(AVP_HDR_SIZE + 4) +               /* auth-app-id */
-		nr_acct_app*(AVP_HDR_SIZE + 4);                /* acc-app-id */
+		AVP_HDR_SIZE(0) + 4 +                            /* host-ip-address */
+		AVP_HDR_SIZE(0) + 4 +                            /* vendor-id  */
+		AVP_HDR_SIZE(0) + to_32x_len(product_name.len) + /* product-name */
+		nr_auth_app*(AVP_HDR_SIZE(0) + 4) +              /* auth-app-id */
+		nr_acct_app*(AVP_HDR_SIZE(0) + 4);               /* acc-app-id */
 	table->ce_avp_ipv4.s = shm_malloc( table->ce_avp_ipv4.len );
 	if (!table->ce_avp_ipv4.s)
 		goto error;
@@ -314,37 +313,37 @@ int build_msg_buffers(struct p_table *table)
 	memset( ptr, 0, table->ce_avp_ipv4.len);
 	/* host-ip-address AVP */
 	((unsigned int*)ptr)[0] = htonl(257);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 	ptr[4] = 1<<6;
-	ptr += AVP_HDR_SIZE + 4;
+	ptr += AVP_HDR_SIZE(0) + 4;
 	/* vendor-id AVP */
 	((unsigned int*)ptr)[0] = htonl(266);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 	ptr[4] = 1<<6;
-	ptr += AVP_HDR_SIZE;
+	ptr += AVP_HDR_SIZE(0);
 	((unsigned int*)ptr)[0] = htonl( vendor_id );
 	ptr += 4;
 	/* product-name AVP */
 	((unsigned int*)ptr)[0] = htonl(269);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + product_name.len );
-	ptr += AVP_HDR_SIZE;
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + product_name.len );
+	ptr += AVP_HDR_SIZE(0);
 	memcpy( ptr, product_name.s, product_name.len);
 	ptr += to_32x_len(product_name.len);
 	/* auth-app-id AVP */
 	for(mod=modules;mod;mod=mod->next)
 		if ( mod->exports->app_type&DOES_AUTH ) {
 			((unsigned int*)ptr)[0] = htonl(258);
-			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 			ptr[4] = 1<<6;
-			ptr += AVP_HDR_SIZE;
+			ptr += AVP_HDR_SIZE(0);
 			((unsigned int*)ptr)[0] = htonl( mod->exports->app_id );
 			ptr += 4;
 		}
 	if (do_relay) {
 		((unsigned int*)ptr)[0] = htonl(258);
-		((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+		((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 		ptr[4] = 1<<6;
-		ptr += AVP_HDR_SIZE;
+		ptr += AVP_HDR_SIZE(0);
 		((unsigned int*)ptr)[0] = htonl( AAA_APP_RELAY );
 		ptr += 4;
 	}
@@ -352,17 +351,17 @@ int build_msg_buffers(struct p_table *table)
 	for(mod=modules;mod;mod=mod->next)
 		if ( mod->exports->app_type&DOES_ACCT ) {
 			((unsigned int*)ptr)[0] = htonl(259);
-			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+			((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 			ptr[4] = 1<<6;
-			ptr += AVP_HDR_SIZE;
+			ptr += AVP_HDR_SIZE(0);
 			((unsigned int*)ptr)[0] = htonl( mod->exports->app_id );
 			ptr += 4;
 		}
 	if (do_relay) {
 		((unsigned int*)ptr)[0] = htonl(259);
-		((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+		((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 		ptr[4] = 1<<6;
-		ptr += AVP_HDR_SIZE;
+		ptr += AVP_HDR_SIZE(0);
 		((unsigned int*)ptr)[0] = htonl( AAA_APP_RELAY );
 		ptr += 4;
 	}
@@ -376,16 +375,16 @@ int build_msg_buffers(struct p_table *table)
 	ptr = table->ce_avp_ipv6.s;
 	memset( ptr, 0, table->ce_avp_ipv6.len);
 	/* copy the host-ip avp */
-	memcpy( ptr, table->ce_avp_ipv4.s, AVP_HDR_SIZE );
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 16 ); /* update len */
-	ptr += AVP_HDR_SIZE + 16;
+	memcpy( ptr, table->ce_avp_ipv4.s, AVP_HDR_SIZE(0) );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 16 ); /* update len */
+	ptr += AVP_HDR_SIZE(0) + 16;
 	/* copy the rest of the avps */
-	memcpy( ptr, table->ce_avp_ipv4.s+AVP_HDR_SIZE+4,
-		table->ce_avp_ipv4.len-AVP_HDR_SIZE-4);
+	memcpy( ptr, table->ce_avp_ipv4.s+AVP_HDR_SIZE(0)+4,
+		table->ce_avp_ipv4.len-AVP_HDR_SIZE(0)-4);
 
 
 	/* DPR avp */
-	table->dpr_avp.len = AVP_HDR_SIZE + 4; /* disconnect cause  */
+	table->dpr_avp.len = AVP_HDR_SIZE(0) + 4; /* disconnect cause  */
 	table->dpr_avp.s = shm_malloc( table->dpr_avp.len );
 	if (!table->dpr_avp.s)
 		goto error;
@@ -393,9 +392,9 @@ int build_msg_buffers(struct p_table *table)
 	memset( ptr, 0, table->dpr_avp.len);
 	/* disconnect cause AVP */
 	((unsigned int*)ptr)[0] = htonl(273);
-	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE + 4 );
+	((unsigned int*)ptr)[1] = htonl( AVP_HDR_SIZE(0) + 4 );
 	ptr[4] = 1<<6;
-	ptr += AVP_HDR_SIZE + 4;
+	ptr += AVP_HDR_SIZE(0) + 4;
 
 	return 1;
 error:
@@ -409,7 +408,7 @@ error:
 /* a new peer is created and added. The name of the peer host is given and the 
  * offset of the realm inside the host name. The host name and realm are copied
  * locally */
-int add_peer( str *aaa_identity, str *host, unsigned int port )
+struct peer* add_peer( str *aaa_identity, str *host, unsigned int port )
 {
 	static struct hostent* ht;
 	struct peer *p;
@@ -485,10 +484,10 @@ int add_peer( str *aaa_identity, str *host, unsigned int port )
 	/* give the peer to the designated thread */
 	write_command( p->fd, ADD_PEER_CMD, 0, p, 0);
 
-	return 1;
+	return p;
 error:
 	if (p) shm_free(p);
-	return -1;
+	return 0;
 }
 
 
@@ -505,6 +504,9 @@ void destroy_peer( struct peer *p)
 			shm_free( p->supp_acct_app_ids );
 		if (p->supp_auth_app_ids)
 			shm_free( p->supp_auth_app_ids );
+		/* free the origin realm */
+		if (p->aaa_realm.s)
+			shm_free( p->aaa_realm.s );
 		/* free the lock */
 		if (p->mutex)
 			destroy_locks( p->mutex, 1 );
@@ -515,33 +517,41 @@ void destroy_peer( struct peer *p)
 
 
 
-int send_req_to_peers( struct trans *tr , struct peer_chain *pc)
+int send_req_to_peer( struct trans *tr , struct peer *p)
 {
-	for( ; pc ; pc=pc->next ) {
-		lock_get( pc->p->mutex );
-		if ( pc->p->state!=PEER_CONN ) {
-			lock_release( pc->p->mutex);
-			continue;
-		}
-		/* peer available for sending */
-		DBG("peer \"%.*s\" available for sending\n",pc->p->aaa_identity.len,
-			pc->p->aaa_identity.s);
-		add_cell_to_htable( pc->p->trans_table, &(tr->linker) );
-		tr->peer = pc->p;
-		/* the hash label is used as hop-by-hop ID */
-		((unsigned int*)tr->req->s)[3] = tr->linker.label;
-		if (write( pc->p->sock, tr->req->s, tr->req->len)!=-1) {
-			lock_release( pc->p->mutex);
-			/* success */
-			return 1;
-		} else {
-			/* write failed*/
-			remove_cell_from_htable( pc->p->trans_table, &(tr->linker) );
-			lock_release( pc->p->mutex);
-		}
-	}
+	unsigned int ete;
+	str s;
 
-	DBG("cannot send\n");
+	lock_get( p->mutex );
+	if ( p->state!=PEER_CONN ) {
+		LOG(L_INFO,"ERROR:send_req_to_peer: peer is not connected\n");
+		lock_release( p->mutex);
+		return -1;
+	}
+	/* peer available for sending */
+	DBG("peer \"%.*s\" available for sending\n",p->aaa_identity.len,
+			p->aaa_identity.s);
+	/* get a new end-to-end ID for computing the hash code */
+	ete = p->endtoendID++;
+	s.s = (char*)&ete;
+	s.len = END_TO_END_IDENTIFIER_SIZE;
+	tr->linker.hash_code = hash( &s , p->trans_table->hash_size );
+	/* insert into trans hash table */
+	add_cell_to_htable( p->trans_table, &(tr->linker) );
+	tr->peer = p;
+	/* the hash label is used as hop-by-hop ID */
+	((unsigned int*)tr->req->s)[3] = tr->linker.label;
+	((unsigned int*)tr->req->s)[4] = ete;
+	/* send it */
+	if (write( p->sock, tr->req->s, tr->req->len)!=-1) {
+		lock_release( p->mutex);
+		/* success */
+		return 1;
+	}
+	/* write failed*/
+	LOG(L_ERR,"ERROR:send_req_to_peer: write returned error\n");
+	remove_cell_from_htable( p->trans_table, &(tr->linker) );
+	lock_release( p->mutex);
 	return -1;
 }
 
@@ -660,7 +670,8 @@ int send_cer( struct peer *dst_peer)
 	ptr += peer_table->std_req.len;
 	/* set the correct address */
 	memcpy( ptr, ce_avp->s, ce_avp->len );
-	memcpy( ptr+AVP_HDR_SIZE,dst_peer->local_ip.u.addr,dst_peer->local_ip.len);
+	memcpy( ptr+AVP_HDR_SIZE(0), dst_peer->local_ip.u.addr,
+		dst_peer->local_ip.len);
 
 	/* send the buffer */
 	ret = internal_send_request( &cer, dst_peer);
@@ -698,12 +709,13 @@ int send_cea( struct trans *tr, unsigned int result_code)
 	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
 
 	/* set the result code  AVP value */
-	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
+	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE(0))>>2] =
 		htonl( result_code );
 	ptr += peer_table->std_ans.len;
 	/* set the correct address into host-ip-address AVP */
 	memcpy( ptr, ce_avp->s, ce_avp->len );
-	memcpy( ptr+AVP_HDR_SIZE,tr->peer->local_ip.u.addr,tr->peer->local_ip.len);
+	memcpy( ptr+AVP_HDR_SIZE(0), tr->peer->local_ip.u.addr,
+		tr->peer->local_ip.len);
 
 	/* send the buffer */
 	ret = internal_send_response( &cea, tr);
@@ -733,8 +745,10 @@ unsigned int process_ce( struct peer *p, str *buf , int is_req)
 	unsigned int code;
 	char *ptr;
 	char *foo;
+	char *realm;
 
 	mask = 0;
+	realm = 0;
 	code = AAA_NO_COMMON_APPLICATION;
 	nr_auth_app_ids = 0;
 	nr_acct_app_ids = 0;
@@ -742,7 +756,7 @@ unsigned int process_ce( struct peer *p, str *buf , int is_req)
 	for_all_AVPS_do_switch( buf , foo , ptr ) {
 		case 268: /* result_code */
 			set_bit_in_mask( mask, 0);
-			code = ntohl( ((unsigned int *)ptr)[2] );
+			code = ntohl( ((unsigned int *)(ptr+AVP_HDR_SIZE(ptr[4])))[0] );
 			DBG("DEBUG:process_ce: CEA has code %d\n", code);
 			if (code!=AAA_SUCCESS)
 				return code;
@@ -752,6 +766,7 @@ unsigned int process_ce( struct peer *p, str *buf , int is_req)
 			break;
 		case 296: /* orig realm */
 			set_bit_in_mask( mask, 2);
+			realm = ptr;
 			break;
 		case 257: /* host ip address */
 			set_bit_in_mask( mask, 3);
@@ -808,6 +823,7 @@ unsigned int process_ce( struct peer *p, str *buf , int is_req)
 			} else {
 				memcpy( p->supp_auth_app_ids, auth_app_ids,
 					nr_auth_app_ids*sizeof(unsigned int));
+				p->supp_auth_app_ids[nr_auth_app_ids] = 0;
 			}
 		}
 		/* copy the acct_app_ids into peer structure */
@@ -823,11 +839,24 @@ unsigned int process_ce( struct peer *p, str *buf , int is_req)
 			} else {
 				memcpy( p->supp_acct_app_ids, acct_app_ids,
 					nr_acct_app_ids*sizeof(unsigned int));
+				p->supp_acct_app_ids[nr_acct_app_ids] = 0;
 			}
 		}
-	}
-
-	if (code==AAA_NO_COMMON_APPLICATION)
+		/* copy the realm */
+		p->aaa_realm.len = ntohl(((unsigned int*)(realm))[1]&MASK_MSG_CODE)-
+			AVP_HDR_SIZE(realm[4]);
+		p->aaa_realm.s = (char*)shm_malloc( p->aaa_realm.len );
+		if (!p->aaa_realm.s) {
+			LOG(L_ERR,"ERROR:process_ce: cannot allocate memory -> unable "
+					"to save origin realm\n");
+			p->aaa_realm.len = 0;
+		} else {
+			memcpy( p->aaa_realm.s, realm + AVP_HDR_SIZE(realm[4]),
+				p->aaa_realm.len);
+		}
+		DBG("DEBUG:process_ce: origin realm = [%.*s](%d)\n",
+			p->aaa_realm.len,p->aaa_realm.s,p->aaa_realm.len);
+	} else if (code==AAA_NO_COMMON_APPLICATION)
 		LOG(L_ERR,"ERROR:process_ce: no commoun applications with peer!\n");
 
 	return code;
@@ -882,7 +911,7 @@ int send_dwa( struct trans *tr, unsigned int result_code)
 	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
 
 	/* set the result code */
-	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
+	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE(0))>>2] =
 		htonl( result_code );
 
 	/* send the buffer */
@@ -957,7 +986,7 @@ int send_dpr( struct peer *dst_peer, unsigned int disc_cause)
 	ptr += peer_table->std_req.len;
 	/* disconnect cause avp */
 	memcpy( ptr, peer_table->dpr_avp.s, peer_table->dpr_avp.len );
-	((unsigned int*)ptr)[ AVP_HDR_SIZE>>2 ] |= htonl( disc_cause );
+	((unsigned int*)ptr)[ AVP_HDR_SIZE(0)>>2 ] |= htonl( disc_cause );
 
 	/* send the buffer */
 	ret = internal_send_request( &dpr, dst_peer);
@@ -988,7 +1017,7 @@ int send_dpa( struct trans *tr, unsigned int result_code)
 	memcpy( ptr, peer_table->std_ans.s, peer_table->std_ans.len );
 
 	/* set thr result code */
-	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE)>>2] =
+	((unsigned int*)ptr)[(AAA_MSG_HDR_SIZE+AVP_HDR_SIZE(0))>>2] =
 		htonl( result_code );
 
 	/* send the buffer */
@@ -1138,6 +1167,9 @@ inline void reset_peer( struct peer *p)
 		shm_free( p->supp_auth_app_ids );
 	p->supp_auth_app_ids = 0;
 
+	/* free the origin realm */
+	if (p->aaa_realm.s)
+		shm_free( p->aaa_realm.s );
 }
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: sender.c,v 1.2 2003/04/08 22:30:18 bogdan Exp $
+ * $Id: sender.c,v 1.3 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-02-03 created by bogdan
  * 2003-03-12 converted to use shm_malloc/shm_free (andrei)
@@ -26,179 +26,10 @@
 #include "../transport/peer.h"
 #include "../transport/trans.h"
 #include "diameter_api.h"
-#include "sender.h"
 #include "session.h"
 
 
-
-/* local var */
-struct send_manager  send_mgr;
-
-
-#define get_3bytes(_b) \
-	((((unsigned int)(_b)[0])<<16)|(((unsigned int)(_b)[1])<<8)|\
-	(((unsigned int)(_b)[2])))
-
-#define get_4bytes(_b) \
-	((((unsigned int)(_b)[0])<<24)|(((unsigned int)(_b)[1])<<16)|\
-	(((unsigned int)(_b)[2])<<8)|(((unsigned int)(_b)[3])))
-
-#define set_3bytes(_b,_v) \
-	{(_b)[0]=((_v)&0x00ff0000)>>16;(_b)[1]=((_v)&0x0000ff00)>>8;\
-	(_b)[2]=((_v)&0x000000ff);}
-
-#define set_4bytes(_b,_v) \
-	{(_b)[0]=((_v)&0xff000000)>>24;(_b)[1]=((_v)&0x00ff0000)>>16;\
-	(_b)[2]=((_v)&0x0000ff00)>>8;(_b)[3]=((_v)&0x000000ff);}
-
-
-
-/*  Inits generators for end-to-end-ID and hop-by-hop-ID
- */
-int init_send_manager()
-{
-	memset( &send_mgr, 0, sizeof(struct send_manager));
-
-	/* create the lock */
-	send_mgr.end_to_end_lock = create_locks( 1 );
-	if (!send_mgr.end_to_end_lock) {
-		LOG(L_ERR,"ERROR:inid_send_manager: cannot create lock!\n");
-		goto error;
-	}
-
-	/* init end_to_end_ID and hop_by_hop_ID */
-	send_mgr.end_to_end  = ((unsigned int)time(0))<<20;
-	send_mgr.end_to_end |= ((unsigned int)rand( ))>>12;
-
-	LOG(L_INFO,"INFO:init_send_manager: message manager started\n");
-	return 1;
-error:
-	LOG(L_INFO,"INFO:init_send_manager: FAILED to start send manager!!\n");
-	return -1;
-}
-
-
-
-/* Destroy the lock and free the memory used by generators
- */
-void destroy_send_manager()
-{
-	/* destroy the lock */
-	if (send_mgr.end_to_end_lock)
-		destroy_locks( send_mgr.end_to_end_lock , 1 );
-
-	LOG(L_INFO,"INFO:destroy_send_manager: send manager stoped\n");
-}
-
-
-
-inline static unsigned int generate_endtoendID()
-{
-	unsigned int id;
-	lock_get( send_mgr.end_to_end_lock );
-	id = send_mgr.end_to_end++;
-	lock_release( send_mgr.end_to_end_lock );
-	return id;
-}
-
-
-
-
-/**************************** SEND FUNCTIONS ********************************/
-
-/*  sends out a aaa message
- */
-int send_request( AAAMessage *msg)
-{
-	struct peer_chain *pc;
-	unsigned int ete;
-	struct trans *tr;
-	str s;
-
-	tr = 0;
-
-	/* generate the buf from the message */
-	if ( AAABuildMsgBuffer( msg )==-1 )
-		goto error;
-
-	/* build a new transaction for this request */
-	if (( tr = create_transaction( &(msg->buf),
-	sId2session(msg->sId)/*ses*/, 0/*no peeer yest*/))==0 ) {
-		LOG(L_ERR,"ERROR:send_aaa_request: cannot create a new"
-			" transaction!\n");
-		goto error;
-	}
-
-	/* generate a new end-to-end id */
-	ete = generate_endtoendID();
-	((unsigned int *)msg->buf.s)[4] = ete;
-
-	pc = (struct peer_chain*)msg->peers;
-
-	/* calculating the hash_code (over the end-to-end Id) */
-	s.s = (char*)&ete;
-	s.len = END_TO_END_IDENTIFIER_SIZE;
-	tr->linker.hash_code = hash( &s , pc->p->trans_table->hash_size );
-
-	/* send the request */
-	DBG(" before send_req_to_peers!\n");
-	if (send_req_to_peers(tr, (struct peer_chain*)msg->peers)==-1) {
-		LOG(L_ERR,"ERROR:send_aaa_request: send returned error!\n");
-		goto error;
-	}
-
-	/* start the timeout timer */
-	add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
-		get_ticks()+TR_TIMEOUT_TIMEOUT );
-
-	return 1;
-error:
-	if (tr) {
-		destroy_transaction(tr);
-	} else if (msg->buf.s) {
-		shm_free( msg->buf.s );
-		msg->buf.s = 0;
-		msg->buf.len = 0;
-	}
-	return -1;
-}
-
-
-
-/* sends out a reply/response/answer
- */
-int send_aaa_response( AAAMessage *msg)
-{
-	str *req;;
-
-	/* generate the buf from the message */
-	if ( AAABuildMsgBuffer( msg )==-1 )
-		goto error;
-
-	/* copy the end-to-end id and hop-by-hop id */
-	req = ((struct trans*)msg->trans)->req;
-	((unsigned int*)msg->buf.s)[3] = ((unsigned int*)req->s)[3];
-	((unsigned int*)msg->buf.s)[4] = ((unsigned int*)req->s)[4];
-
-	/* send the message */
-	if (send_res_to_peer(&(msg->buf),((struct trans*)msg->trans)->peer)==-1) {
-		LOG(L_ERR,"ERROR:send_aaa_response: send returned error!\n");
-	}
-
-	/* destroy everything */
-	destroy_transaction( (struct trans*)msg->trans );
-	shm_free( msg->buf.s );
-
-	return 1;
-error:
-	if (msg->buf.s) {
-		shm_free( msg->buf.s );
-		msg->buf.s = 0;
-		msg->buf.len = 0;
-	}
-	return -1;
-}
-
+int get_dest_peers( AAAMessage *msg, struct peer_chain **pc );
 
 
 /****************************** API FUNCTIONS ********************************/
@@ -209,10 +40,10 @@ error:
 AAAReturnCode  AAASendMessage(AAAMessage *msg)
 {
 	struct peer_chain *pc;
-	struct session     *ses;
-	struct trans       *tr;
-	unsigned int       event;
-	int                ret;
+	struct session    *ses;
+	struct trans      *tr;
+	unsigned int      event;
+	int               ret;
 
 	ses = 0;
 	tr  = 0;
@@ -228,35 +59,44 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 	}
 
 	if ( !is_req(msg) ) {
-		/* if it's a response, I already have a transaction for it */
+		/* it's a response -> I already have a transaction and a session */
 		tr = (struct trans*)msg->trans;
-		/* ....and the session */
 		ses = tr->ses;
-		/* update the session state machine */
-		switch (msg->commandCode) {
-			case 274: /*ASA*/
-				event = AAA_ASA_SENT;
-				break;
-			case 275: /*STA*/
-				event = AAA_STA_SENT;
-				break;
-			case 258: /*RAA*/
-				event = AAA_RAA_SENT;
-				break;
-			default:
-				event = AAA_SEND_AA;
-		}
-		//if (session_state_machine( ses, event)!=1)
-		//	goto error;
+
 		/* generate the buf from the message */
-		//if ( build_buf_from_msg( msg, &buf)==-1 )
-		//	goto error;
-		/* send the response */
-		//if (send_aaa_response( &buf, tr)==-1)
-		//	goto error;
+		if ( AAABuildMsgBuffer( msg )==-1 )
+			goto error;
+
+		/* copy the end-to-end id and hop-by-hop id */
+		((unsigned int*)msg->buf.s)[3] = ((unsigned int*)tr->req->s)[3];
+		((unsigned int*)msg->buf.s)[4] = ((unsigned int*)tr->req->s)[4];
+
+		if (ses!=FAKE_SESSION) {
+			/* update the session state machine */
+			switch (msg->commandCode) {
+				case 274: /*ASA*/ event = AAA_SENDING_ASA; break;
+				case 275: /*STA*/ event = AAA_SENDING_STA; break;
+				case 258: /*RAA*/ event = AAA_SENDING_RAA; break;
+				default:  /*AA */ event = AAA_SENDING_AA;  break;
+			}
+			if (session_state_machine( ses, event, 0)!=1)
+				goto error;
+		}
+
+		/* send the message */
+		if (send_res_to_peer( &(msg->buf), tr->peer)==-1) {
+			LOG(L_ERR,"ERROR:send_aaa_response: send returned error!\n");
+			if (ses!=FAKE_SESSION)
+				session_state_machine( ses, AAA_SEND_FAILED, 0);
+			goto error;
+		}
+
+		/* destroy the transaction  */
+		destroy_transaction( tr );
 	} else {
 		/* it's a request -> get its session */
 		ses = sId2session( msg->sId );
+
 		/* where should I send this request? */
 		pc = 0;
 		ret = get_dest_peers( msg, &pc );
@@ -265,29 +105,60 @@ AAAReturnCode  AAASendMessage(AAAMessage *msg)
 				" do_routing returned %d, pc=%p.\n",ret,pc);
 			goto error;
 		}
-		msg->peers = pc;
+
 		/* update the session state */
 		switch (msg->commandCode) {
-			case 274: /*ASR*/
-				event = AAA_ASR_SENT;
-				break;
-			case 275: /*STR*/
-				event = AAA_STR_SENT;
-				break;
-			case 258: /*RAR*/
-				event = AAA_RAR_SENT;
-				break;
-			default:
-				event = AAA_SEND_AR;
+			case 274: /*ASR*/ event = AAA_SENDING_ASR; break;
+			case 275: /*STR*/ event = AAA_SENDING_STR; break;
+			case 258: /*RAR*/ event = AAA_SENDING_RAR; break;
+			default:  /*AR */ event = AAA_SENDING_AR;  break;
 		}
-		if (session_state_machine( ses, event, msg)!=1)
+		if (session_state_machine( ses, event, 0)!=1)
 			goto error;
+
+		/* generate the buf from the message */
+		if ( AAABuildMsgBuffer( msg )==-1 )
+			goto error;
+
+		/* build a new transaction for this request */
+		if (( tr=create_transaction( &msg->buf, ses, 0/*no peer yet*/))==0 ) {
+			LOG(L_ERR,"ERROR:AAASendMesage: cannot create a new"
+				" transaction!\n");
+			goto error;
+		}
+
+		/* send the request */
+		for( ; pc ; pc=pc->next ) {
+			if ( (ret=send_req_to_peer( tr, pc->p))!=-1) {
+				/* start the timeout timer */
+				add_to_timer_list( &(tr->timeout) , tr_timeout_timer ,
+					get_ticks()+TR_TIMEOUT_TIMEOUT );
+				break;
+			}
+		}
+		if (ret==-1) {
+			LOG(L_ERR,"ERROR:AAASendMessage: I wasn't able to send request\n");
+			session_state_machine( ses, AAA_SEND_FAILED, 0);
+			goto error;
+		}
+		/* just to be sure */
+		tr->req = 0;
 	}
 
-	msg->peers = 0;
+
+	/* free the buffer */
+	shm_free(msg->buf.s);
+	msg->buf.s = 0;
+	msg->buf.len = 0;
 	return AAA_ERR_SUCCESS;
 error:
-	msg->peers = 0;
+	if (tr)
+		destroy_transaction( tr );
+	if (msg->buf.s) {
+		shm_free(msg->buf.s);
+		msg->buf.s = 0;
+		msg->buf.len = 0;
+	}
 	return AAA_ERR_FAILURE;
 }
 

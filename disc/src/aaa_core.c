@@ -1,5 +1,5 @@
 /*
- * $Id: aaa_core.c,v 1.8 2003/04/09 18:49:16 andrei Exp $
+ * $Id: aaa_core.c,v 1.9 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-04-08 created by bogdan
  */
@@ -273,6 +273,9 @@ int start_aaa_core()
 
 	/* for the last of the execution, I will act as timer */
 	timer_ticker();
+
+	/* this call is just a trick to force the linker to add this function */
+	AAASendMessage(0); // !!!!!!!!!!!!!!!!!!
 
 	return 1;
 }

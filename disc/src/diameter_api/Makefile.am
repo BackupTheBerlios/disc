@@ -1,5 +1,5 @@
 ##
-## $Id: Makefile.am,v 1.3 2003/04/07 21:27:52 andrei Exp $
+## $Id: Makefile.am,v 1.4 2003/04/09 22:10:34 bogdan Exp $
 ##
 ## Process this file with automake to produce Makefile.in
 ##
@@ -9,7 +9,7 @@
 noinst_LTLIBRARIES = libdiameter_api.la
 libdiameter_api_la_SOURCES =	init_conf.c sender.c session.c \
 								session.h diameter_api.h \
-								init_conf.h sender.h 
+								init_conf.h 
 								
 #								dictionary.c  dictionary.h
 								

@@ -1,5 +1,5 @@
 /*
- * $Id: session.h,v 1.14 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: session.h,v 1.15 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-01-28 created by bogdan
  *
@@ -24,6 +24,7 @@
 	((struct session*)((char *)(_sId_) - \
 	(unsigned long)(&((struct session*)0)->sID)))
 
+#define FAKE_SESSION ((struct session*)0xFFFFFFFF)
 
 
 /* all possible states of the session state machine */
@@ -46,22 +47,22 @@ enum AAA_ENTITY {
 enum AAA_EVENTS {
 	AAA_AA_RECEIVED,
 	AAA_AR_RECEIVED,
-	AAA_SEND_AR,
-	AAA_SEND_AA,
-	AAA_SESSION_REQ_TIMEOUT,
-
+	AAA_SENDING_AR,
+	AAA_SENDING_AA,
 	AAA_ASR_RECEIVED,
 	AAA_ASA_RECEIVED,
-	AAA_ASR_SENT,
-	AAA_ASA_SENT,
+	AAA_SENDING_ASR,
+	AAA_SENDING_ASA,
 	AAA_RAR_RECEIVED,
 	AAA_RAA_RECEIVED,
-	AAA_RAR_SENT,
-	AAA_RAA_SENT,
-	AAA_STR_SENT,
-	AAA_STA_SENT,
+	AAA_SENDING_RAR,
+	AAA_SENDING_RAA,
 	AAA_STR_RECEIVED,
-	AAA_STA_RECEIVED
+	AAA_STA_RECEIVED,
+	AAA_SENDING_STR,
+	AAA_SENDING_STA,
+	AAA_SESSION_REQ_TIMEOUT,
+	AAA_SEND_FAILED,
 };
 
 

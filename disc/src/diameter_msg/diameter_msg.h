@@ -1,5 +1,5 @@
 /*
- * $Id: diameter_msg.h,v 1.4 2003/04/08 16:47:31 bogdan Exp $
+ * $Id: diameter_msg.h,v 1.5 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-04-07 created by bogdan
  */
@@ -30,9 +30,10 @@
 #define AAA_MSG_HDR_SIZE  \
 	(VER_SIZE + MESSAGE_LENGTH_SIZE + FLAGS_SIZE + COMMAND_CODE_SIZE +\
 	APPLICATION_ID_SIZE+HOP_BY_HOP_IDENTIFIER_SIZE+END_TO_END_IDENTIFIER_SIZE)
-#define AVP_HDR_SIZE  \
-	(AVP_CODE_SIZE+AVP_FLAGS_SIZE+AVP_LENGTH_SIZE)
 
+#define AVP_HDR_SIZE(_flags_)  \
+	(AVP_CODE_SIZE+AVP_FLAGS_SIZE+AVP_LENGTH_SIZE+\
+	AVP_VENDOR_ID_SIZE*(((_flags_)&AAA_AVP_FLAG_VENDOR_SPECIFIC)!=0) )
 
 /* mesage codes
  */
@@ -264,7 +265,6 @@ typedef struct _message_t {
 	AAA_AVP             *auth_ses_state;
 	AAA_AVP_LIST        avpList;
 	str                 buf;
-	void                *peers;
 	void                *trans;
 } AAAMessage;
 

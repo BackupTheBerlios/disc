@@ -1,5 +1,5 @@
 /*
- * $Id: peer.h,v 1.14 2003/04/08 22:30:18 bogdan Exp $
+ * $Id: peer.h,v 1.15 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-02-18 created by bogdan
  *
@@ -10,7 +10,6 @@
 
 #include "../str.h"
 #include "../locking.h"
-//#include "../counter.h"
 #include "../timer.h"
 #include "../list.h"
 #include "../hash_table.h"
@@ -42,6 +41,7 @@ struct peer {
 	/* aaa specific information */
 	str aaa_identity;
 	str aaa_host;
+	str aaa_realm;
 	/* location of the peer as ip:port */
 	unsigned int port;
 	struct ip_addr ip;
@@ -148,12 +148,13 @@ extern struct p_table *peer_table;
 #define PEER_TO_DESTROY    1<<0
 #define PEER_CONN_IN_PROG  1<<1
 
+#define get_avp_len( _ptr_ ) \
+	( to_32x_len((ntohl(((unsigned int*)(_ptr_))[1])&0x00ffffff)) )
 
 #define for_all_AVPS_do_switch( _buf_ , _foo_ , _ptr_ ) \
-	for( (_ptr_) =  (_buf_)->s + AAA_MSG_HDR_SIZE, (_foo_)=(_ptr_) ;\
+	for( (_ptr_) =  (_buf_)->s + AAA_MSG_HDR_SIZE, (_foo_)=(_ptr_);\
 	(_ptr_) < (_buf_)->s+(_buf_)->len ;\
-	(_ptr_) = (_foo_)+to_32x_len((ntohl( ((unsigned int *)(_foo_))[1] )&\
-	0x00ffffff)), (_foo_) = (_ptr_) ) \
+	(_ptr_) = (_foo_)+get_avp_len( _foo_ ), (_foo_) = (_ptr_) ) \
 		switch( ntohl( ((unsigned int *)(_ptr_))[0] ) )
 
 
@@ -163,11 +164,11 @@ struct p_table *init_peer_manager( unsigned int trans_hash_size );
 
 void destroy_peer_manager();
 
-int add_peer( str *aaa_identity, str *host, unsigned int port);
+struct peer* add_peer( str *aaa_identity, str *host, unsigned int port);
 
 void init_all_peers();
 
-int send_req_to_peers( struct trans *tr , struct peer_chain *pc);
+int send_req_to_peer( struct trans *tr , struct peer *p);
 
 int send_res_to_peer( str *buf, struct peer *p);
 
@@ -211,7 +212,6 @@ static inline struct peer* lookup_peer_by_identity( str *aaa_id )
 	}
 
 	lock_release( peer_table->mutex );
-
 	return res;
 }
 
@@ -236,10 +236,46 @@ static inline struct peer* lookup_peer_by_ip( struct ip_addr *ip )
 	}
 
 	lock_release( peer_table->mutex );
-
 	return res;
 }
 
+
+
+/* search into the peer table for the peer having the given app-Id */
+static inline struct peer* lookup_peer_by_realm_appid(str *realm,
+														unsigned int appid )
+{
+	struct list_head *lh;
+	struct peer *p;
+	struct peer *res=0;
+	unsigned int i;
+
+	lock_get( peer_table->mutex );
+
+	list_for_each( lh, &(peer_table->peers)) {
+		p = list_entry( lh, struct peer, all_peer_lh);
+		if ( realm->len==p->aaa_realm.len &&
+		!strncasecmp( realm->s, p->aaa_realm.s, realm->len)) {
+			for(i=0;p->supp_auth_app_ids[i];i++) {
+				if ( p->supp_auth_app_ids[i]==appid ) {
+					//ref_peer( p );
+					res = p;
+					break;
+				}
+			}
+			for(i=0;p->supp_acct_app_ids[i];i++) {
+				if ( p->supp_acct_app_ids[i]==appid ) {
+					//ref_peer( p );
+					res = p;
+					break;
+				}
+			}
+		}
+	}
+
+	lock_release( peer_table->mutex );
+	return res;
+}
 
 
 #endif

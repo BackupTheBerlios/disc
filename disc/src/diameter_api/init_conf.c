@@ -1,5 +1,5 @@
 /*
- * $Id: init_conf.c,v 1.24 2003/04/07 21:27:52 andrei Exp $
+ * $Id: init_conf.c,v 1.25 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-02-03  created by bogdan
  * 2003-03-12  converted to shm_malloc, from ser (andrei)
@@ -17,7 +17,6 @@
 #include "init_conf.h"
 #include "diameter_api.h"
 #include "session.h"
-#include "sender.h"
 
 
 
@@ -33,9 +32,6 @@ AAAReturnCode AAAClose()
 		return AAA_ERR_NOT_INITIALIZED;
 	}
 	is_lib_init = 0;
-
-	/* stop the message manager */
-	destroy_send_manager();
 
 	/* stop session manager */
 	shutdown_session_manager();
@@ -55,10 +51,6 @@ AAAReturnCode AAAOpen()
 
 	/* init the session manager */
 	if (init_session_manager( 1024/*hash_size*/, 512/*shared_locks*/  )==-1)
-		goto mem_error;
-
-	/* init the message manager */
-	if (init_send_manager()==-1)
 		goto mem_error;
 
 	/* finally DONE */

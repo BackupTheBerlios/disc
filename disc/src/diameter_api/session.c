@@ -1,5 +1,5 @@
 /*
- * $Id: session.c,v 1.17 2003/04/07 19:51:57 bogdan Exp $
+ * $Id: session.c,v 1.18 2003/04/09 22:10:34 bogdan Exp $
  *
  * 2003-01-28  created by bogdan
  * 2003-03-12  converted to shm_malloc/shm_free (andrei)
@@ -20,7 +20,6 @@
 #include "../locking.h"
 #include "../hash_table.h"
 #include "../aaa_module.h"
-#include "sender.h"
 #include "session.h"
 
 
@@ -366,18 +365,12 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 		case AAA_SERVER_STATELESS:
 			/* I am client to a stateless server */
 			switch( event ) {
-				case AAA_SEND_AR:
+				case AAA_SENDING_AR:
 					/* an auth request has to be sent */
 					lock_get( ses->mutex );
 					switch(ses->state) {
 						case AAA_IDLE_STATE:
 						case AAA_OPEN_STATE:
-							/* send out the message */
-							if (send_request(msg)==-1) {
-								lock_release( ses->mutex );
-								error_code = 4;
-								goto error;
-							}
 							ses->prev_state = ses->state;
 							ses->state = AAA_PENDING_STATE;
 							lock_release( ses->mutex );
@@ -420,6 +413,21 @@ int session_state_machine( struct session *ses, enum AAA_EVENTS event,
 							/* run the timeout handler */
 							((struct module_exports*)ses->app_ref)->mod_tout(
 								ANSWER_TIMEOUT_EVENT,&(ses->sID),ses->context);
+							break;
+						default:
+							lock_release( ses->mutex );
+							error_code = 1;
+							goto error;
+					}
+					break;
+				case AAA_SEND_FAILED:
+					/* a send operation that was already been registered
+					 * into the session failed */
+					lock_get( ses->mutex );
+					switch(ses->state) {
+						case AAA_PENDING_STATE:
+							ses->state = ses->prev_state;
+							lock_release( ses->mutex );
 							break;
 						default:
 							lock_release( ses->mutex );
